@@ -43,7 +43,7 @@ class _LoginScreenState extends State<LoginScreen> {
     } else {
       setState(() {
         _pin = '';
-        _errorMessage = 'Invalid PIN. Please try again.';
+        _errorMessage = 'ভুল পিন। আবার চেষ্টা করুন।';
       });
     }
   }
@@ -85,7 +85,7 @@ class _LoginScreenState extends State<LoginScreen> {
                   child: Column(
                     mainAxisSize: MainAxisSize.min,
                     children: [
-                      // Shop Logo and Info (Modern circular badge)
+                      // Shop Logo (Pulsing storefront)
                       Container(
                         padding: const EdgeInsets.all(18),
                         decoration: BoxDecoration(
@@ -100,7 +100,7 @@ class _LoginScreenState extends State<LoginScreen> {
                       ).animate().scale(delay: 100.ms, duration: 450.ms, curve: Curves.easeOutBack),
                       const SizedBox(height: 20),
                       Text(
-                        'VillageCO Inventory',
+                        'ভিলেজকো ইনভেন্টরি',
                         style: theme.textTheme.titleLarge?.copyWith(
                           fontWeight: FontWeight.bold,
                           fontSize: 22,
@@ -108,9 +108,10 @@ class _LoginScreenState extends State<LoginScreen> {
                       ),
                       const SizedBox(height: 6),
                       Text(
-                        'Enter Admin PIN to access',
+                        'অ্যাক্সেস করতে অ্যাডমিন পিন দিন',
                         style: theme.textTheme.bodyMedium?.copyWith(
                           color: theme.colorScheme.onSurfaceVariant,
+                          fontWeight: FontWeight.w600,
                         ),
                       ),
                       const SizedBox(height: 36),
@@ -147,7 +148,7 @@ class _LoginScreenState extends State<LoginScreen> {
                           _errorMessage!,
                           style: TextStyle(
                             color: theme.colorScheme.error,
-                            fontWeight: FontWeight.w600,
+                            fontWeight: FontWeight.bold,
                             fontSize: 13,
                           ),
                         ).animate().shake(duration: 300.ms),
@@ -199,9 +200,10 @@ class _LoginScreenState extends State<LoginScreen> {
                           const SizedBox(width: 8),
                           Flexible(
                             child: Text(
-                              'Remember PIN for this shift',
+                              'এই শিফটের জন্য পিন মনে রাখুন',
                               style: theme.textTheme.bodyMedium?.copyWith(
                                 color: theme.colorScheme.onSurfaceVariant,
+                                fontWeight: FontWeight.w600,
                               ),
                               overflow: TextOverflow.ellipsis,
                             ),

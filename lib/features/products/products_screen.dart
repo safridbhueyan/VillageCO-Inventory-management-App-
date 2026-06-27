@@ -1,9 +1,13 @@
+import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:drift/drift.dart' as drift;
 import 'package:flutter_slidable/flutter_slidable.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 import 'package:uuid/uuid.dart';
+import 'package:image_picker/image_picker.dart';
+import 'package:path_provider/path_provider.dart';
+import 'package:path/path.dart' as p;
 
 import '../../core/database/database.dart';
 import '../../core/utils/formatters.dart';
@@ -26,7 +30,9 @@ class _ProductsScreenState extends ConsumerState<ProductsScreen> {
     setState(() {
       if (_selectedIds.contains(id)) {
         _selectedIds.remove(id);
-        if (_selectedIds.isEmpty) _isMultiSelectMode = false;
+        if (_selectedIds.isEmpty) {
+          _isMultiSelectMode = false;
+        }
       } else {
         _selectedIds.add(id);
         _isMultiSelectMode = true;
@@ -43,61 +49,64 @@ class _ProductsScreenState extends ConsumerState<ProductsScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
     final productsAsync = ref.watch(productsListProvider);
     final filter = ref.watch(productsFilterProvider);
-    final categoriesAsync = ref.watch(categoriesControllerProvider);
-    final theme = Theme.of(context);
-    final double width = MediaQuery.of(context).size.width;
-    final bool isDesktop = width > 850;
 
     return Scaffold(
       appBar: AppBar(
-        title: _isMultiSelectMode
-            ? Text('${_selectedIds.length} Selected')
-            : const Text('Products Directory', style: TextStyle(fontWeight: FontWeight.bold)),
-        leading: _isMultiSelectMode
-            ? IconButton(icon: const Icon(Icons.close), onPressed: _clearSelection)
-            : null,
-        actions: _isMultiSelectMode
-            ? [
-                IconButton(
-                  icon: const Icon(Icons.edit_note, color: Colors.teal),
-                  tooltip: 'Bulk Stock Update',
-                  onPressed: () => _showBulkStockUpdateDialog(context),
-                ),
-                IconButton(
-                  icon: const Icon(Icons.delete_outline, color: Colors.red),
-                  tooltip: 'Bulk Delete',
-                  onPressed: () => _confirmBulkDelete(context),
-                ),
-              ]
-            : [
-                IconButton(
-                  icon: const Icon(Icons.refresh),
-                  onPressed: () => ref.invalidate(productsListProvider),
-                ),
-              ],
+        title: Text(
+          _isMultiSelectMode ? '${_selectedIds.length}টি পণ্য সিলেক্ট করা হয়েছে' : 'পণ্য তালিকা',
+          style: const TextStyle(fontWeight: FontWeight.bold),
+        ),
+        actions: [
+          if (_isMultiSelectMode) ...[
+            IconButton(
+              icon: const Icon(Icons.edit_note_rounded),
+              tooltip: 'স্টক পরিবর্তন করুন',
+              onPressed: () => _showBulkStockUpdateDialog(context),
+            ),
+            IconButton(
+              icon: const Icon(Icons.delete_outline_rounded, color: Colors.red),
+              tooltip: 'মুছে ফেলুন',
+              onPressed: () => _confirmBulkDelete(context),
+            ),
+            IconButton(
+              icon: const Icon(Icons.close_rounded),
+              tooltip: 'বাতিল',
+              onPressed: _clearSelection,
+            ),
+          ] else ...[
+            IconButton(
+              icon: const Icon(Icons.add_circle_outline_rounded),
+              tooltip: 'নতুন পণ্য যোগ',
+              onPressed: () => _showProductFormDialog(context),
+            ),
+          ]
+        ],
       ),
       body: Column(
         children: [
-          // Sticky search and filter bar
-          _buildSearchAndFilters(context, filter, categoriesAsync),
-          
+          _buildFilterPanel(context, filter),
+          const Divider(height: 1),
           Expanded(
             child: productsAsync.when(
               loading: () => const Center(child: CircularProgressIndicator()),
-              error: (err, stack) => Center(child: Text('Error loading products: $err')),
+              error: (err, st) => Center(child: Text('লোড করতে ত্রুটি হয়েছে: $err')),
               data: (products) {
                 if (products.isEmpty) {
                   return const _EmptyProductsState();
                 }
+
+                final double width = MediaQuery.of(context).size.width;
+                final bool isDesktop = width > 850;
 
                 if (isDesktop) {
                   return GridView.builder(
                     padding: const EdgeInsets.all(20),
                     gridDelegate: const SliverGridDelegateWithMaxCrossAxisExtent(
                       maxCrossAxisExtent: 220,
-                      childAspectRatio: 0.8,
+                      childAspectRatio: 0.78,
                       crossAxisSpacing: 16,
                       mainAxisSpacing: 16,
                     ),
@@ -112,7 +121,7 @@ class _ProductsScreenState extends ConsumerState<ProductsScreen> {
                   return ListView.separated(
                     padding: const EdgeInsets.all(16),
                     itemCount: products.length,
-                    separatorBuilder: (_, __) => const SizedBox(height: 12),
+                    separatorBuilder: (_, __) => const SizedBox(height: 10),
                     itemBuilder: (context, index) {
                       final item = products[index];
                       final isSelected = _selectedIds.contains(item.product.id);
@@ -125,38 +134,26 @@ class _ProductsScreenState extends ConsumerState<ProductsScreen> {
           ),
         ],
       ),
-      floatingActionButton: _isMultiSelectMode
-          ? null
-          : FloatingActionButton.extended(
-              onPressed: () => _showProductFormDialog(context),
-              icon: const Icon(Icons.add),
-              label: const Text('Add Product'),
-            ),
     );
   }
 
-  // Build Filter row
-  Widget _buildSearchAndFilters(
-    BuildContext context,
-    ProductsFilterState filter,
-    AsyncValue<List<Category>> categoriesAsync,
-  ) {
+  Widget _buildFilterPanel(BuildContext context, ProductsFilterState filter) {
     final theme = Theme.of(context);
-    return Container(
-      color: theme.colorScheme.surface,
-      padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0),
+    final categoriesAsync = ref.watch(categoriesControllerProvider);
+
+    return Padding(
+      padding: const EdgeInsets.all(16.0),
       child: Column(
         children: [
-          // Search & Sort bar
           Row(
             children: [
               Expanded(
                 child: TextField(
                   decoration: InputDecoration(
-                    hintText: 'Search product, brand, barcode...',
+                    hintText: 'নাম বা বারকোড দিয়ে পণ্য খুঁজুন...',
                     prefixIcon: const Icon(Icons.search),
                     border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
-                    contentPadding: const EdgeInsets.symmetric(vertical: 0),
+                    contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
                   ),
                   onChanged: (val) {
                     ref.read(productsFilterProvider.notifier).update((s) => s.copyWith(searchQuery: val));
@@ -164,48 +161,43 @@ class _ProductsScreenState extends ConsumerState<ProductsScreen> {
                 ),
               ),
               const SizedBox(width: 12),
-              // Sort dropdown
-              Container(
-                padding: const EdgeInsets.symmetric(horizontal: 8),
-                decoration: BoxDecoration(
-                  border: Border.all(color: theme.colorScheme.outlineVariant),
-                  borderRadius: BorderRadius.circular(12),
-                ),
-                child: DropdownButtonHideUnderline(
-                  child: DropdownButton<String>(
-                    value: filter.sortBy,
-                    icon: const Icon(Icons.sort_rounded),
-                    items: const [
-                      DropdownMenuItem(value: 'name_asc', child: Text('Name A-Z')),
-                      DropdownMenuItem(value: 'name_desc', child: Text('Name Z-A')),
-                      DropdownMenuItem(value: 'stock_asc', child: Text('Stock: Low to High')),
-                      DropdownMenuItem(value: 'stock_desc', child: Text('Stock: High to Low')),
-                      DropdownMenuItem(value: 'price_asc', child: Text('Price: Low to High')),
-                      DropdownMenuItem(value: 'price_desc', child: Text('Price: High to Low')),
-                    ],
-                    onChanged: (val) {
-                      if (val != null) {
-                        ref.read(productsFilterProvider.notifier).update((s) => s.copyWith(sortBy: val));
-                      }
-                    },
+              SizedBox(
+                width: 160,
+                child: DropdownButtonFormField<String>(
+                  value: filter.sortBy,
+                  isExpanded: true,
+                  decoration: InputDecoration(
+                    border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+                    contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
                   ),
+                  items: const [
+                    DropdownMenuItem(value: 'name_asc', child: Text('নাম: ক-অ')),
+                    DropdownMenuItem(value: 'name_desc', child: Text('নাম: অ-ক')),
+                    DropdownMenuItem(value: 'stock_asc', child: Text('স্টক: কম থেকে বেশি')),
+                    DropdownMenuItem(value: 'stock_desc', child: Text('স্টক: বেশি থেকে কম')),
+                    DropdownMenuItem(value: 'price_asc', child: Text('মূল্য: কম থেকে বেশি')),
+                    DropdownMenuItem(value: 'price_desc', child: Text('মূল্য: বেশি থেকে কম')),
+                  ],
+                  onChanged: (val) {
+                    if (val != null) {
+                      ref.read(productsFilterProvider.notifier).update((s) => s.copyWith(sortBy: val));
+                    }
+                  },
                 ),
               ),
             ],
           ),
           const SizedBox(height: 10),
-          // Category chips & Stock status chips
           SingleChildScrollView(
             scrollDirection: Axis.horizontal,
             child: Row(
               children: [
-                // Favorite filter
                 FilterChip(
                   label: const Row(
                     children: [
                       Icon(Icons.star, size: 16, color: Colors.orange),
                       SizedBox(width: 4),
-                      Text('Starred'),
+                      Text('প্রিয় পণ্য'),
                     ],
                   ),
                   selected: filter.favoritesOnly,
@@ -214,7 +206,6 @@ class _ProductsScreenState extends ConsumerState<ProductsScreen> {
                   },
                 ),
                 const SizedBox(width: 8),
-                // Category Filter
                 categoriesAsync.maybeWhen(
                   data: (categories) => Row(
                     children: categories.map((cat) {
@@ -236,18 +227,22 @@ class _ProductsScreenState extends ConsumerState<ProductsScreen> {
                   orElse: () => const SizedBox.shrink(),
                 ),
                 const VerticalDivider(width: 16),
-                // Stock filter chips
-                ...['Healthy', 'Low', 'Critical', 'OutOfStock'].map((status) {
-                  final isSelected = filter.stockStatus == status;
+                ...[
+                  {'id': 'Healthy', 'label': 'পর্যাপ্ত স্টক'},
+                  {'id': 'Low', 'label': 'কম স্টক'},
+                  {'id': 'Critical', 'label': 'খুবই কম স্টক'},
+                  {'id': 'OutOfStock', 'label': 'স্টক নেই'},
+                ].map((status) {
+                  final isSelected = filter.stockStatus == status['id'];
                   return Padding(
                     padding: const EdgeInsets.only(right: 8.0),
                     child: FilterChip(
-                      label: Text(status),
+                      label: Text(status['label']!),
                       selected: isSelected,
-                      selectedColor: _getStatusColor(status).withOpacity(0.2),
+                      selectedColor: _getStatusColor(status['id']!).withOpacity(0.2),
                       onSelected: (val) {
                         ref.read(productsFilterProvider.notifier).update(
-                              (s) => s.copyWith(stockStatus: val ? status : null),
+                              (s) => s.copyWith(stockStatus: val ? status['id'] : null),
                             );
                       },
                     ),
@@ -271,7 +266,6 @@ class _ProductsScreenState extends ConsumerState<ProductsScreen> {
     }
   }
 
-  // Grid widget (desktop)
   Widget _buildProductGridCard(BuildContext context, ProductWithDetails item, bool isSelected) {
     final theme = Theme.of(context);
     final product = item.product;
@@ -282,7 +276,7 @@ class _ProductsScreenState extends ConsumerState<ProductsScreen> {
       elevation: isSelected ? 4 : 0,
       color: isSelected ? theme.colorScheme.primaryContainer.withOpacity(0.4) : theme.colorScheme.surface,
       shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(16),
+        borderRadius: BorderRadius.circular(20),
         side: BorderSide(
           color: isSelected
               ? theme.colorScheme.primary
@@ -299,13 +293,12 @@ class _ProductsScreenState extends ConsumerState<ProductsScreen> {
             _showProductDetailsSheet(context, item);
           }
         },
-        borderRadius: BorderRadius.circular(16),
+        borderRadius: BorderRadius.circular(20),
         child: Padding(
           padding: const EdgeInsets.all(12.0),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              // Image or category icon row
               Expanded(
                 child: Stack(
                   children: [
@@ -313,15 +306,25 @@ class _ProductsScreenState extends ConsumerState<ProductsScreen> {
                       width: double.infinity,
                       decoration: BoxDecoration(
                         color: theme.colorScheme.surfaceVariant.withOpacity(0.4),
-                        borderRadius: BorderRadius.circular(12),
+                        borderRadius: BorderRadius.circular(14),
                       ),
-                      child: Center(
-                        child: Icon(
-                          Icons.shopping_bag_outlined,
-                          size: 40,
-                          color: theme.colorScheme.onSurfaceVariant.withOpacity(0.5),
-                        ),
-                      ),
+                      child: product.imagePath != null && File(product.imagePath!).existsSync()
+                          ? ClipRRect(
+                              borderRadius: BorderRadius.circular(14),
+                              child: Image.file(
+                                File(product.imagePath!),
+                                fit: BoxFit.cover,
+                                width: double.infinity,
+                                height: double.infinity,
+                              ),
+                            )
+                          : Center(
+                              child: Icon(
+                                Icons.shopping_bag_outlined,
+                                size: 40,
+                                color: theme.colorScheme.onSurfaceVariant.withOpacity(0.5),
+                              ),
+                            ),
                     ),
                     Positioned(
                       top: 4,
@@ -340,7 +343,6 @@ class _ProductsScreenState extends ConsumerState<ProductsScreen> {
                 ),
               ),
               const SizedBox(height: 8),
-              // Details
               Text(
                 product.name,
                 style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13),
@@ -348,11 +350,10 @@ class _ProductsScreenState extends ConsumerState<ProductsScreen> {
                 overflow: TextOverflow.ellipsis,
               ),
               Text(
-                product.brand ?? 'Generic',
+                product.brand ?? 'ব্র্যান্ড ছাড়া',
                 style: TextStyle(color: theme.colorScheme.onSurfaceVariant, fontSize: 11),
               ),
               const SizedBox(height: 6),
-              // Price and stock indicator
               Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
@@ -386,7 +387,6 @@ class _ProductsScreenState extends ConsumerState<ProductsScreen> {
     );
   }
 
-  // Slidable tile (mobile list view)
   Widget _buildProductSlidableTile(BuildContext context, ProductWithDetails item, bool isSelected) {
     final theme = Theme.of(context);
     final product = item.product;
@@ -403,14 +403,14 @@ class _ProductsScreenState extends ConsumerState<ProductsScreen> {
             backgroundColor: Colors.blue,
             foregroundColor: Colors.white,
             icon: Icons.edit,
-            label: 'Edit',
+            label: 'সংশোধন',
           ),
           SlidableAction(
             onPressed: (_) => _confirmSingleDelete(context, product.id, product.name),
             backgroundColor: Colors.red,
             foregroundColor: Colors.white,
             icon: Icons.delete,
-            label: 'Delete',
+            label: 'মুছুন',
           ),
         ],
       ),
@@ -437,15 +437,26 @@ class _ProductsScreenState extends ConsumerState<ProductsScreen> {
             }
           },
           leading: Container(
-            padding: const EdgeInsets.all(8),
+            width: 48,
+            height: 48,
             decoration: BoxDecoration(
               color: theme.colorScheme.surfaceVariant.withOpacity(0.4),
               borderRadius: BorderRadius.circular(10),
             ),
-            child: Icon(Icons.shopping_bag_outlined, color: theme.colorScheme.onSurfaceVariant),
+            child: product.imagePath != null && File(product.imagePath!).existsSync()
+                ? ClipRRect(
+                    borderRadius: BorderRadius.circular(10),
+                    child: Image.file(
+                      File(product.imagePath!),
+                      fit: BoxFit.cover,
+                      width: 48,
+                      height: 48,
+                    ),
+                  )
+                : Icon(Icons.shopping_bag_outlined, color: theme.colorScheme.onSurfaceVariant),
           ),
           title: Text(product.name, style: const TextStyle(fontWeight: FontWeight.bold)),
-          subtitle: Text('${product.brand ?? 'Generic'} • ${Formatters.currency(product.sellingPrice)}'),
+          subtitle: Text('${product.brand ?? "ব্র্যান্ড ছাড়া"} • ${Formatters.currency(product.sellingPrice)}'),
           trailing: Row(
             mainAxisSize: MainAxisSize.min,
             children: [
@@ -478,7 +489,6 @@ class _ProductsScreenState extends ConsumerState<ProductsScreen> {
     );
   }
 
-  // Product Details Bottom Sheet
   void _showProductDetailsSheet(BuildContext context, ProductWithDetails item) {
     final theme = Theme.of(context);
     final p = item.product;
@@ -512,6 +522,20 @@ class _ProductsScreenState extends ConsumerState<ProductsScreen> {
                     ),
                   ),
                   const SizedBox(height: 20),
+                  
+                  if (p.imagePath != null && File(p.imagePath!).existsSync()) ...[
+                    ClipRRect(
+                      borderRadius: BorderRadius.circular(16),
+                      child: Image.file(
+                        File(p.imagePath!),
+                        width: double.infinity,
+                        height: 200,
+                        fit: BoxFit.cover,
+                      ),
+                    ),
+                    const SizedBox(height: 16),
+                  ],
+
                   Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
@@ -531,29 +555,25 @@ class _ProductsScreenState extends ConsumerState<ProductsScreen> {
                     ],
                   ),
                   Text(
-                    p.brand ?? 'Brand: Generic',
+                    p.brand ?? 'ব্র্যান্ড: ব্র্যান্ড ছাড়া',
                     style: TextStyle(color: theme.colorScheme.onSurfaceVariant, fontSize: 16),
                   ),
                   const Divider(height: 32),
-                  _buildDetailRow(context, 'Barcode', p.barcode ?? 'None'),
-                  _buildDetailRow(context, 'Category', item.category?.name ?? 'Uncategorized'),
-                  _buildDetailRow(context, 'Buying Price', Formatters.currency(p.buyingPrice)),
-                  _buildDetailRow(context, 'Selling Price', Formatters.currency(p.sellingPrice)),
-                  _buildDetailRow(context, 'Current Stock', '${Formatters.number(p.currentStock)} ${p.unit}'),
-                  _buildDetailRow(context, 'Minimum Stock', '${Formatters.number(p.minimumStock)} ${p.unit}'),
-                  _buildDetailRow(context, 'Supplier', item.supplier?.name ?? 'None'),
-                  _buildDetailRow(context, 'Description', p.description ?? 'No description provided.'),
+                  _buildDetailRow(context, 'বারকোড', p.barcode ?? 'নেই'),
+                  _buildDetailRow(context, 'ক্যাটাগরি', item.category?.name ?? 'ক্যাটাগরি ছাড়া'),
+                  _buildDetailRow(context, 'ক্রয়মূল্য', Formatters.currency(p.buyingPrice)),
+                  _buildDetailRow(context, 'বিক্রয়মূল্য', Formatters.currency(p.sellingPrice)),
+                  _buildDetailRow(context, 'বর্তমান স্টক', '${Formatters.number(p.currentStock)} ${p.unit}'),
+                  _buildDetailRow(context, 'সর্বনিম্ন স্টক', '${Formatters.number(p.minimumStock)} ${p.unit}'),
+                  _buildDetailRow(context, 'বিবরণ', p.description ?? 'কোনো বিবরণ দেওয়া হয়নি।'),
                   const SizedBox(height: 32),
                   Row(
                     children: [
                       Expanded(
                         child: OutlinedButton.icon(
-                          onPressed: () {
-                            Navigator.pop(context);
-                            ref.read(productsRepositoryProvider).duplicateProduct(p.id);
-                          },
-                          icon: const Icon(Icons.copy),
-                          label: const Text('Duplicate'),
+                          onPressed: () => _confirmSingleDelete(context, p.id, p.name),
+                          icon: const Icon(Icons.delete_outline, color: Colors.red),
+                          label: const Text('মুছে ফেলুন', style: TextStyle(color: Colors.red)),
                         ),
                       ),
                       const SizedBox(width: 12),
@@ -564,7 +584,7 @@ class _ProductsScreenState extends ConsumerState<ProductsScreen> {
                             _showProductFormDialog(context, product: p);
                           },
                           icon: const Icon(Icons.edit),
-                          label: const Text('Edit Details'),
+                          label: const Text('তথ্য সংশোধন'),
                         ),
                       ),
                     ],
@@ -602,68 +622,66 @@ class _ProductsScreenState extends ConsumerState<ProductsScreen> {
     );
   }
 
-  // Single confirmation delete
   void _confirmSingleDelete(BuildContext context, String id, String name) {
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
-        title: const Text('Delete Product?'),
-        content: Text('Are you sure you want to delete "$name"? This will remove its history logs.'),
+        title: const Text('পণ্যটি কি মুছে ফেলবেন?'),
+        content: Text('আপনি কি নিশ্চিত যে "$name" মুছে ফেলতে চান? এর ফলে এই পণ্যের সব স্টক রিপোর্টও মুছে যাবে।'),
         actions: [
-          TextButton(onPressed: () => Navigator.pop(context), child: const Text('Cancel')),
+          TextButton(onPressed: () => Navigator.pop(context), child: const Text('বাতিল')),
           TextButton(
             onPressed: () {
               Navigator.pop(context);
+              Navigator.of(context).popUntil((route) => route.isFirst);
               ref.read(productsRepositoryProvider).deleteProduct(id);
             },
-            child: const Text('Delete', style: TextStyle(color: Colors.red)),
+            child: const Text('মুছে ফেলুন', style: TextStyle(color: Colors.red)),
           ),
         ],
       ),
     );
   }
 
-  // Bulk actions confirmation delete
   void _confirmBulkDelete(BuildContext context) {
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
-        title: const Text('Delete Selected Products?'),
-        content: Text('Are you sure you want to delete the ${_selectedIds.length} selected products?'),
+        title: const Text('সিলেক্ট করা পণ্য মুছে ফেলবেন?'),
+        content: Text('আপনি কি নিশ্চিত যে সিলেক্ট করা ${_selectedIds.length}টি পণ্য মুছে ফেলতে চান?'),
         actions: [
-          TextButton(onPressed: () => Navigator.pop(context), child: const Text('Cancel')),
+          TextButton(onPressed: () => Navigator.pop(context), child: const Text('বাতিল')),
           TextButton(
             onPressed: () {
               Navigator.pop(context);
               ref.read(productsRepositoryProvider).bulkDelete(_selectedIds.toList());
               _clearSelection();
             },
-            child: const Text('Delete All', style: TextStyle(color: Colors.red)),
+            child: const Text('সব মুছুন', style: TextStyle(color: Colors.red)),
           ),
         ],
       ),
     );
   }
 
-  // Bulk stock update dialog
   void _showBulkStockUpdateDialog(BuildContext context) {
     final qtyController = TextEditingController();
-    String reason = 'Bulk Adjustment';
+    String reason = 'স্টক সমন্বয়';
 
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
-        title: const Text('Bulk Stock Adjustment'),
+        title: const Text('সব পণ্যের স্টক পরিবর্তন'),
         content: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Text('Adjust stock for ${_selectedIds.length} products. Use positive numbers to add, negative numbers to subtract.'),
+            Text('সিলেক্ট করা ${_selectedIds.length}টি পণ্যের স্টক সমন্বয় করুন। যোগ করতে পজিটিভ নম্বর এবং কমাতে মাইনাস (-) নম্বর লিখুন।'),
             const SizedBox(height: 16),
             TextField(
               controller: qtyController,
               decoration: const InputDecoration(
-                labelText: 'Adjustment Amount',
-                hintText: 'e.g. 10 or -5',
+                labelText: 'পরিবর্তনের পরিমাণ',
+                hintText: 'যেমন: ১০ বা -৫',
                 border: OutlineInputBorder(),
               ),
               keyboardType: const TextInputType.numberWithOptions(signed: true, decimal: true),
@@ -671,11 +689,11 @@ class _ProductsScreenState extends ConsumerState<ProductsScreen> {
             const SizedBox(height: 12),
             DropdownButtonFormField<String>(
               value: reason,
-              decoration: const InputDecoration(labelText: 'Reason', border: OutlineInputBorder()),
+              decoration: const InputDecoration(labelText: 'কারণ', border: OutlineInputBorder()),
               items: const [
-                DropdownMenuItem(value: 'Bulk Adjustment', child: Text('Stock Adjustment')),
-                DropdownMenuItem(value: 'Stock In', child: Text('Purchase / Stock In')),
-                DropdownMenuItem(value: 'Stock Out', child: Text('Write Off / Stock Out')),
+                DropdownMenuItem(value: 'স্টক সমন্বয়', child: Text('স্টক সমন্বয়')),
+                DropdownMenuItem(value: 'নতুন স্টক যোগ', child: Text('নতুন স্টক যোগ')),
+                DropdownMenuItem(value: 'স্টক আউট/ক্ষতি', child: Text('স্টক আউট/ক্ষতি')),
               ],
               onChanged: (val) {
                 if (val != null) reason = val;
@@ -684,7 +702,7 @@ class _ProductsScreenState extends ConsumerState<ProductsScreen> {
           ],
         ),
         actions: [
-          TextButton(onPressed: () => Navigator.pop(context), child: const Text('Cancel')),
+          TextButton(onPressed: () => Navigator.pop(context), child: const Text('বাতিল')),
           ElevatedButton(
             onPressed: () {
               final amt = double.tryParse(qtyController.text);
@@ -694,14 +712,13 @@ class _ProductsScreenState extends ConsumerState<ProductsScreen> {
                 _clearSelection();
               }
             },
-            child: const Text('Apply'),
+            child: const Text('প্রয়োগ করুন'),
           ),
         ],
       ),
     );
   }
 
-  // Product Add / Edit Dialog Form
   void _showProductFormDialog(BuildContext context, {Product? product}) {
     final isEdit = product != null;
     final nameController = TextEditingController(text: product?.name);
@@ -715,7 +732,7 @@ class _ProductsScreenState extends ConsumerState<ProductsScreen> {
 
     String selectedUnit = product?.unit ?? 'pcs';
     String? selectedCategoryId = product?.categoryId;
-    String? selectedSupplierId = product?.supplierId;
+    String? imagePath = product?.imagePath;
 
     String? nameError;
 
@@ -726,241 +743,304 @@ class _ProductsScreenState extends ConsumerState<ProductsScreen> {
         return Consumer(
           builder: (context, ref, child) {
             final categoriesAsync = ref.watch(categoriesControllerProvider);
-            final suppliersAsync = ref.watch(suppliersControllerProvider);
+            final theme = Theme.of(context);
             
             return StatefulBuilder(
               builder: (context, setDialogState) {
                 return AlertDialog(
-              title: Text(isEdit ? 'Edit Product Details' : 'Register New Product'),
-              content: SizedBox(
-                width: 500,
-                child: SingleChildScrollView(
-                  child: Column(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      // Name
-                      TextField(
-                        controller: nameController,
-                        decoration: InputDecoration(
-                          labelText: 'Product Name *', 
-                          border: const OutlineInputBorder(),
-                          errorText: nameError,
-                        ),
-                      ),
-                      const SizedBox(height: 12),
-                      // Barcode with mock scanner icon
-                      Row(
+                  title: Text(isEdit ? 'পণ্যের বিবরণ সংশোধন' : 'নতুন পণ্য যোগ করুন'),
+                  content: SizedBox(
+                    width: 500,
+                    child: SingleChildScrollView(
+                      child: Column(
+                        mainAxisSize: MainAxisSize.min,
                         children: [
-                          Expanded(
-                            child: TextField(
-                              controller: barcodeController,
-                              decoration: const InputDecoration(
-                                labelText: 'Barcode (Optional)',
-                                border: OutlineInputBorder(),
-                              ),
-                            ),
-                          ),
-                          const SizedBox(width: 8),
-                          IconButton.filledTonal(
-                            icon: const Icon(Icons.qr_code_scanner),
-                            tooltip: 'Mock Barcode Scan',
-                            onPressed: () {
-                              // Generate a random 12-digit mock barcode
-                              final randomBarcode = List.generate(12, (_) => (Uuid().v4().hashCode % 10).toString()).join();
-                              setDialogState(() {
-                                barcodeController.text = randomBarcode;
-                              });
+                          // Image Selector
+                          GestureDetector(
+                            onTap: () async {
+                              try {
+                                final picker = ImagePicker();
+                                final XFile? image = await picker.pickImage(
+                                  source: ImageSource.gallery,
+                                  maxWidth: 600,
+                                  maxHeight: 600,
+                                );
+                                if (image != null) {
+                                  final appDir = await getApplicationDocumentsDirectory();
+                                  final filename = 'prod_${DateTime.now().millisecondsSinceEpoch}${p.extension(image.path)}';
+                                  final savedFile = await File(image.path).copy(p.join(appDir.path, filename));
+                                  setDialogState(() {
+                                    imagePath = savedFile.path;
+                                  });
+                                }
+                              } catch (e) {
+                                ScaffoldMessenger.of(context).showSnackBar(
+                                  SnackBar(content: Text('ছবি আপলোড ব্যর্থ হয়েছে: $e')),
+                                );
+                              }
                             },
-                          ),
-                        ],
-                      ),
-                      const SizedBox(height: 12),
-                      // Brand & Unit
-                      Row(
-                        children: [
-                          Expanded(
-                            child: TextField(
-                              controller: brandController,
-                              decoration: const InputDecoration(labelText: 'Brand / Label', border: OutlineInputBorder()),
-                            ),
-                          ),
-                          const SizedBox(width: 12),
-                          Expanded(
-                            child: DropdownButtonFormField<String>(
-                              value: selectedUnit,
-                              isExpanded: true,
-                              decoration: const InputDecoration(labelText: 'Unit', border: OutlineInputBorder()),
-                              items: const [
-                                DropdownMenuItem(value: 'pcs', child: Text('Pieces (pcs)')),
-                                DropdownMenuItem(value: 'kg', child: Text('Kilograms (kg)')),
-                                DropdownMenuItem(value: 'pack', child: Text('Pack')),
-                                DropdownMenuItem(value: 'liter', child: Text('Liter (L)')),
-                                DropdownMenuItem(value: 'bag', child: Text('Bag')),
-                              ],
-                              onChanged: (val) {
-                                if (val != null) setDialogState(() => selectedUnit = val);
-                              },
-                            ),
-                          ),
-                        ],
-                      ),
-                      const SizedBox(height: 12),
-                      // Category dropdown
-                      categoriesAsync.maybeWhen(
-                        data: (categories) => DropdownButtonFormField<String>(
-                          value: selectedCategoryId,
-                          isExpanded: true,
-                          decoration: const InputDecoration(labelText: 'Category', border: OutlineInputBorder()),
-                          items: [
-                            const DropdownMenuItem(value: null, child: Text('Uncategorized')),
-                            ...categories.map((c) => DropdownMenuItem(value: c.id, child: Text(c.name))),
-                          ],
-                          onChanged: (val) => setDialogState(() => selectedCategoryId = val),
-                        ),
-                        orElse: () => const SizedBox.shrink(),
-                      ),
-                      const SizedBox(height: 12),
-                      // Buying & Selling Price
-                      Row(
-                        children: [
-                          Expanded(
-                            child: TextField(
-                              controller: buyPriceController,
-                              decoration: const InputDecoration(labelText: 'Buying Cost *', border: OutlineInputBorder(), prefixText: '\$'),
-                              keyboardType: TextInputType.number,
-                            ),
-                          ),
-                          const SizedBox(width: 12),
-                          Expanded(
-                            child: TextField(
-                              controller: sellPriceController,
-                              decoration: const InputDecoration(labelText: 'Selling Price *', border: OutlineInputBorder(), prefixText: '\$'),
-                              keyboardType: TextInputType.number,
-                            ),
-                          ),
-                        ],
-                      ),
-                      const SizedBox(height: 12),
-                      // Stock Levels (Stock disabled in Edit - must go through Stock Management)
-                      Row(
-                        children: [
-                          Expanded(
-                            child: TextField(
-                              controller: stockController,
-                              enabled: !isEdit,
-                              decoration: InputDecoration(
-                                labelText: isEdit ? 'Stock (Edit in Inv)' : 'Initial Stock *',
-                                border: const OutlineInputBorder(),
+                            child: Container(
+                              height: 120,
+                              width: double.infinity,
+                              decoration: BoxDecoration(
+                                color: theme.colorScheme.surfaceVariant.withOpacity(0.3),
+                                borderRadius: BorderRadius.circular(12),
+                                border: Border.all(
+                                  color: theme.colorScheme.outlineVariant.withOpacity(0.5),
+                                ),
                               ),
-                              keyboardType: TextInputType.number,
+                              child: imagePath != null && File(imagePath!).existsSync()
+                                  ? Stack(
+                                      children: [
+                                        ClipRRect(
+                                          borderRadius: BorderRadius.circular(12),
+                                          child: Image.file(
+                                            File(imagePath!),
+                                            width: double.infinity,
+                                            height: 120,
+                                            fit: BoxFit.cover,
+                                          ),
+                                        ),
+                                        Positioned(
+                                          right: 8,
+                                          top: 8,
+                                          child: CircleAvatar(
+                                            backgroundColor: Colors.black54,
+                                            radius: 16,
+                                            child: IconButton(
+                                              padding: EdgeInsets.zero,
+                                              icon: const Icon(Icons.close, size: 16, color: Colors.white),
+                                              onPressed: () {
+                                                setDialogState(() {
+                                                  imagePath = null;
+                                                });
+                                              },
+                                            ),
+                                          ),
+                                        ),
+                                      ],
+                                    )
+                                  : Column(
+                                      mainAxisAlignment: MainAxisAlignment.center,
+                                      children: [
+                                        Icon(
+                                          Icons.add_a_photo_outlined,
+                                          size: 32,
+                                          color: theme.colorScheme.onSurfaceVariant.withOpacity(0.6),
+                                        ),
+                                        const SizedBox(height: 8),
+                                        Text(
+                                          'পণ্যের ছবি যোগ করুন',
+                                          style: TextStyle(
+                                            fontSize: 12,
+                                            fontWeight: FontWeight.w600,
+                                            color: theme.colorScheme.onSurfaceVariant.withOpacity(0.8),
+                                          ),
+                                        ),
+                                      ],
+                                    ),
                             ),
                           ),
-                          const SizedBox(width: 12),
-                          Expanded(
-                            child: TextField(
-                              controller: minStockController,
-                              decoration: const InputDecoration(labelText: 'Min Stock Level *', border: OutlineInputBorder()),
-                              keyboardType: TextInputType.number,
+                          const SizedBox(height: 16),
+                          
+                          TextField(
+                            controller: nameController,
+                            decoration: InputDecoration(
+                              labelText: 'পণ্যের নাম *', 
+                              border: const OutlineInputBorder(),
+                              errorText: nameError,
                             ),
+                          ),
+                          const SizedBox(height: 12),
+                          Row(
+                            children: [
+                              Expanded(
+                                child: TextField(
+                                  controller: barcodeController,
+                                  decoration: const InputDecoration(
+                                    labelText: 'বারকোড (ঐচ্ছিক)',
+                                    border: OutlineInputBorder(),
+                                  ),
+                                ),
+                              ),
+                              const SizedBox(width: 8),
+                              IconButton.filledTonal(
+                                icon: const Icon(Icons.qr_code_scanner),
+                                tooltip: 'বারকোড জেনারেট',
+                                onPressed: () {
+                                  final randomBarcode = List.generate(12, (_) => (Uuid().v4().hashCode % 10).toString()).join();
+                                  setDialogState(() {
+                                    barcodeController.text = randomBarcode;
+                                  });
+                                },
+                              ),
+                            ],
+                          ),
+                          const SizedBox(height: 12),
+                          Row(
+                            children: [
+                              Expanded(
+                                child: TextField(
+                                  controller: brandController,
+                                  decoration: const InputDecoration(labelText: 'ব্র্যান্ড/লেবেল (ঐচ্ছিক)', border: OutlineInputBorder()),
+                                ),
+                              ),
+                              const SizedBox(width: 12),
+                              Expanded(
+                                child: DropdownButtonFormField<String>(
+                                  value: selectedUnit,
+                                  isExpanded: true,
+                                  decoration: const InputDecoration(labelText: 'একক', border: OutlineInputBorder()),
+                                  items: const [
+                                    DropdownMenuItem(value: 'pcs', child: Text('টি (pcs)')),
+                                    DropdownMenuItem(value: 'kg', child: Text('কেজি (kg)')),
+                                    DropdownMenuItem(value: 'pack', child: Text('প্যাকেট (pack)')),
+                                    DropdownMenuItem(value: 'liter', child: Text('লিটার (liter)')),
+                                    DropdownMenuItem(value: 'bag', child: Text('ব্যাগ (bag)')),
+                                  ],
+                                  onChanged: (val) {
+                                    if (val != null) setDialogState(() => selectedUnit = val);
+                                  },
+                                ),
+                              ),
+                            ],
+                          ),
+                          const SizedBox(height: 12),
+                          categoriesAsync.maybeWhen(
+                            data: (categories) => DropdownButtonFormField<String>(
+                              value: selectedCategoryId,
+                              isExpanded: true,
+                              decoration: const InputDecoration(labelText: 'ক্যাটাগরি সিলেক্ট করুন', border: OutlineInputBorder()),
+                              items: [
+                                const DropdownMenuItem(value: null, child: Text('ক্যাটাগরি ছাড়া')),
+                                ...categories.map((c) => DropdownMenuItem(value: c.id, child: Text(c.name))),
+                              ],
+                              onChanged: (val) => setDialogState(() => selectedCategoryId = val),
+                            ),
+                            orElse: () => const SizedBox.shrink(),
+                          ),
+                          const SizedBox(height: 12),
+                          Row(
+                            children: [
+                              Expanded(
+                                child: TextField(
+                                  controller: buyPriceController,
+                                  decoration: const InputDecoration(labelText: 'ক্রয়মূল্য (টাকা) *', border: OutlineInputBorder(), prefixText: '৳'),
+                                  keyboardType: TextInputType.number,
+                                ),
+                              ),
+                              const SizedBox(width: 12),
+                              Expanded(
+                                child: TextField(
+                                  controller: sellPriceController,
+                                  decoration: const InputDecoration(labelText: 'বিক্রয়মূল্য (টাকা) *', border: OutlineInputBorder(), prefixText: '৳'),
+                                  keyboardType: TextInputType.number,
+                                ),
+                              ),
+                            ],
+                          ),
+                          const SizedBox(height: 12),
+                          Row(
+                            children: [
+                              Expanded(
+                                child: TextField(
+                                  controller: stockController,
+                                  enabled: !isEdit,
+                                  decoration: InputDecoration(
+                                    labelText: isEdit ? 'স্টক পরিবর্তন হবে না' : 'প্রারম্ভিক স্টক *',
+                                    border: const OutlineInputBorder(),
+                                  ),
+                                  keyboardType: TextInputType.number,
+                                ),
+                              ),
+                              const SizedBox(width: 12),
+                              Expanded(
+                                child: TextField(
+                                  controller: minStockController,
+                                  decoration: const InputDecoration(labelText: 'সর্বনিম্ন স্টক *', border: OutlineInputBorder()),
+                                  keyboardType: TextInputType.number,
+                                ),
+                              ),
+                            ],
+                          ),
+                          const SizedBox(height: 12),
+                          TextField(
+                            controller: descController,
+                            maxLines: 2,
+                            decoration: const InputDecoration(labelText: 'পণ্যের বিবরণ (ঐচ্ছিক)', border: OutlineInputBorder()),
                           ),
                         ],
                       ),
-                      const SizedBox(height: 12),
-                      // Supplier dropdown
-                      suppliersAsync.maybeWhen(
-                        data: (suppliers) => DropdownButtonFormField<String>(
-                          value: selectedSupplierId,
-                          isExpanded: true,
-                          decoration: const InputDecoration(labelText: 'Supplier', border: OutlineInputBorder()),
-                          items: [
-                            const DropdownMenuItem(value: null, child: Text('No Supplier')),
-                            ...suppliers.map((s) => DropdownMenuItem(value: s.id, child: Text(s.name))),
-                          ],
-                          onChanged: (val) => setDialogState(() => selectedSupplierId = val),
-                        ),
-                        orElse: () => const SizedBox.shrink(),
-                      ),
-                      const SizedBox(height: 12),
-                      // Description
-                      TextField(
-                        controller: descController,
-                        maxLines: 2,
-                        decoration: const InputDecoration(labelText: 'Description', border: OutlineInputBorder()),
-                      ),
-                    ],
+                    ),
                   ),
-                ),
-              ),
-              actions: [
-                TextButton(
-                  onPressed: () => Navigator.pop(context),
-                  child: const Text('Cancel'),
-                ),
-                ElevatedButton(
-                  onPressed: () {
-                    // Validations
-                    if (nameController.text.trim().isEmpty) {
-                      setDialogState(() {
-                        nameError = 'Product name is required';
-                      });
-                      return;
-                    }
-                    final buyVal = double.tryParse(buyPriceController.text) ?? 0.0;
-                    final sellVal = double.tryParse(sellPriceController.text) ?? 0.0;
-                    final stockVal = double.tryParse(stockController.text) ?? 0.0;
-                    final minVal = double.tryParse(minStockController.text) ?? 0.0;
+                  actions: [
+                    TextButton(
+                      onPressed: () => Navigator.pop(context),
+                      child: const Text('বাতিল'),
+                    ),
+                    ElevatedButton(
+                      onPressed: () {
+                        if (nameController.text.trim().isEmpty) {
+                          setDialogState(() {
+                            nameError = 'পণ্যের নাম আবশ্যক';
+                          });
+                          return;
+                        }
+                        final buyVal = double.tryParse(buyPriceController.text) ?? 0.0;
+                        final sellVal = double.tryParse(sellPriceController.text) ?? 0.0;
+                        final stockVal = double.tryParse(stockController.text) ?? 0.0;
+                        final minVal = double.tryParse(minStockController.text) ?? 0.0;
 
-                    final repo = ref.read(productsRepositoryProvider);
+                        final repo = ref.read(productsRepositoryProvider);
 
-                    if (isEdit) {
-                      final comp = ProductsCompanion(
-                        name: drift.Value(nameController.text.trim()),
-                        barcode: drift.Value(barcodeController.text.trim().isEmpty ? null : barcodeController.text.trim()),
-                        brand: drift.Value(brandController.text.trim().isEmpty ? null : brandController.text.trim()),
-                        categoryId: drift.Value(selectedCategoryId),
-                        unit: drift.Value(selectedUnit),
-                        buyingPrice: drift.Value(buyVal),
-                        sellingPrice: drift.Value(sellVal),
-                        minimumStock: drift.Value(minVal),
-                        supplierId: drift.Value(selectedSupplierId),
-                        description: drift.Value(descController.text.trim().isEmpty ? null : descController.text.trim()),
-                      );
-                      repo.updateProduct(product.id, comp);
-                    } else {
-                      final newId = const Uuid().v4();
-                      final comp = ProductsCompanion(
-                        id: drift.Value(newId),
-                        name: drift.Value(nameController.text.trim()),
-                        barcode: drift.Value(barcodeController.text.trim().isEmpty ? null : barcodeController.text.trim()),
-                        brand: drift.Value(brandController.text.trim().isEmpty ? null : brandController.text.trim()),
-                        categoryId: drift.Value(selectedCategoryId),
-                        unit: drift.Value(selectedUnit),
-                        buyingPrice: drift.Value(buyVal),
-                        sellingPrice: drift.Value(sellVal),
-                        currentStock: drift.Value(stockVal),
-                        minimumStock: drift.Value(minVal),
-                        supplierId: drift.Value(selectedSupplierId),
-                        description: drift.Value(descController.text.trim().isEmpty ? null : descController.text.trim()),
-                      );
-                      repo.addProduct(comp);
-                    }
+                        if (isEdit) {
+                          final comp = ProductsCompanion(
+                            name: drift.Value(nameController.text.trim()),
+                            barcode: drift.Value(barcodeController.text.trim().isEmpty ? null : barcodeController.text.trim()),
+                            brand: drift.Value(brandController.text.trim().isEmpty ? null : brandController.text.trim()),
+                            categoryId: drift.Value(selectedCategoryId),
+                            unit: drift.Value(selectedUnit),
+                            buyingPrice: drift.Value(buyVal),
+                            sellingPrice: drift.Value(sellVal),
+                            minimumStock: drift.Value(minVal),
+                            imagePath: drift.Value(imagePath),
+                            description: drift.Value(descController.text.trim().isEmpty ? null : descController.text.trim()),
+                          );
+                          repo.updateProduct(product.id, comp);
+                        } else {
+                          final newId = const Uuid().v4();
+                          final comp = ProductsCompanion(
+                            id: drift.Value(newId),
+                            name: drift.Value(nameController.text.trim()),
+                            barcode: drift.Value(barcodeController.text.trim().isEmpty ? null : barcodeController.text.trim()),
+                            brand: drift.Value(brandController.text.trim().isEmpty ? null : brandController.text.trim()),
+                            categoryId: drift.Value(selectedCategoryId),
+                            unit: drift.Value(selectedUnit),
+                            buyingPrice: drift.Value(buyVal),
+                            sellingPrice: drift.Value(sellVal),
+                            currentStock: drift.Value(stockVal),
+                            minimumStock: drift.Value(minVal),
+                            imagePath: drift.Value(imagePath),
+                            description: drift.Value(descController.text.trim().isEmpty ? null : descController.text.trim()),
+                          );
+                          repo.addProduct(comp);
+                        }
 
-                    Navigator.pop(context);
-                  },
-                  child: const Text('Save'),
-                ),
-              ],
+                        Navigator.pop(context);
+                      },
+                      child: const Text('সংরক্ষণ করুন'),
+                    ),
+                  ],
+                );
+              },
             );
           },
         );
       },
     );
-  },
-);
   }
 }
 
-// Reusable Empty State Widget
 class _EmptyProductsState extends StatelessWidget {
   const _EmptyProductsState();
 
@@ -980,12 +1060,12 @@ class _EmptyProductsState extends StatelessWidget {
             ),
             const SizedBox(height: 16),
             Text(
-              'No Products Found',
+              'কোনো পণ্য পাওয়া যায়নি',
               style: theme.textTheme.titleLarge?.copyWith(fontWeight: FontWeight.bold),
             ),
             const SizedBox(height: 8),
             Text(
-              'Create new categories and register items to populate the inventory directory.',
+              'নতুন পণ্য যোগ করতে উপরে ডানদিকের বাটনটিতে ক্লিক করুন।',
               style: TextStyle(color: theme.colorScheme.onSurfaceVariant),
               textAlign: TextAlign.center,
             ),

@@ -26,7 +26,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
   final _shopNameController = TextEditingController();
   final _taxRateController = TextEditingController();
   final _pinController = TextEditingController();
-  String _selectedCurrency = 'USD';
+  String _selectedCurrency = 'BDT';
 
   @override
   Widget build(BuildContext context) {
@@ -35,13 +35,12 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
 
     return Scaffold(
       appBar: AppBar(
-        title: const Text('App Settings & Backups', style: TextStyle(fontWeight: FontWeight.bold)),
+        title: const Text('অ্যাপ সেটিংস ও ব্যাকআপ', style: TextStyle(fontWeight: FontWeight.bold)),
       ),
       body: settingsAsync.when(
         loading: () => const Center(child: CircularProgressIndicator()),
-        error: (err, st) => Center(child: Text('Error loading settings: $err')),
+        error: (err, st) => Center(child: Text('সেটিংস লোড করতে ত্রুটি: $err')),
         data: (settings) {
-          // Initialize controllers if empty
           if (_shopNameController.text.isEmpty) {
             _shopNameController.text = settings.shopName;
             _taxRateController.text = settings.taxRate.toString();
@@ -54,7 +53,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 // Theme settings section
-                Text('Display & Themes', style: theme.textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold)),
+                Text('ডিসপ্লে ও থিম', style: theme.textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold)),
                 const SizedBox(height: 12),
                 Card(
                   elevation: 0,
@@ -64,8 +63,8 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                   ),
                   child: ListTile(
                     leading: const Icon(Icons.dark_mode_outlined),
-                    title: const Text('Dark Theme Mode'),
-                    subtitle: const Text('Toggle between dark and light workspace styling'),
+                    title: const Text('ডার্ক থিম মোড'),
+                    subtitle: const Text('সাদা বা কালো স্ক্রিন মোড পরিবর্তন করুন'),
                     trailing: Switch(
                       value: settings.isDarkMode,
                       onChanged: (val) {
@@ -77,7 +76,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                 const SizedBox(height: 24),
 
                 // Shop settings section
-                Text('Shop Profile Metadata', style: theme.textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold)),
+                Text('দোকানের প্রোফাইল', style: theme.textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold)),
                 const SizedBox(height: 12),
                 Card(
                   elevation: 0,
@@ -91,7 +90,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                       children: [
                         TextField(
                           controller: _shopNameController,
-                          decoration: const InputDecoration(labelText: 'Shop Name', border: OutlineInputBorder()),
+                          decoration: const InputDecoration(labelText: 'দোকানের নাম', border: OutlineInputBorder()),
                         ),
                         const SizedBox(height: 12),
                         Row(
@@ -99,12 +98,11 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                             Expanded(
                               child: DropdownButtonFormField<String>(
                                 value: _selectedCurrency,
-                                decoration: const InputDecoration(labelText: 'Currency Symbol', border: OutlineInputBorder()),
+                                decoration: const InputDecoration(labelText: 'মুদ্রার প্রতীক', border: OutlineInputBorder()),
                                 items: const [
+                                  DropdownMenuItem(value: 'BDT', child: Text('BDT (৳)')),
                                   DropdownMenuItem(value: 'USD', child: Text('USD (\$)')),
                                   DropdownMenuItem(value: 'EUR', child: Text('EUR (€)')),
-                                  DropdownMenuItem(value: 'GBP', child: Text('GBP (£)')),
-                                  DropdownMenuItem(value: 'BDT', child: Text('BDT (৳)')),
                                 ],
                                 onChanged: (val) {
                                   if (val != null) setState(() => _selectedCurrency = val);
@@ -116,7 +114,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                               child: TextField(
                                 controller: _taxRateController,
                                 decoration: const InputDecoration(
-                                  labelText: 'Tax Rate (%)',
+                                  labelText: 'ভ্যাট হার (%)',
                                   border: OutlineInputBorder(),
                                 ),
                                 keyboardType: TextInputType.number,
@@ -139,12 +137,12 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                                     );
                                 if (context.mounted) {
                                   ScaffoldMessenger.of(context).showSnackBar(
-                                    const SnackBar(content: Text('Shop settings updated!')),
+                                    const SnackBar(content: Text('দোকানের প্রোফাইল আপডেট করা হয়েছে!')),
                                   );
                                 }
                               }
                             },
-                            child: const Text('Update Profile'),
+                            child: const Text('প্রোফাইল সংরক্ষণ করুন'),
                           ),
                         ),
                       ],
@@ -154,7 +152,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                 const SizedBox(height: 24),
 
                 // Category management shortcuts
-                Text('Catalog Categories', style: theme.textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold)),
+                Text('পণ্যের ক্যাটাগরি', style: theme.textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold)),
                 const SizedBox(height: 12),
                 Card(
                   elevation: 0,
@@ -164,8 +162,8 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                   ),
                   child: ListTile(
                     leading: const Icon(Icons.category_outlined),
-                    title: const Text('Manage Catalog Categories'),
-                    subtitle: const Text('Add, edit, or delete classifications for products'),
+                    title: const Text('পণ্যের ক্যাটাগরি ম্যানেজ করুন'),
+                    subtitle: const Text('নতুন ক্যাটাগরি তৈরি, সংশোধন বা মুছে ফেলুন'),
                     trailing: const Icon(Icons.arrow_forward_ios, size: 14),
                     onTap: () => _showCategoryManagementDialog(context),
                   ),
@@ -173,7 +171,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                 const SizedBox(height: 24),
 
                 // Security admin lock code
-                Text('Security & Admin Access', style: theme.textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold)),
+                Text('নিরাপত্তা ও অ্যাডমিন পিন', style: theme.textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold)),
                 const SizedBox(height: 12),
                 Card(
                   elevation: 0,
@@ -186,7 +184,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        const Text('Change Admin Terminal PIN (4-Digits)', style: TextStyle(fontWeight: FontWeight.w500)),
+                        const Text('৪-সংখ্যার অ্যাডমিন পিন পরিবর্তন করুন', style: TextStyle(fontWeight: FontWeight.w500)),
                         const SizedBox(height: 12),
                         Row(
                           children: [
@@ -194,7 +192,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                               child: TextField(
                                 controller: _pinController,
                                 decoration: const InputDecoration(
-                                  labelText: 'New 4-Digit PIN',
+                                  labelText: 'নতুন ৪-সংখ্যার পিন',
                                   border: OutlineInputBorder(),
                                   counterText: '',
                                 ),
@@ -213,16 +211,16 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                                   _pinController.clear();
                                   if (context.mounted) {
                                     ScaffoldMessenger.of(context).showSnackBar(
-                                      const SnackBar(content: Text('Admin PIN code changed successfully!')),
+                                      const SnackBar(content: Text('অ্যাডমিন পিন পরিবর্তন সফল হয়েছে!')),
                                     );
                                   }
                                 } else {
                                   ScaffoldMessenger.of(context).showSnackBar(
-                                    const SnackBar(content: Text('PIN must be exactly 4 digits.')),
+                                    const SnackBar(content: Text('পিন অবশ্যই ৪-সংখ্যার হতে হবে।')),
                                   );
                                 }
                               },
-                              child: const Text('Change PIN'),
+                              child: const Text('পিন পরিবর্তন'),
                             ),
                           ],
                         ),
@@ -233,7 +231,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                 const SizedBox(height: 24),
 
                 // Backup settings section
-                Text('Backup & Database Restore', style: theme.textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold)),
+                Text('ব্যাকআপ ও ডেটা পুনরুদ্ধার', style: theme.textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold)),
                 const SizedBox(height: 12),
                 Card(
                   elevation: 0,
@@ -247,8 +245,8 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                       children: [
                         ListTile(
                           contentPadding: EdgeInsets.zero,
-                          title: const Text('Export JSON Database'),
-                          subtitle: const Text('Downloads SQLite data tables structure to a JSON backup file'),
+                          title: const Text('ডেটা ব্যাকআপ ফাইল এক্সপোর্ট (JSON)'),
+                          subtitle: const Text('সম্পূর্ণ ডেটা একটি JSON ফাইলে সংরক্ষণ করুন'),
                           trailing: IconButton.filledTonal(
                             icon: const Icon(Icons.cloud_upload_outlined),
                             onPressed: () => _exportDatabaseBackup(context),
@@ -257,8 +255,8 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                         const Divider(),
                         ListTile(
                           contentPadding: EdgeInsets.zero,
-                          title: const Text('Import JSON Database'),
-                          subtitle: const Text('Select a previously exported JSON backup to override local database tables'),
+                          title: const Text('ব্যাকআপ ফাইল রিস্টোর (JSON)'),
+                          subtitle: const Text('পূর্বে এক্সপোর্ট করা JSON ফাইল দিয়ে ডেটা রিস্টোর করুন'),
                           trailing: IconButton.filledTonal(
                             icon: const Icon(Icons.cloud_download_outlined),
                             onPressed: () => _importDatabaseBackup(context),
@@ -267,8 +265,8 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                         const Divider(),
                         ListTile(
                           contentPadding: EdgeInsets.zero,
-                          title: const Text('Load Demo Conveniences Data'),
-                          subtitle: const Text('Overwrites database tables with high-fidelity sample grocery items and category structures'),
+                          title: const Text('পরীক্ষামূলক ডেমো ডেটা লোড করুন'),
+                          subtitle: const Text('অ্যাপ বোঝার জন্য ডেমো পণ্যের তালিকা ও হিসাব লোড করুন'),
                           trailing: IconButton.filledTonal(
                             icon: const Icon(Icons.insights),
                             onPressed: () => _loadDemoStoreData(context),
@@ -286,12 +284,12 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
     );
   }
 
-  // Dialog to CRUD Categories
+  // Dialog Categories CRUD
   void _showCategoryManagementDialog(BuildContext context) {
     final theme = Theme.of(context);
     final catNameController = TextEditingController();
     String selectedIcon = 'local_cafe';
-    String selectedColor = '0xFF008060'; // Hex string
+    String selectedColor = '0xFF008060';
 
     showDialog(
       context: context,
@@ -301,17 +299,16 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
             final categoriesAsync = ref.watch(categoriesControllerProvider);
 
             return AlertDialog(
-              title: const Text('Manage Categories'),
+              title: const Text('ক্যাটাগরি সমূহ ম্যানেজ করুন'),
               content: SizedBox(
                 width: 400,
                 child: Column(
                   mainAxisSize: MainAxisSize.min,
                   children: [
-                    // Categories list
                     Flexible(
                       child: categoriesAsync.maybeWhen(
                         data: (list) {
-                          if (list.isEmpty) return const Padding(padding: EdgeInsets.all(16.0), child: Text('No categories created.'));
+                          if (list.isEmpty) return const Padding(padding: EdgeInsets.all(16.0), child: Text('কোনো ক্যাটাগরি তৈরি করা হয়নি।'));
                           return ListView.separated(
                             shrinkWrap: true,
                             itemCount: list.length,
@@ -340,14 +337,13 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                     ),
                     const Divider(),
                     const SizedBox(height: 8),
-                    const Text('Create New Category', style: TextStyle(fontWeight: FontWeight.bold)),
+                    const Text('নতুন ক্যাটাগরি তৈরি করুন', style: TextStyle(fontWeight: FontWeight.bold)),
                     const SizedBox(height: 12),
                     TextField(
                       controller: catNameController,
-                      decoration: const InputDecoration(labelText: 'Category Name', border: OutlineInputBorder()),
+                      decoration: const InputDecoration(labelText: 'ক্যাটাগরির নাম', border: OutlineInputBorder()),
                     ),
                     const SizedBox(height: 10),
-                    // Icon Select Row
                     Row(
                       mainAxisAlignment: MainAxisAlignment.spaceEvenly,
                       children: [
@@ -379,15 +375,14 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                       }).toList(),
                     ),
                     const SizedBox(height: 10),
-                    // Color Select Row
                     Row(
                       mainAxisAlignment: MainAxisAlignment.spaceEvenly,
                       children: [
-                        '0xFF008060', // Soft Green
-                        '0xFFFF8C00', // Dark Orange
-                        '0xFF4682B4', // Steel Blue
-                        '0xFFDAA520', // Goldenrod
-                        '0xFFBA55D3', // Medium Orchid
+                        '0xFF008060',
+                        '0xFFFF8C00',
+                        '0xFF4682B4',
+                        '0xFFDAA520',
+                        '0xFFBA55D3',
                       ].map((hexStr) {
                         final isSelected = selectedColor == hexStr;
                         return InkWell(
@@ -419,14 +414,14 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                             catNameController.clear();
                           }
                         },
-                        child: const Text('Add Category'),
+                        child: const Text('ক্যাটাগরি যোগ করুন'),
                       ),
                     ),
                   ],
                 ),
               ),
               actions: [
-                TextButton(onPressed: () => Navigator.pop(context), child: const Text('Close')),
+                TextButton(onPressed: () => Navigator.pop(context), child: const Text('বন্ধ করুন')),
               ],
             );
           },
@@ -435,7 +430,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
     );
   }
 
-  // Backup database json file export
+  // Backup Export
   Future<void> _exportDatabaseBackup(BuildContext context) async {
     try {
       final jsonStr = await ref.read(settingsControllerProvider.notifier).exportToJson();
@@ -447,7 +442,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('Database exported to: $path'),
+            content: Text('ডেটা এখানে এক্সপোর্ট করা হয়েছে: $path'),
             duration: const Duration(seconds: 4),
           ),
         );
@@ -455,38 +450,38 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Backup failed: $e')),
+          SnackBar(content: Text('ব্যাকআপ ব্যর্থ হয়েছে: $e')),
         );
       }
     }
   }
 
-  // Import local database from JSON file selector dialog input
+  // Backup Import
   void _importDatabaseBackup(BuildContext context) {
     final inputController = TextEditingController();
 
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
-        title: const Text('Restore Database from Backup'),
+        title: const Text('ব্যাকআপ থেকে ডেটা রিস্টোর করুন'),
         content: Column(
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            const Text('Paste the JSON content of your previously exported database backup below to restore all tables.'),
+            const Text('পূর্বে এক্সপোর্ট করা ডেটা ফাইলে থাকা JSON লেখাটি নিচে পেস্ট করুন।'),
             const SizedBox(height: 12),
             TextField(
               controller: inputController,
               maxLines: 6,
               decoration: const InputDecoration(
-                hintText: 'Paste backup JSON here...',
+                hintText: 'এখানে ব্যাকআপ JSON পেস্ট করুন...',
                 border: OutlineInputBorder(),
               ),
             ),
           ],
         ),
         actions: [
-          TextButton(onPressed: () => Navigator.pop(context), child: const Text('Cancel')),
+          TextButton(onPressed: () => Navigator.pop(context), child: const Text('বাতিল')),
           ElevatedButton(
             onPressed: () async {
               final json = inputController.text.trim();
@@ -494,7 +489,6 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
 
               try {
                 await ref.read(settingsControllerProvider.notifier).importFromJson(json);
-                // invalidate providers to reload UI
                 ref.invalidate(productsListProvider);
                 ref.invalidate(categoriesControllerProvider);
                 ref.invalidate(suppliersControllerProvider);
@@ -504,47 +498,47 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                 if (context.mounted) {
                   Navigator.pop(context);
                   ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(content: Text('Database restored successfully!')),
+                    const SnackBar(content: Text('ডেটা সফলভাবে পুনরুদ্ধার করা হয়েছে!')),
                   );
                 }
               } catch (e) {
                 ScaffoldMessenger.of(context).showSnackBar(
-                  SnackBar(content: Text('Failed to parse backup JSON: $e')),
+                  SnackBar(content: Text('JSON ব্যাকআপ ফাইলটি সঠিক নয়: $e')),
                 );
               }
             },
-            child: const Text('Restore'),
+            child: const Text('রিস্টোর করুন'),
           ),
         ],
       ),
     );
   }
 
-  // Load sample convenio store data
+  // Load Demo Data (Localized Bangla datasets)
   Future<void> _loadDemoStoreData(BuildContext context) async {
     const demoJson = '''
     {
       "categories": [
-        {"id": "c1", "name": "Drinks & Sodas", "icon": "local_cafe", "color": "0xFF008060"},
-        {"id": "c2", "name": "Snacks & Chips", "icon": "fastfood", "color": "0xFFFF8C00"},
-        {"id": "c3", "name": "Grocery Essentials", "icon": "shopping_basket", "color": "0xFF4682B4"},
-        {"id": "c4", "name": "Rice & Flour", "icon": "grass", "color": "0xFFDAA520"}
+        {"id": "c1", "name": "পানীয় ও জুস", "icon": "local_cafe", "color": "0xFF008060"},
+        {"id": "c2", "name": "নাস্তা ও চিপস", "icon": "fastfood", "color": "0xFFFF8C00"},
+        {"id": "c3", "name": "নিত্য প্রয়োজনীয়", "icon": "shopping_basket", "color": "0xFF4682B4"},
+        {"id": "c4", "name": "চাল ও ডাল", "icon": "grass", "color": "0xFFDAA520"}
       ],
       "suppliers": [
-        {"id": "s1", "name": "Metro Distribution Ltd", "phone": "01711223344", "email": "info@metro.com", "address": "Tejgaon Industrial Area, Dhaka"},
-        {"id": "s2", "name": "Green Valley Traders", "phone": "01999998888", "email": "sales@greenvalley.com", "address": "Khatungonj, Chittagong"}
+        {"id": "s1", "name": "মেট্রো ডিস্ট্রিবিউশন লিঃ", "phone": "01711223344", "email": "info@metro.com", "address": "তেজগাঁও শিল্প এলাকা, ঢাকা"},
+        {"id": "s2", "name": "গ্রিন ভ্যালি ট্রেডার্স", "phone": "01999998888", "email": "sales@greenvalley.com", "address": "খাতুনগঞ্জ, চট্টগ্রাম"}
       ],
       "customers": [
-        {"id": "cust1", "name": "Kamal Uddin", "phone": "01671112222", "email": "kamal@gmail.com", "address": "Mirpur, Dhaka"},
-        {"id": "cust2", "name": "Fatima Begum", "phone": "01851234567", "email": "fatima@gmail.com", "address": "Gulshan, Dhaka"}
+        {"id": "cust1", "name": "কামাল উদ্দিন", "phone": "01671112222", "email": "kamal@gmail.com", "address": "মিরপুর, ঢাকা"},
+        {"id": "cust2", "name": "ফাতেমা বেগম", "phone": "01851234567", "email": "fatima@gmail.com", "address": "গুলশান, ঢাকা"}
       ],
       "products": [
-        {"id": "p1", "name": "Coca-Cola 250ml", "barcode": "88010203040", "categoryId": "c1", "brand": "Coca-Cola", "buyingPrice": 0.28, "sellingPrice": 0.38, "currentStock": 120.0, "minimumStock": 30.0, "unit": "pcs", "supplierId": "s1", "description": "Soft drink can.", "isArchived": false, "isFavorite": true},
-        {"id": "p2", "name": "Sprite 250ml", "barcode": "88010203045", "categoryId": "c1", "brand": "Coca-Cola", "buyingPrice": 0.28, "sellingPrice": 0.38, "currentStock": 80.0, "minimumStock": 20.0, "unit": "pcs", "supplierId": "s1", "description": "Lemony soft drink.", "isArchived": false, "isFavorite": false},
-        {"id": "p3", "name": "Bashundhara Flour 2kg", "barcode": "88010203052", "categoryId": "c4", "brand": "Bashundhara", "buyingPrice": 1.20, "sellingPrice": 1.50, "currentStock": 40.0, "minimumStock": 10.0, "unit": "bag", "supplierId": "s2", "description": "All purpose white flour.", "isArchived": false, "isFavorite": true},
-        {"id": "p4", "name": "Miniket White Rice 25kg", "barcode": "88010203058", "categoryId": "c4", "brand": "Rashid Rice", "buyingPrice": 16.00, "sellingPrice": 19.50, "currentStock": 8.0, "minimumStock": 15.0, "unit": "bag", "supplierId": "s2", "description": "Polished long grain rice.", "isArchived": false, "isFavorite": true},
-        {"id": "p5", "name": "Lay's Potato Chips Magic Masala", "barcode": "88010203061", "categoryId": "c2", "brand": "PepsiCo", "buyingPrice": 0.18, "sellingPrice": 0.25, "currentStock": 15.0, "minimumStock": 25.0, "unit": "pcs", "supplierId": "s1", "description": "Spicy Indian-flavor chips.", "isArchived": false, "isFavorite": false},
-        {"id": "p6", "name": "Lipton Black Tea 100 bags", "barcode": "88010203070", "categoryId": "c3", "brand": "Unilever", "buyingPrice": 2.20, "sellingPrice": 2.90, "currentStock": 25.0, "minimumStock": 5.0, "unit": "pcs", "supplierId": "s1", "description": "High quality black tea bags.", "isArchived": false, "isFavorite": false}
+        {"id": "p1", "name": "কোকাকোলা ২৫০ মিলি", "barcode": "88010203040", "categoryId": "c1", "brand": "কোকাকোলা", "buyingPrice": 30.00, "sellingPrice": 35.00, "currentStock": 120.0, "minimumStock": 30.0, "unit": "pcs", "supplierId": "s1", "description": "কোকাকোলা সফট ড্রিংক ক্যান।", "isArchived": false, "isFavorite": true},
+        {"id": "p2", "name": "স্প্রাইট ২৫০ মিলি", "barcode": "88010203045", "categoryId": "c1", "brand": "কোকাকোলা", "buyingPrice": 30.00, "sellingPrice": 35.00, "currentStock": 80.0, "minimumStock": 20.0, "unit": "pcs", "supplierId": "s1", "description": "স্প্রাইট সফট ড্রিংক।", "isArchived": false, "isFavorite": false},
+        {"id": "p3", "name": "বসুন্ধরা আটা ২ কেজি", "barcode": "88010203052", "categoryId": "c4", "brand": "বসুন্ধরা", "buyingPrice": 120.00, "sellingPrice": 135.00, "currentStock": 40.0, "minimumStock": 10.0, "unit": "bag", "supplierId": "s2", "description": "প্যাকেটজাত সাদা ময়দা/আটা।", "isArchived": false, "isFavorite": true},
+        {"id": "p4", "name": "মিনিকেট চাল ২৫ কেজি", "barcode": "88010203058", "categoryId": "c4", "brand": "রশিদ রাইস", "buyingPrice": 1600.00, "sellingPrice": 1750.00, "currentStock": 8.0, "minimumStock": 15.0, "unit": "bag", "supplierId": "s2", "description": "প্রিমিয়াম মিনিকেট চালের বস্তা।", "isArchived": false, "isFavorite": true},
+        {"id": "p5", "name": "লেস পটেটো চিপস মাসালা", "barcode": "88010203061", "categoryId": "c2", "brand": "পেপসিকো", "buyingPrice": 18.00, "sellingPrice": 25.00, "currentStock": 15.0, "minimumStock": 25.0, "unit": "pcs", "supplierId": "s1", "description": "লেস ম্যাজিক মাসালা চিপস।", "isArchived": false, "isFavorite": false},
+        {"id": "p6", "name": "লিপটন ব্ল্যাক টি ১০০ ব্যাগ", "barcode": "88010203070", "categoryId": "c3", "brand": "ইউনিলিভার", "buyingPrice": 220.00, "sellingPrice": 270.00, "currentStock": 25.0, "minimumStock": 5.0, "unit": "pcs", "supplierId": "s1", "description": "লিপটন ব্ল্যাক টি ব্যাগ।", "isArchived": false, "isFavorite": false}
       ]
     }
     ''';
@@ -552,15 +546,14 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
-        title: const Text('Load Demo Conveniences Data?'),
-        content: const Text('Warning: This action will completely erase your existing products, categories, suppliers, and sales data tables, replacing them with a premium convenience store inventory list.'),
+        title: const Text('ডেমো ডেটা লোড করবেন?'),
+        content: const Text('সতর্কতা: এটি করলে আপনার বর্তমান পণ্য, ক্যাটাগরি এবং বিক্রির হিসাব মুছে যাবে এবং পরীক্ষামূলক নতুন ডেমো পণ্যের তালিকা লোড হবে।'),
         actions: [
-          TextButton(onPressed: () => Navigator.pop(context), child: const Text('Cancel')),
+          TextButton(onPressed: () => Navigator.pop(context), child: const Text('বাতিল')),
           ElevatedButton(
             onPressed: () async {
               try {
                 await ref.read(settingsControllerProvider.notifier).importFromJson(demoJson);
-                // invalidate providers to reload UI
                 ref.invalidate(productsListProvider);
                 ref.invalidate(categoriesControllerProvider);
                 ref.invalidate(suppliersControllerProvider);
@@ -570,16 +563,16 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                 if (context.mounted) {
                   Navigator.pop(context);
                   ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(content: Text('Demo Convenience Shop dataset loaded successfully! Check Dashboard and Products.')),
+                    const SnackBar(content: Text('ডেমো পণ্যের ডেটাসেট লোড সম্পন্ন হয়েছে! ড্যাশবোর্ড দেখুন।')),
                   );
                 }
               } catch (e) {
                 ScaffoldMessenger.of(context).showSnackBar(
-                  SnackBar(content: Text('Failed to load demo dataset: $e')),
+                  SnackBar(content: Text('ডেমো ডেটা লোড ব্যর্থ: $e')),
                 );
               }
             },
-            child: const Text('Load Demo Data'),
+            child: const Text('ডেমো ডেটা লোড'),
           ),
         ],
       ),

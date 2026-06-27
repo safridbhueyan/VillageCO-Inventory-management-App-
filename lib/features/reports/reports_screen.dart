@@ -43,7 +43,7 @@ class _ReportsScreenState extends ConsumerState<ReportsScreen> with SingleTicker
 
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Reports & Analytics', style: TextStyle(fontWeight: FontWeight.bold)),
+        title: const Text('হিসাব ও রিপোর্ট', style: TextStyle(fontWeight: FontWeight.bold)),
         bottom: TabBar(
           controller: _tabController,
           isScrollable: true,
@@ -51,10 +51,10 @@ class _ReportsScreenState extends ConsumerState<ReportsScreen> with SingleTicker
           labelColor: theme.colorScheme.primary,
           unselectedLabelColor: theme.colorScheme.onSurfaceVariant,
           tabs: const [
-            Tab(icon: Icon(Icons.analytics_outlined), text: 'Financials'),
-            Tab(icon: Icon(Icons.receipt_long_outlined), text: 'Sales Log'),
-            Tab(icon: Icon(Icons.money_off_rounded), text: 'Expenses'),
-            Tab(icon: Icon(Icons.auto_graph_rounded), text: 'Product Insights'),
+            Tab(icon: Icon(Icons.analytics_outlined), text: 'লাভ-ক্ষতি হিসাব'),
+            Tab(icon: Icon(Icons.receipt_long_outlined), text: 'বিক্রির খাতা'),
+            Tab(icon: Icon(Icons.money_off_rounded), text: 'খরচের খাতা'),
+            Tab(icon: Icon(Icons.auto_graph_rounded), text: 'বিক্রিত পণ্য বিশ্লেষণ'),
           ],
         ),
       ),
@@ -70,23 +70,22 @@ class _ReportsScreenState extends ConsumerState<ReportsScreen> with SingleTicker
     );
   }
 
-  // TAB 1: Financial Summaries and download actions
+  // TAB 1: Financial Summaries
   Widget _buildFinancialsTab(BuildContext context, AsyncValue<DashboardMetrics> metricsAsync) {
     final theme = Theme.of(context);
     
     return metricsAsync.when(
       loading: () => const Center(child: CircularProgressIndicator()),
-      error: (err, st) => Center(child: Text('Error: $err')),
+      error: (err, st) => Center(child: Text('হিসাব লোড ব্যর্থ: $err')),
       data: (metrics) {
         return SingleChildScrollView(
           padding: const EdgeInsets.all(20.0),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Text('Profit & Loss Statements', style: theme.textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold)),
+              Text('লাভ-ক্ষতি বিবরণী', style: theme.textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold)),
               const SizedBox(height: 12),
               
-              // Profit cards
               Card(
                 color: theme.colorScheme.surfaceVariant.withOpacity(0.2),
                 shape: RoundedRectangleBorder(
@@ -97,14 +96,14 @@ class _ReportsScreenState extends ConsumerState<ReportsScreen> with SingleTicker
                   padding: const EdgeInsets.all(20.0),
                   child: Column(
                     children: [
-                      _buildPlRow('Gross Sales Revenue', Formatters.currency(metrics.todaySales + metrics.monthlySales), isPositive: true),
+                      _buildPlRow('আজকের বিক্রির পরিমাণ', Formatters.currency(metrics.todaySales), isPositive: true),
                       const SizedBox(height: 10),
-                      _buildPlRow('Inventory Valuation', Formatters.currency(metrics.inventoryValue)),
+                      _buildPlRow('মজুদ পণ্যের মূল্য', Formatters.currency(metrics.inventoryValue)),
                       const SizedBox(height: 10),
-                      _buildPlRow('Total Expenses Logged', '- ${Formatters.currency(metrics.totalExpenses)}', isNegative: true),
+                      _buildPlRow('মোট খরচের পরিমাণ', '- ${Formatters.currency(metrics.totalExpenses)}', isNegative: true),
                       const Divider(height: 24),
                       _buildPlRow(
-                        'Net Profit Margin',
+                        'আজকের নিট লাভ',
                         Formatters.currency(metrics.netProfit),
                         isBold: true,
                         fontSize: 16,
@@ -117,8 +116,7 @@ class _ReportsScreenState extends ConsumerState<ReportsScreen> with SingleTicker
               ),
               const SizedBox(height: 24),
               
-              // Download CSV and PDF
-              Text('Export Reports Data', style: theme.textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold)),
+              Text('রিপোর্ট এক্সপোর্ট করুন', style: theme.textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold)),
               const SizedBox(height: 12),
               Row(
                 children: [
@@ -130,7 +128,7 @@ class _ReportsScreenState extends ConsumerState<ReportsScreen> with SingleTicker
                       ),
                       onPressed: () => _exportCsvData(),
                       icon: const Icon(Icons.download_rounded),
-                      label: const Text('Export CSV Sheet'),
+                      label: const Text('CSV শীট ডাউনলোড'),
                     ),
                   ),
                   const SizedBox(width: 12),
@@ -142,11 +140,11 @@ class _ReportsScreenState extends ConsumerState<ReportsScreen> with SingleTicker
                       ),
                       onPressed: () {
                         ScaffoldMessenger.of(context).showSnackBar(
-                          const SnackBar(content: Text('Generating PDF Report format...')),
+                          const SnackBar(content: Text('PDF রিপোর্ট তৈরি করা হচ্ছে...')),
                         );
                       },
                       icon: const Icon(Icons.picture_as_pdf_outlined),
-                      label: const Text('Download PDF'),
+                      label: const Text('PDF ডাউনলোড'),
                     ),
                   ),
                 ],
@@ -185,14 +183,13 @@ class _ReportsScreenState extends ConsumerState<ReportsScreen> with SingleTicker
     );
   }
 
-  // TAB 2: Sales log history with date range filtering
+  // TAB 2: Sales Log
   Widget _buildSalesLogTab(BuildContext context, AsyncValue<List<SaleWithDetails>> salesHistoryAsync) {
     final filter = ref.watch(salesFilterProvider);
     final theme = Theme.of(context);
 
     return Column(
       children: [
-        // Filter bar
         Padding(
           padding: const EdgeInsets.all(16.0),
           child: Row(
@@ -200,7 +197,7 @@ class _ReportsScreenState extends ConsumerState<ReportsScreen> with SingleTicker
               Expanded(
                 child: TextField(
                   decoration: InputDecoration(
-                    hintText: 'Search sales by ID, product, customer...',
+                    hintText: 'রশিদ আইডি বা কাস্টমারের নাম দিয়ে খুঁজুন...',
                     prefixIcon: const Icon(Icons.search),
                     border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
                     contentPadding: const EdgeInsets.symmetric(vertical: 0),
@@ -211,7 +208,6 @@ class _ReportsScreenState extends ConsumerState<ReportsScreen> with SingleTicker
                 ),
               ),
               const SizedBox(width: 8),
-              // Payment method filter
               Container(
                 padding: const EdgeInsets.symmetric(horizontal: 8),
                 decoration: BoxDecoration(
@@ -221,12 +217,12 @@ class _ReportsScreenState extends ConsumerState<ReportsScreen> with SingleTicker
                 child: DropdownButtonHideUnderline(
                   child: DropdownButton<String?>(
                     value: filter.paymentMethod,
-                    hint: const Text('Payment'),
+                    hint: const Text('পদ্ধতি'),
                     items: const [
-                      DropdownMenuItem(value: null, child: Text('All')),
-                      DropdownMenuItem(value: 'Cash', child: Text('Cash')),
-                      DropdownMenuItem(value: 'Mobile Banking', child: Text('Mobile')),
-                      DropdownMenuItem(value: 'Card', child: Text('Card')),
+                      DropdownMenuItem(value: null, child: Text('সব')),
+                      DropdownMenuItem(value: 'Cash', child: Text('ক্যাশ')),
+                      DropdownMenuItem(value: 'Mobile Banking', child: Text('মোবাইল')),
+                      DropdownMenuItem(value: 'Card', child: Text('কার্ড')),
                     ],
                     onChanged: (val) {
                       ref.read(salesFilterProvider.notifier).update((s) => s.copyWith(paymentMethod: val));
@@ -241,10 +237,10 @@ class _ReportsScreenState extends ConsumerState<ReportsScreen> with SingleTicker
         Expanded(
           child: salesHistoryAsync.when(
             loading: () => const Center(child: CircularProgressIndicator()),
-            error: (err, st) => Center(child: Text('Error: $err')),
+            error: (err, st) => Center(child: Text('বিক্রি লগ লোড ব্যর্থ: $err')),
             data: (sales) {
               if (sales.isEmpty) {
-                return const Center(child: Text('No matching sales transactions.'));
+                return const Center(child: Text('ম্যাচিং কোনো বিক্রির রেকর্ড পাওয়া যায়নি।'));
               }
 
               return ListView.separated(
@@ -254,12 +250,12 @@ class _ReportsScreenState extends ConsumerState<ReportsScreen> with SingleTicker
                 itemBuilder: (context, index) {
                   final saleWithDetails = sales[index];
                   final sale = saleWithDetails.sale;
-                  final customer = saleWithDetails.customer?.name ?? 'Walk-in Customer';
+                  final customer = saleWithDetails.customer?.name ?? 'সাধারণ কাস্টমার';
 
                   return ListTile(
                     contentPadding: EdgeInsets.zero,
                     title: Text(customer, style: const TextStyle(fontWeight: FontWeight.bold)),
-                    subtitle: Text('ID: ${sale.id.substring(0, 8).toUpperCase()} • ${Formatters.dateTime(sale.date)} • ${sale.paymentMethod}'),
+                    subtitle: Text('রশিদ: ${sale.id.substring(0, 8).toUpperCase()} • ${Formatters.dateTime(sale.date)} • ${sale.paymentMethod == "Cash" ? "ক্যাশ" : (sale.paymentMethod == "Card" ? "কার্ড" : "মোবাইল")}'),
                     trailing: Text(Formatters.currency(sale.total), style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
                     onTap: () => _showInvoiceReceiptDetails(context, saleWithDetails),
                   );
@@ -272,7 +268,7 @@ class _ReportsScreenState extends ConsumerState<ReportsScreen> with SingleTicker
     );
   }
 
-  // TAB 3: Expenses log and add dialog
+  // TAB 3: Expenses
   Widget _buildExpensesTab(BuildContext context, AsyncValue<List<Expense>> expensesAsync) {
     return Column(
       children: [
@@ -281,11 +277,11 @@ class _ReportsScreenState extends ConsumerState<ReportsScreen> with SingleTicker
           child: Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              const Text('Business Expenses Log', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
+              const Text('দোকানের আনুষঙ্গিক খরচ সমূহ', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
               ElevatedButton.icon(
                 onPressed: () => _showAddExpenseDialog(context),
                 icon: const Icon(Icons.add),
-                label: const Text('Add Expense'),
+                label: const Text('খরচ লিখুন'),
               ),
             ],
           ),
@@ -293,10 +289,10 @@ class _ReportsScreenState extends ConsumerState<ReportsScreen> with SingleTicker
         Expanded(
           child: expensesAsync.when(
             loading: () => const Center(child: CircularProgressIndicator()),
-            error: (err, st) => Center(child: Text('Error: $err')),
+            error: (err, st) => Center(child: Text('খরচ তালিকা লোড ব্যর্থ: $err')),
             data: (expenses) {
               if (expenses.isEmpty) {
-                return const Center(child: Text('No expenses logged.'));
+                return const Center(child: Text('কোনো খরচের বিবরণ নেই।'));
               }
 
               return ListView.separated(
@@ -312,7 +308,7 @@ class _ReportsScreenState extends ConsumerState<ReportsScreen> with SingleTicker
                       child: Icon(Icons.money_off, color: Colors.white),
                     ),
                     title: Text(ex.name, style: const TextStyle(fontWeight: FontWeight.bold)),
-                    subtitle: Text('${ex.category} • ${Formatters.date(ex.date)}'),
+                    subtitle: Text('${_translateCategory(ex.category)} • ${Formatters.date(ex.date)}'),
                     trailing: Row(
                       mainAxisSize: MainAxisSize.min,
                       children: [
@@ -335,29 +331,40 @@ class _ReportsScreenState extends ConsumerState<ReportsScreen> with SingleTicker
     );
   }
 
-  // TAB 4: Top/worst items analytics list
+  String _translateCategory(String category) {
+    switch (category) {
+      case 'Rent': return 'দোকান ভাড়া';
+      case 'Electricity': return 'বিদ্যুৎ বিল';
+      case 'Internet': return 'ইন্টারনেট বিল';
+      case 'Transport': return 'পরিবহন ভাড়া';
+      case 'Salary': return 'কর্মচারী বেতন';
+      default: return 'অন্যান্য খরচ';
+    }
+  }
+
+  // TAB 4: Product Insights
   Widget _buildProductInsightsTab(BuildContext context, AsyncValue<List<ProductSaleAggregation>> topSellingAsync) {
     final theme = Theme.of(context);
     return topSellingAsync.when(
       loading: () => const Center(child: CircularProgressIndicator()),
-      error: (err, st) => Center(child: Text('Error: $err')),
+      error: (err, st) => Center(child: Text('বিশ্লেষণ লোড ব্যর্থ: $err')),
       data: (insights) {
         if (insights.isEmpty) {
-          return const Center(child: Text('Generate sales in POS to view product analytics.'));
+          return const Center(child: Text('বিশ্লেষণ দেখতে পিওএস থেকে পণ্য বিক্রি করুন।'));
         }
 
         return ListView(
           padding: const EdgeInsets.all(20),
           children: [
-            Text('Top Selling Products (Quantity)', style: theme.textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold)),
+            Text('সবচেয়ে বেশি বিক্রি হওয়া পণ্যসমূহ', style: theme.textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold)),
             const SizedBox(height: 12),
             ...insights.take(5).map((e) {
               return ListTile(
                 contentPadding: EdgeInsets.zero,
                 leading: CircleAvatar(child: Text(e.product.name.substring(0, 1))),
                 title: Text(e.product.name, style: const TextStyle(fontWeight: FontWeight.bold)),
-                subtitle: Text('Revenue Generated: ${Formatters.currency(e.totalRevenue)}'),
-                trailing: Text('${Formatters.number(e.quantitySold)} units', style: const TextStyle(fontWeight: FontWeight.bold)),
+                subtitle: Text('বিক্রিত মোট মূল্য: ${Formatters.currency(e.totalRevenue)}'),
+                trailing: Text('${Formatters.number(e.quantitySold)} টি বিক্রিত', style: const TextStyle(fontWeight: FontWeight.bold)),
               );
             }),
           ],
@@ -380,32 +387,32 @@ class _ReportsScreenState extends ConsumerState<ReportsScreen> with SingleTicker
         return StatefulBuilder(
           builder: (context, setDialogState) {
             return AlertDialog(
-              title: const Text('Log Business Expense'),
+              title: const Text('নতুন খরচ লিখুন'),
               content: SingleChildScrollView(
                 child: Column(
                   mainAxisSize: MainAxisSize.min,
                   children: [
                     TextField(
                       controller: nameController,
-                      decoration: const InputDecoration(labelText: 'Expense Name *', border: OutlineInputBorder()),
+                      decoration: const InputDecoration(labelText: 'খরচের নাম/খাত *', border: OutlineInputBorder()),
                     ),
                     const SizedBox(height: 12),
                     TextField(
                       controller: amountController,
-                      decoration: const InputDecoration(labelText: 'Amount Spent *', prefixText: '\$', border: OutlineInputBorder()),
+                      decoration: const InputDecoration(labelText: 'খরচের পরিমাণ (টাকা) *', prefixText: '৳', border: OutlineInputBorder()),
                       keyboardType: TextInputType.number,
                     ),
                     const SizedBox(height: 12),
                     DropdownButtonFormField<String>(
                       value: selectedCategory,
-                      decoration: const InputDecoration(labelText: 'Category', border: OutlineInputBorder()),
+                      decoration: const InputDecoration(labelText: 'ক্যাটাগরি', border: OutlineInputBorder()),
                       items: const [
-                        DropdownMenuItem(value: 'Rent', child: Text('Rent')),
-                        DropdownMenuItem(value: 'Electricity', child: Text('Electricity')),
-                        DropdownMenuItem(value: 'Internet', child: Text('Internet')),
-                        DropdownMenuItem(value: 'Transport', child: Text('Transport')),
-                        DropdownMenuItem(value: 'Salary', child: Text('Salary')),
-                        DropdownMenuItem(value: 'Misc', child: Text('Misc. Overhead')),
+                        DropdownMenuItem(value: 'Rent', child: Text('দোকান ভাড়া')),
+                        DropdownMenuItem(value: 'Electricity', child: Text('বিদ্যুৎ বিল')),
+                        DropdownMenuItem(value: 'Internet', child: Text('ইন্টারনেট বিল')),
+                        DropdownMenuItem(value: 'Transport', child: Text('পরিবহন ভাড়া')),
+                        DropdownMenuItem(value: 'Salary', child: Text('কর্মচারী বেতন')),
+                        DropdownMenuItem(value: 'Misc', child: Text('অন্যান্য খরচ')),
                       ],
                       onChanged: (val) {
                         if (val != null) setDialogState(() => selectedCategory = val);
@@ -414,7 +421,7 @@ class _ReportsScreenState extends ConsumerState<ReportsScreen> with SingleTicker
                     const SizedBox(height: 12),
                     ListTile(
                       contentPadding: EdgeInsets.zero,
-                      title: const Text('Transaction Date'),
+                      title: const Text('খরচের তারিখ'),
                       subtitle: Text(Formatters.date(selectedDate)),
                       trailing: IconButton(
                         icon: const Icon(Icons.calendar_today),
@@ -432,13 +439,13 @@ class _ReportsScreenState extends ConsumerState<ReportsScreen> with SingleTicker
                     const SizedBox(height: 12),
                     TextField(
                       controller: descController,
-                      decoration: const InputDecoration(labelText: 'Description', border: OutlineInputBorder()),
+                      decoration: const InputDecoration(labelText: 'বিবরণ (ঐচ্ছিক)', border: OutlineInputBorder()),
                     ),
                   ],
                 ),
               ),
               actions: [
-                TextButton(onPressed: () => Navigator.pop(context), child: const Text('Cancel')),
+                TextButton(onPressed: () => Navigator.pop(context), child: const Text('বাতিল')),
                 ElevatedButton(
                   onPressed: () {
                     final name = nameController.text.trim();
@@ -454,7 +461,7 @@ class _ReportsScreenState extends ConsumerState<ReportsScreen> with SingleTicker
                         );
                     Navigator.pop(context);
                   },
-                  child: const Text('Log Expense'),
+                  child: const Text('সংরক্ষণ করুন'),
                 ),
               ],
             );
@@ -480,21 +487,21 @@ class _ReportsScreenState extends ConsumerState<ReportsScreen> with SingleTicker
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-              const Text('VILLAGECO INVENTORY', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 18, color: Colors.black)),
-              const Text('Sales History Duplicate Invoice', style: TextStyle(fontSize: 11, color: Colors.grey)),
+              const Text('ভিলেজকো স্টোর', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 18, color: Colors.black)),
+              const Text('বিক্রির রশিদের কপি', style: TextStyle(fontSize: 11, color: Colors.grey)),
               const SizedBox(height: 12),
               const Divider(color: Colors.black38, thickness: 1),
-              _buildReceiptMetaRow('Invoice ID', sale.id.substring(0, 8).toUpperCase()),
-              _buildReceiptMetaRow('Date/Time', Formatters.dateTime(sale.date)),
-              _buildReceiptMetaRow('Payment Method', sale.paymentMethod),
-              _buildReceiptMetaRow('Customer', customer?.name ?? 'Walk-in'),
+              _buildReceiptMetaRow('রশিদ নং', sale.id.substring(0, 8).toUpperCase()),
+              _buildReceiptMetaRow('তারিখ ও সময়', Formatters.dateTime(sale.date)),
+              _buildReceiptMetaRow('পেমেন্ট পদ্ধতি', sale.paymentMethod == 'Cash' ? 'ক্যাশ' : (sale.paymentMethod == 'Card' ? 'কার্ড' : 'মোবাইল ব্যাংকিং')),
+              _buildReceiptMetaRow('ক্রেতা', customer?.name ?? 'সাধারণ কাস্টমার'),
               const Divider(color: Colors.black38, thickness: 1),
               const Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
-                  Expanded(flex: 3, child: Text('Item Description', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 11, color: Colors.black))),
-                  Expanded(flex: 1, child: Text('Qty', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 11, color: Colors.black), textAlign: TextAlign.center)),
-                  Expanded(flex: 2, child: Text('Total', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 11, color: Colors.black), textAlign: TextAlign.right)),
+                  Expanded(flex: 3, child: Text('পণ্যের বিবরণ', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 11, color: Colors.black))),
+                  Expanded(flex: 1, child: Text('পরিমাণ', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 11, color: Colors.black), textAlign: TextAlign.center)),
+                  Expanded(flex: 2, child: Text('মোট টাকা', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 11, color: Colors.black), textAlign: TextAlign.right)),
                 ],
               ),
               const SizedBox(height: 6),
@@ -541,28 +548,28 @@ class _ReportsScreenState extends ConsumerState<ReportsScreen> with SingleTicker
                 ),
               ),
               const Divider(color: Colors.black38, thickness: 1),
-              _buildReceiptFinancialRow('Subtotal', Formatters.currency(sale.subtotal)),
-              _buildReceiptFinancialRow('Discount Applied', '- ${Formatters.currency(sale.discount)}'),
+              _buildReceiptFinancialRow('উপ-মোট বিল', Formatters.currency(sale.subtotal)),
+              _buildReceiptFinancialRow('ডিসকাউন্ট ছাড়', '- ${Formatters.currency(sale.discount)}'),
               const SizedBox(height: 4),
               Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
-                  const Text('GRAND TOTAL', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13, color: Colors.black)),
-                  Text(Formatters.currency(sale.total), style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14, color: Colors.black)),
+                  const Text('পরিশোধযোগ্য মোট বিল', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 12, color: Colors.black)),
+                  Text(Formatters.currency(sale.total), style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13, color: Colors.black)),
                 ],
               ),
             ],
           ),
         ),
         actions: [
-          TextButton(onPressed: () => Navigator.pop(context), child: const Text('Close')),
+          TextButton(onPressed: () => Navigator.pop(context), child: const Text('বন্ধ করুন')),
           ElevatedButton.icon(
             icon: const Icon(Icons.print),
-            label: const Text('Re-Print'),
+            label: const Text('রশিদ প্রিন্ট করুন'),
             onPressed: () {
               Navigator.pop(context);
               ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(content: Text('Re-sending print jobs...')),
+                const SnackBar(content: Text('থার্মাল প্রিন্টারে সংযোগ পাঠানো হচ্ছে...')),
               );
             },
           ),
@@ -597,12 +604,12 @@ class _ReportsScreenState extends ConsumerState<ReportsScreen> with SingleTicker
     );
   }
 
-  // Export Sales History to real CSV file
+  // Export Sales History
   Future<void> _exportCsvData() async {
     final list = ref.read(salesHistoryProvider).value ?? [];
     if (list.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('No sales records to export.')),
+        const SnackBar(content: Text('ডাউনলোড করার মতো কোনো বিক্রির রেকর্ড নেই।')),
       );
       return;
     }
@@ -625,8 +632,8 @@ class _ReportsScreenState extends ConsumerState<ReportsScreen> with SingleTicker
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('CSV file exported to: $path'),
-            action: SnackBarAction(label: 'OK', onPressed: () {}),
+            content: Text('CSV ফাইল এখানে ডাউনলোড হয়েছে: $path'),
+            action: SnackBarAction(label: 'ঠিক আছে', onPressed: () {}),
             duration: const Duration(seconds: 4),
           ),
         );
@@ -634,7 +641,7 @@ class _ReportsScreenState extends ConsumerState<ReportsScreen> with SingleTicker
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Export failed: $e')),
+          SnackBar(content: Text('ডাউনলোড ব্যর্থ হয়েছে: $e')),
         );
       }
     }

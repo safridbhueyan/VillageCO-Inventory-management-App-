@@ -33,7 +33,7 @@ void main() {
     await tester.pump(const Duration(seconds: 1));
 
     // Verify that the login PIN terminal is displayed
-    expect(find.text('Enter Admin PIN to access'), findsOneWidget);
+    expect(find.text('অ্যাক্সেস করতে অ্যাডমিন পিন দিন'), findsOneWidget);
 
     // Reset size after test
     addTearDown(tester.view.resetPhysicalSize);

@@ -28,7 +28,7 @@ class DashboardScreen extends ConsumerWidget {
         title: Text(
           settingsAsync.maybeWhen(
             data: (settings) => settings.shopName,
-            orElse: () => 'VillageCO Inventory',
+            orElse: () => 'ভিলেজকো ইনভেন্টরি',
           ),
           style: const TextStyle(fontWeight: FontWeight.bold),
         ),
@@ -47,7 +47,7 @@ class DashboardScreen extends ConsumerWidget {
       ),
       body: metricsAsync.when(
         loading: () => const Center(child: CircularProgressIndicator()),
-        error: (err, stack) => Center(child: Text('Error loading dashboard: $err')),
+        error: (err, stack) => Center(child: Text('ড্যাশবোর্ড লোড করতে সমস্যা হয়েছে: $err')),
         data: (metrics) => RefreshIndicator(
           onRefresh: () async {
             ref.invalidate(dashboardMetricsProvider);
@@ -60,7 +60,7 @@ class DashboardScreen extends ConsumerWidget {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                // Welcome Header Block
+                // Welcome Header (Bangla)
                 Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
@@ -69,7 +69,7 @@ class DashboardScreen extends ConsumerWidget {
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           Text(
-                            'Welcome back, Admin 👋',
+                            'স্বাগতম, অ্যাডমিন 👋',
                             style: theme.textTheme.headlineSmall?.copyWith(
                               fontWeight: FontWeight.bold,
                               letterSpacing: -0.5,
@@ -79,7 +79,7 @@ class DashboardScreen extends ConsumerWidget {
                           ),
                           const SizedBox(height: 4),
                           Text(
-                            'Here is how VillageCO is performing today.',
+                            'আজকের দোকানের বেচা-বিক্রি ও হিসাব নিচে দেওয়া হলো।',
                             style: theme.textTheme.bodyMedium?.copyWith(
                               color: theme.colorScheme.onSurfaceVariant,
                             ),
@@ -90,7 +90,7 @@ class DashboardScreen extends ConsumerWidget {
                       ),
                     ),
                     const SizedBox(width: 8),
-                    // Live POS Pulsing Status Pill
+                    // Live Status (Bangla)
                     Container(
                       padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
                       decoration: BoxDecoration(
@@ -114,7 +114,7 @@ class DashboardScreen extends ConsumerWidget {
                           ),
                           const SizedBox(width: 8),
                           Text(
-                            'POS ACTIVE',
+                            'বিক্রি চালু',
                             style: TextStyle(
                               color: theme.colorScheme.primary,
                               fontSize: 11,
@@ -132,7 +132,7 @@ class DashboardScreen extends ConsumerWidget {
                 ).animate().fadeIn(duration: 300.ms),
                 const SizedBox(height: 24),
 
-                // Metrics Grid
+                // Metrics Grid (Simplified: 4 Key metrics instead of 8)
                 GridView.count(
                   shrinkWrap: true,
                   physics: const NeverScrollableScrollPhysics(),
@@ -142,75 +142,46 @@ class DashboardScreen extends ConsumerWidget {
                   mainAxisSpacing: 16,
                   children: [
                     _MetricCard(
-                      title: "Today's Sales",
+                      title: "আজকের বিক্রি",
                       value: Formatters.currency(metrics.todaySales),
                       icon: Icons.today_rounded,
                       iconColor: theme.colorScheme.primary,
                       bgColor: theme.colorScheme.primary.withOpacity(0.08),
                     ),
                     _MetricCard(
-                      title: "Monthly Sales",
-                      value: Formatters.currency(metrics.monthlySales),
-                      icon: Icons.calendar_month_rounded,
-                      iconColor: const Color(0xFF6366F1), // Indigo
-                      bgColor: const Color(0xFF6366F1).withOpacity(0.08),
-                    ),
-                    _MetricCard(
-                      title: "Inventory Value",
+                      title: "মজুদ পণ্যের মূল্য",
                       value: Formatters.currency(metrics.inventoryValue),
                       icon: Icons.inventory_2_outlined,
-                      iconColor: const Color(0xFF0EA5E9), // Sky Blue
+                      iconColor: const Color(0xFF0EA5E9), // Cyan
                       bgColor: const Color(0xFF0EA5E9).withOpacity(0.08),
                     ),
                     _MetricCard(
-                      title: "Net Profit",
+                      title: "আজকের নিট লাভ",
                       value: Formatters.currency(metrics.netProfit),
                       icon: Icons.trending_up_rounded,
-                      iconColor: const Color(0xFF00B074), // Shopify Green
+                      iconColor: const Color(0xFF00B074), // Green
                       bgColor: const Color(0xFF00B074).withOpacity(0.08),
                       valueColor: metrics.netProfit >= 0 ? const Color(0xFF00B074) : Colors.redAccent,
                     ),
                     _MetricCard(
-                      title: "Total Products",
-                      value: metrics.totalProducts.toString(),
-                      icon: Icons.grid_view_rounded,
-                      iconColor: const Color(0xFF8B5CF6), // Violet
-                      bgColor: const Color(0xFF8B5CF6).withOpacity(0.08),
-                    ),
-                    _MetricCard(
-                      title: "Categories",
-                      value: metrics.totalCategories.toString(),
-                      icon: Icons.category_outlined,
-                      iconColor: const Color(0xFFEC4899), // Pink
-                      bgColor: const Color(0xFFEC4899).withOpacity(0.08),
-                    ),
-                    _MetricCard(
-                      title: "Low Stock Items",
+                      title: "কম স্টক পণ্য",
                       value: metrics.lowStockProducts.toString(),
                       icon: Icons.warning_amber_rounded,
-                      iconColor: const Color(0xFFF59E0B), // Amber
+                      iconColor: const Color(0xFFF59E0B), // Orange
                       bgColor: const Color(0xFFF59E0B).withOpacity(0.08),
                       valueColor: metrics.lowStockProducts > 0 ? const Color(0xFFF59E0B) : null,
-                    ),
-                    _MetricCard(
-                      title: "Out of Stock Items",
-                      value: metrics.outOfStockProducts.toString(),
-                      icon: Icons.error_outline_rounded,
-                      iconColor: const Color(0xFFEF4444), // Red
-                      bgColor: const Color(0xFFEF4444).withOpacity(0.08),
-                      valueColor: metrics.outOfStockProducts > 0 ? const Color(0xFFEF4444) : null,
                     ),
                   ],
                 ).animate().slideY(begin: 0.08, duration: 400.ms, curve: Curves.easeOutCubic),
 
                 const SizedBox(height: 28),
 
-                // Quick Actions Dashboard Section
+                // Quick Actions (Bangla)
                 Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
-                      'Quick Actions',
+                      'দ্রুত অ্যাক্সেস',
                       style: theme.textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold),
                     ),
                     const SizedBox(height: 12),
@@ -219,28 +190,28 @@ class DashboardScreen extends ConsumerWidget {
                       child: Row(
                         children: [
                           _QuickActionCard(
-                            label: 'New Sale',
+                            label: 'নতুন বিক্রি',
                             icon: Icons.point_of_sale_rounded,
                             color: theme.colorScheme.primary,
                             onTap: () => context.go('/pos'),
                           ),
                           const SizedBox(width: 14),
                           _QuickActionCard(
-                            label: 'Add Product',
+                            label: 'পণ্য যোগ',
                             icon: Icons.add_circle_outline_rounded,
                             color: Colors.blue,
                             onTap: () => context.go('/products'),
                           ),
                           const SizedBox(width: 14),
                           _QuickActionCard(
-                            label: 'Stock In',
+                            label: 'স্টক আপডেট',
                             icon: Icons.call_received_rounded,
                             color: Colors.teal,
                             onTap: () => context.go('/inventory'),
                           ),
                           const SizedBox(width: 14),
                           _QuickActionCard(
-                            label: 'View Reports',
+                            label: 'লাভ-ক্ষতি রিপোর্ট',
                             icon: Icons.bar_chart_rounded,
                             color: Colors.purple,
                             onTap: () => context.go('/reports'),
@@ -311,20 +282,20 @@ class DashboardScreen extends ConsumerWidget {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Text(
-              'Sales Revenue (Last 7 Days)',
+              'সাপ্তাহিক বিক্রি রিপোর্ট (টাকা)',
               style: theme.textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold),
             ),
             const SizedBox(height: 24),
             salesAsync.when(
               loading: () => const SizedBox(height: 200, child: Center(child: CircularProgressIndicator())),
-              error: (err, st) => SizedBox(height: 200, child: Center(child: Text('Chart error: $err'))),
+              error: (err, st) => SizedBox(height: 200, child: Center(child: Text('চার্ট লোড ব্যর্থ: $err'))),
               data: (sales) {
                 if (sales.isEmpty) {
                   return const SizedBox(
                     height: 200,
                     child: Center(
                       child: Text(
-                        'No sales recorded yet. Perform transactions in POS to generate data.',
+                        'এখনও কোনো বিক্রি করা হয়নি। পিওএস থেকে নতুন পণ্য বিক্রি করুন।',
                         style: TextStyle(color: Colors.grey),
                         textAlign: TextAlign.center,
                       ),
@@ -358,7 +329,7 @@ class DashboardScreen extends ConsumerWidget {
                             reservedSize: 45,
                             getTitlesWidget: (value, meta) {
                               return Text(
-                                '\$${value.toInt()}',
+                                '৳${value.toInt()}',
                                 style: const TextStyle(fontSize: 10, color: Colors.grey, fontWeight: FontWeight.w600),
                               );
                             },
@@ -475,12 +446,12 @@ class DashboardScreen extends ConsumerWidget {
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
                 Text(
-                  'Low Stock Alerts',
+                  'কম স্টক এলার্ট',
                   style: theme.textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold),
                 ),
                 TextButton(
                   onPressed: () => context.go('/inventory'),
-                  child: const Text('View All'),
+                  child: const Text('সব দেখুন'),
                 ),
               ],
             ),
@@ -488,7 +459,7 @@ class DashboardScreen extends ConsumerWidget {
             Expanded(
               child: productsAsync.when(
                 loading: () => const Center(child: CircularProgressIndicator()),
-                error: (err, st) => Center(child: Text('Error: $err')),
+                error: (err, st) => Center(child: Text('লোডে সমস্যা: $err')),
                 data: (products) {
                   final lowStockList = products.where((p) {
                     final prod = p.product;
@@ -502,7 +473,7 @@ class DashboardScreen extends ConsumerWidget {
                         children: [
                           Icon(Icons.check_circle_outline_rounded, color: Colors.green, size: 36),
                           SizedBox(height: 8),
-                          Text('All stocks healthy!', style: TextStyle(color: Colors.grey)),
+                          Text('সব পণ্যের স্টক পর্যাপ্ত!', style: TextStyle(color: Colors.grey)),
                         ],
                       ),
                     );
@@ -517,7 +488,7 @@ class DashboardScreen extends ConsumerWidget {
                       return ListTile(
                         contentPadding: EdgeInsets.zero,
                         title: Text(item.name, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13)),
-                        subtitle: Text('Min: ${Formatters.number(item.minimumStock)} ${item.unit}', style: const TextStyle(fontSize: 11)),
+                        subtitle: Text('সর্বনিম্ন স্টক: ${Formatters.number(item.minimumStock)} ${item.unit}', style: const TextStyle(fontSize: 11)),
                         trailing: Container(
                           padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                           decoration: BoxDecoration(
@@ -576,25 +547,25 @@ class DashboardScreen extends ConsumerWidget {
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
                 Text(
-                  'Recent Transactions',
+                  'সাম্প্রতিক বিক্রি সমূহ',
                   style: theme.textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold),
                 ),
                 TextButton(
                   onPressed: () => context.go('/reports'),
-                  child: const Text('View All'),
+                  child: const Text('সব দেখুন'),
                 ),
               ],
             ),
             const SizedBox(height: 12),
             salesAsync.when(
               loading: () => const Center(child: CircularProgressIndicator()),
-              error: (err, st) => Center(child: Text('Error loading transactions: $err')),
+              error: (err, st) => Center(child: Text('বিক্রি তালিকা লোড ব্যর্থ: $err')),
               data: (sales) {
                 if (sales.isEmpty) {
                   return const Padding(
                     padding: EdgeInsets.symmetric(vertical: 36.0),
                     child: Center(
-                      child: Text('No transactions recorded yet.', style: TextStyle(color: Colors.grey)),
+                      child: Text('এখনও কোনো পণ্য বিক্রি হয়নি।', style: TextStyle(color: Colors.grey)),
                     ),
                   );
                 }
@@ -607,7 +578,7 @@ class DashboardScreen extends ConsumerWidget {
                   itemBuilder: (context, index) {
                     final saleWithDetails = sales[index];
                     final sale = saleWithDetails.sale;
-                    final customerName = saleWithDetails.customer?.name ?? 'Walk-in Customer';
+                    final customerName = saleWithDetails.customer?.name ?? 'সাধারণ কাস্টমার';
                     final itemsCount = saleWithDetails.items.length;
 
                     return ListTile(
@@ -625,7 +596,7 @@ class DashboardScreen extends ConsumerWidget {
                         style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14),
                       ),
                       subtitle: Text(
-                        '${Formatters.dateTime(sale.date)} • $itemsCount items • ${sale.paymentMethod}',
+                        '${Formatters.dateTime(sale.date)} • $itemsCountটি আইটেম • ${sale.paymentMethod}',
                         style: const TextStyle(fontSize: 11, color: Colors.grey),
                       ),
                       trailing: Column(
@@ -644,7 +615,7 @@ class DashboardScreen extends ConsumerWidget {
                               borderRadius: BorderRadius.circular(4),
                             ),
                             child: const Text(
-                              'Paid',
+                              'পরিশোধিত',
                               style: TextStyle(
                                 color: Color(0xFF00B074),
                                 fontSize: 9,
@@ -808,7 +779,7 @@ class _QuickActionCard extends StatelessWidget {
             ),
             const SizedBox(height: 2),
             Text(
-              'Quick access',
+              'ক্লিক করুন',
               style: TextStyle(
                 color: theme.colorScheme.onSurfaceVariant,
                 fontSize: 10,

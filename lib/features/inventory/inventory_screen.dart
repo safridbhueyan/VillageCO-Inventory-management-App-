@@ -10,7 +10,6 @@ import '../../core/utils/formatters.dart';
 import '../products/products_controller.dart';
 import '../suppliers/suppliers_controller.dart';
 
-// Stock History Log data class
 class StockHistoryWithDetails {
   final StockHistoryData log;
   final Product product;
@@ -23,7 +22,6 @@ class StockHistoryWithDetails {
   });
 }
 
-// Fetch stock history logs joined with product name and supplier name
 final stockHistoryListProvider = FutureProvider<List<StockHistoryWithDetails>>((ref) async {
   final db = ref.watch(databaseProvider);
   
@@ -42,7 +40,6 @@ final stockHistoryListProvider = FutureProvider<List<StockHistoryWithDetails>>((
     );
   }).toList();
 
-  // Sort by date descending
   list.sort((a, b) => b.log.date.compareTo(a.log.date));
   return list;
 });
@@ -77,15 +74,15 @@ class _InventoryScreenState extends ConsumerState<InventoryScreen> with SingleTi
 
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Inventory & Stock', style: TextStyle(fontWeight: FontWeight.bold)),
+        title: const Text('স্টক ও ইনভেন্টরি', style: TextStyle(fontWeight: FontWeight.bold)),
         bottom: TabBar(
           controller: _tabController,
           indicatorColor: theme.colorScheme.primary,
           labelColor: theme.colorScheme.primary,
           unselectedLabelColor: theme.colorScheme.onSurfaceVariant,
           tabs: const [
-            Tab(icon: Icon(Icons.inventory_rounded), text: 'Stock Status'),
-            Tab(icon: Icon(Icons.history_rounded), text: 'Transaction Logs'),
+            Tab(icon: Icon(Icons.inventory_rounded), text: 'স্টক রিপোর্ট'),
+            Tab(icon: Icon(Icons.history_rounded), text: 'আদান-প্রদান লগ'),
           ],
         ),
       ),
@@ -99,12 +96,11 @@ class _InventoryScreenState extends ConsumerState<InventoryScreen> with SingleTi
       floatingActionButton: FloatingActionButton.extended(
         onPressed: () => _showStockAdjustmentDialog(context),
         icon: const Icon(Icons.swap_vertical_circle_outlined),
-        label: const Text('Adjust Stock'),
+        label: const Text('স্টক পরিবর্তন করুন'),
       ),
     );
   }
 
-  // TAB 1: Stock levels grid/list with details
   Widget _buildStockStatusTab(BuildContext context, AsyncValue<List<ProductWithDetails>> productsAsync) {
     final theme = Theme.of(context);
     final double width = MediaQuery.of(context).size.width;
@@ -112,28 +108,27 @@ class _InventoryScreenState extends ConsumerState<InventoryScreen> with SingleTi
 
     return productsAsync.when(
       loading: () => const Center(child: CircularProgressIndicator()),
-      error: (err, st) => Center(child: Text('Error: $err')),
+      error: (err, st) => Center(child: Text('লোড করতে ত্রুটি হয়েছে: $err')),
       data: (products) {
         if (products.isEmpty) {
-          return const Center(child: Text('No products in directory. Register a product first.'));
+          return const Center(child: Text('কোনো পণ্য পাওয়া যায়নি। পণ্য তালিকা থেকে পণ্য যোগ করুন।'));
         }
 
         return Column(
           children: [
-            // Table Header on desktop, normal list otherwise
             if (isDesktop)
               Container(
                 color: theme.colorScheme.surfaceVariant.withOpacity(0.3),
                 padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
                 child: const Row(
                   children: [
-                    Expanded(flex: 3, child: Text('Product Name', style: TextStyle(fontWeight: FontWeight.bold))),
-                    Expanded(flex: 2, child: Text('Category', style: TextStyle(fontWeight: FontWeight.bold))),
-                    Expanded(flex: 1, child: Text('Stock Level', style: TextStyle(fontWeight: FontWeight.bold))),
-                    Expanded(flex: 1, child: Text('Buying Price', style: TextStyle(fontWeight: FontWeight.bold))),
-                    Expanded(flex: 1, child: Text('Selling Price', style: TextStyle(fontWeight: FontWeight.bold))),
-                    Expanded(flex: 1, child: Text('Unit Profit', style: TextStyle(fontWeight: FontWeight.bold))),
-                    Expanded(flex: 1, child: Text('Status', style: TextStyle(fontWeight: FontWeight.bold))),
+                    Expanded(flex: 3, child: Text('পণ্যের নাম', style: TextStyle(fontWeight: FontWeight.bold))),
+                    Expanded(flex: 2, child: Text('ক্যাটাগরি', style: TextStyle(fontWeight: FontWeight.bold))),
+                    Expanded(flex: 1, child: Text('স্টক পরিমাণ', style: TextStyle(fontWeight: FontWeight.bold))),
+                    Expanded(flex: 1, child: Text('ক্রয়মূল্য', style: TextStyle(fontWeight: FontWeight.bold))),
+                    Expanded(flex: 1, child: Text('বিক্রয়মূল্য', style: TextStyle(fontWeight: FontWeight.bold))),
+                    Expanded(flex: 1, child: Text('নিট লাভ', style: TextStyle(fontWeight: FontWeight.bold))),
+                    Expanded(flex: 1, child: Text('অবস্থা', style: TextStyle(fontWeight: FontWeight.bold))),
                   ],
                 ),
               ),
@@ -145,10 +140,9 @@ class _InventoryScreenState extends ConsumerState<InventoryScreen> with SingleTi
                 itemBuilder: (context, index) {
                   final item = products[index];
                   final p = item.product;
-                  final categoryName = item.category?.name ?? 'Uncategorized';
+                  final categoryName = item.category?.name ?? 'ক্যাটাগরি ছাড়া';
                   final profit = p.sellingPrice - p.buyingPrice;
                   final status = _getStockStatus(p.currentStock, p.minimumStock);
-                  final isOut = p.currentStock <= 0;
 
                   if (isDesktop) {
                     return Padding(
@@ -169,7 +163,7 @@ class _InventoryScreenState extends ConsumerState<InventoryScreen> with SingleTi
                           Expanded(flex: 1, child: Text('${Formatters.number(p.currentStock)} ${p.unit}')),
                           Expanded(flex: 1, child: Text(Formatters.currency(p.buyingPrice))),
                           Expanded(flex: 1, child: Text(Formatters.currency(p.sellingPrice))),
-                          Expanded(flex: 1, child: Text(Formatters.currency(profit), style: const TextStyle(color: Colors.green, fontWeight: FontWeight.w500))),
+                          Expanded(flex: 1, child: Text(Formatters.currency(profit), style: const TextStyle(color: Colors.green, fontWeight: FontWeight.bold))),
                           Expanded(
                             flex: 1,
                             child: _buildStatusBadge(status),
@@ -181,7 +175,7 @@ class _InventoryScreenState extends ConsumerState<InventoryScreen> with SingleTi
                     return ListTile(
                       contentPadding: const EdgeInsets.symmetric(vertical: 4),
                       title: Text(p.name, style: const TextStyle(fontWeight: FontWeight.bold)),
-                      subtitle: Text('$categoryName • Buying: ${Formatters.currency(p.buyingPrice)} • Profit: ${Formatters.currency(profit)}'),
+                      subtitle: Text('$categoryName • কেনা: ${Formatters.currency(p.buyingPrice)} • লাভ: ${Formatters.currency(profit)}'),
                       trailing: Column(
                         mainAxisAlignment: MainAxisAlignment.center,
                         crossAxisAlignment: CrossAxisAlignment.end,
@@ -202,15 +196,13 @@ class _InventoryScreenState extends ConsumerState<InventoryScreen> with SingleTi
     );
   }
 
-  // TAB 2: Chronological transaction logs
   Widget _buildLogsTab(BuildContext context, AsyncValue<List<StockHistoryWithDetails>> logsAsync) {
-    final theme = Theme.of(context);
     return logsAsync.when(
       loading: () => const Center(child: CircularProgressIndicator()),
-      error: (err, st) => Center(child: Text('Error loading logs: $err')),
+      error: (err, st) => Center(child: Text('লগ লোড করতে ত্রুটি: $err')),
       data: (logs) {
         if (logs.isEmpty) {
-          return const Center(child: Text('No stock adjustments recorded.'));
+          return const Center(child: Text('এখনও কোনো স্টক পরিবর্তন করা হয়নি।'));
         }
 
         return ListView.separated(
@@ -222,7 +214,7 @@ class _InventoryScreenState extends ConsumerState<InventoryScreen> with SingleTi
             final product = entry.product;
             final log = entry.log;
             final isAddition = log.changeAmount > 0;
-            final supplierText = entry.supplier != null ? ' • Supplier: ${entry.supplier!.name}' : '';
+            final supplierText = entry.supplier != null ? ' • সরবরাহকারী: ${entry.supplier!.name}' : '';
 
             return ListTile(
               leading: Icon(
@@ -250,12 +242,27 @@ class _InventoryScreenState extends ConsumerState<InventoryScreen> with SingleTi
 
   Widget _buildStatusBadge(String status) {
     Color color;
+    String statusText;
     switch (status) {
-      case 'Healthy': color = Colors.green; break;
-      case 'Low': color = Colors.orange; break;
-      case 'Critical': color = Colors.red; break;
-      case 'OutOfStock': color = Colors.grey; break;
-      default: color = Colors.blue;
+      case 'Healthy': 
+        color = Colors.green; 
+        statusText = 'পর্যাপ্ত স্টক';
+        break;
+      case 'Low': 
+        color = Colors.orange; 
+        statusText = 'কম স্টক';
+        break;
+      case 'Critical': 
+        color = Colors.red; 
+        statusText = 'খুবই কম স্টক';
+        break;
+      case 'OutOfStock': 
+        color = Colors.grey; 
+        statusText = 'স্টক খালি';
+        break;
+      default: 
+        color = Colors.blue;
+        statusText = status;
     }
 
     return Container(
@@ -265,7 +272,7 @@ class _InventoryScreenState extends ConsumerState<InventoryScreen> with SingleTi
         borderRadius: BorderRadius.circular(6),
       ),
       child: Text(
-        status == 'OutOfStock' ? 'Out of Stock' : status,
+        statusText,
         style: TextStyle(
           color: color,
           fontWeight: FontWeight.bold,
@@ -283,7 +290,7 @@ class _InventoryScreenState extends ConsumerState<InventoryScreen> with SingleTi
     return 'Healthy';
   }
 
-  // Stock Adjustment Form Dialog
+  // Stock Adjustment Form Dialog (Bangla & Simplified)
   void _showStockAdjustmentDialog(BuildContext context) {
     final amountController = TextEditingController();
     final costController = TextEditingController();
@@ -292,7 +299,7 @@ class _InventoryScreenState extends ConsumerState<InventoryScreen> with SingleTi
     String selectedType = 'Stock In'; // 'Stock In', 'Stock Out', 'Adjust Stock'
     String? selectedProductId;
     String? selectedSupplierId;
-    String reason = 'Purchase';
+    String reason = 'ক্রয়';
 
     final productsAsync = ref.read(productsListProvider);
     final suppliersAsync = ref.read(suppliersControllerProvider);
@@ -303,7 +310,7 @@ class _InventoryScreenState extends ConsumerState<InventoryScreen> with SingleTi
         return StatefulBuilder(
           builder: (context, setDialogState) {
             return AlertDialog(
-              title: const Text('Record Stock Transaction'),
+              title: const Text('স্টক পরিবর্তন নথিভুক্ত করুন'),
               content: SizedBox(
                 width: 450,
                 child: SingleChildScrollView(
@@ -314,34 +321,35 @@ class _InventoryScreenState extends ConsumerState<InventoryScreen> with SingleTi
                       productsAsync.maybeWhen(
                         data: (products) => DropdownButtonFormField<String>(
                           value: selectedProductId,
-                          decoration: const InputDecoration(labelText: 'Select Product *', border: OutlineInputBorder()),
+                          isExpanded: true,
+                          decoration: const InputDecoration(labelText: 'পণ্য সিলেক্ট করুন *', border: OutlineInputBorder()),
                           items: products.map((p) {
                             return DropdownMenuItem(
                               value: p.product.id,
-                              child: Text('${p.product.name} (Stock: ${Formatters.number(p.product.currentStock)} ${p.product.unit})'),
+                              child: Text('${p.product.name} (বর্তমান: ${Formatters.number(p.product.currentStock)} ${p.product.unit})'),
                             );
                           }).toList(),
                           onChanged: (val) => setDialogState(() => selectedProductId = val),
                         ),
-                        orElse: () => const Text('Loading products...'),
+                        orElse: () => const Text('পণ্য লোড হচ্ছে...'),
                       ),
                       const SizedBox(height: 12),
                       // Transaction Type
                       DropdownButtonFormField<String>(
                         value: selectedType,
-                        decoration: const InputDecoration(labelText: 'Transaction Type', border: OutlineInputBorder()),
+                        decoration: const InputDecoration(labelText: 'পরিবর্তনের ধরন', border: OutlineInputBorder()),
                         items: const [
-                          DropdownMenuItem(value: 'Stock In', child: Text('Stock In (Add)')),
-                          DropdownMenuItem(value: 'Stock Out', child: Text('Stock Out (Subtract)')),
-                          DropdownMenuItem(value: 'Adjust Stock', child: Text('Set Stock Value')),
+                          DropdownMenuItem(value: 'Stock In', child: Text('স্টক যোগ করুন (Stock In)')),
+                          DropdownMenuItem(value: 'Stock Out', child: Text('স্টক কমান (Stock Out)')),
+                          DropdownMenuItem(value: 'Adjust Stock', child: Text('সরাসরি স্টক সেট করুন')),
                         ],
                         onChanged: (val) {
                           if (val != null) {
                             setDialogState(() {
                               selectedType = val;
-                              if (val == 'Stock In') reason = 'Purchase';
-                              if (val == 'Stock Out') reason = 'Damage';
-                              if (val == 'Adjust Stock') reason = 'Physical Audit';
+                              if (val == 'Stock In') reason = 'ক্রয়';
+                              if (val == 'Stock Out') reason = 'নষ্ট/ক্ষতি';
+                              if (val == 'Adjust Stock') reason = 'স্টক গণনা';
                             });
                           }
                         },
@@ -351,46 +359,46 @@ class _InventoryScreenState extends ConsumerState<InventoryScreen> with SingleTi
                       TextField(
                         controller: amountController,
                         decoration: InputDecoration(
-                          labelText: selectedType == 'Adjust Stock' ? 'New Stock Level *' : 'Quantity *',
+                          labelText: selectedType == 'Adjust Stock' ? 'নতুন মোট স্টক সংখ্যা *' : 'পরিমাণ *',
                           border: const OutlineInputBorder(),
                         ),
                         keyboardType: const TextInputType.numberWithOptions(decimal: true),
                       ),
                       const SizedBox(height: 12),
-                      // Reason Text dropdown
+                      // Reason Dropdown
                       DropdownButtonFormField<String>(
                         value: reason,
-                        decoration: const InputDecoration(labelText: 'Reason', border: OutlineInputBorder()),
+                        decoration: const InputDecoration(labelText: 'কারণ', border: OutlineInputBorder()),
                         items: selectedType == 'Stock In'
                             ? const [
-                                DropdownMenuItem(value: 'Purchase', child: Text('Purchase Log')),
-                                DropdownMenuItem(value: 'Return', child: Text('Customer Return')),
-                                DropdownMenuItem(value: 'Transfer', child: Text('Transfer In')),
+                                DropdownMenuItem(value: 'ক্রয়', child: Text('নতুন ক্রয়')),
+                                DropdownMenuItem(value: 'ফেরত', child: Text('কাস্টমার ফেরত')),
+                                DropdownMenuItem(value: 'অন্যান্য', child: Text('অন্যান্য')),
                               ]
                             : (selectedType == 'Stock Out'
                                 ? const [
-                                    DropdownMenuItem(value: 'Damage', child: Text('Damaged / Broken')),
-                                    DropdownMenuItem(value: 'Theft', child: Text('Shrinkage / Theft')),
-                                    DropdownMenuItem(value: 'Expiry', child: Text('Expired Items')),
-                                    DropdownMenuItem(value: 'Transfer', child: Text('Transfer Out')),
+                                    DropdownMenuItem(value: 'নষ্ট/ক্ষতি', child: Text('নষ্ট / ভাঙা পণ্য')),
+                                    DropdownMenuItem(value: 'চুরি', child: Text('চুরি / হারানো')),
+                                    DropdownMenuItem(value: 'মেয়াদ শেষ', child: Text('মেয়াদোত্তীর্ণ পণ্য')),
                                   ]
                                 : const [
-                                    DropdownMenuItem(value: 'Physical Audit', child: Text('Physical Audit')),
-                                    DropdownMenuItem(value: 'Discrepancy Correction', child: Text('Correction')),
+                                    DropdownMenuItem(value: 'স্টক গণনা', child: Text('ভৌত স্টক গণনা')),
+                                    DropdownMenuItem(value: 'সংশোধন', child: Text('হিসাব সংশোধন')),
                                   ]),
                         onChanged: (val) {
                           if (val != null) setDialogState(() => reason = val);
                         },
                       ),
                       const SizedBox(height: 12),
-                      // Conditional fields for 'Stock In' -> Suppliers integration
+                      // Conditional fields for 'Stock In'
                       if (selectedType == 'Stock In') ...[
                         suppliersAsync.maybeWhen(
                           data: (suppliers) => DropdownButtonFormField<String>(
                             value: selectedSupplierId,
-                            decoration: const InputDecoration(labelText: 'Supplier', border: OutlineInputBorder()),
+                            isExpanded: true,
+                            decoration: const InputDecoration(labelText: 'সরবরাহকারী (ঐচ্ছিক)', border: OutlineInputBorder()),
                             items: [
-                              const DropdownMenuItem(value: null, child: Text('Select Supplier')),
+                              const DropdownMenuItem(value: null, child: Text('সরবরাহকারী ছাড়া')),
                               ...suppliers.map((s) => DropdownMenuItem(value: s.id, child: Text(s.name))),
                             ],
                             onChanged: (val) => setDialogState(() => selectedSupplierId = val),
@@ -404,8 +412,8 @@ class _InventoryScreenState extends ConsumerState<InventoryScreen> with SingleTi
                               child: TextField(
                                 controller: costController,
                                 decoration: const InputDecoration(
-                                  labelText: 'Cost Per Unit *',
-                                  prefixText: '\$',
+                                  labelText: 'ক্রয়মূল্য (ঐচ্ছিক)',
+                                  prefixText: '৳',
                                   border: OutlineInputBorder(),
                                 ),
                                 keyboardType: TextInputType.number,
@@ -414,12 +422,12 @@ class _InventoryScreenState extends ConsumerState<InventoryScreen> with SingleTi
                             const SizedBox(width: 12),
                             Expanded(
                               child: TextField(
-                                controller: invoiceController,
-                                decoration: const InputDecoration(
-                                  labelText: 'Invoice No.',
-                                  border: OutlineInputBorder(),
+                                  controller: invoiceController,
+                                  decoration: const InputDecoration(
+                                    labelText: 'চালান নং (ঐচ্ছিক)',
+                                    border: OutlineInputBorder(),
+                                  ),
                                 ),
-                              ),
                             ),
                           ],
                         ),
@@ -429,7 +437,7 @@ class _InventoryScreenState extends ConsumerState<InventoryScreen> with SingleTi
                 ),
               ),
               actions: [
-                TextButton(onPressed: () => Navigator.pop(context), child: const Text('Cancel')),
+                TextButton(onPressed: () => Navigator.pop(context), child: const Text('বাতিল')),
                 ElevatedButton(
                   onPressed: () async {
                     if (selectedProductId == null) return;
@@ -443,7 +451,6 @@ class _InventoryScreenState extends ConsumerState<InventoryScreen> with SingleTi
 
                     if (selectedType == 'Stock In') {
                       diff = amt;
-                      // Log purchase record if supplier selected
                       if (selectedSupplierId != null) {
                         final cost = double.tryParse(costController.text) ?? 0.0;
                         await db.into(db.purchases).insert(
@@ -462,19 +469,17 @@ class _InventoryScreenState extends ConsumerState<InventoryScreen> with SingleTi
                       diff = -amt;
                       await repo.adjustStock(selectedProductId!, diff, reason);
                     } else {
-                      // Adjust stock
                       final pList = productsAsync.value ?? [];
                       final match = pList.firstWhere((p) => p.product.id == selectedProductId);
                       diff = amt - match.product.currentStock;
                       await repo.adjustStock(selectedProductId!, diff, reason);
                     }
 
-                    // Invalidate providers
                     ref.invalidate(stockHistoryListProvider);
                     ref.invalidate(supplierPurchasesProvider);
                     Navigator.pop(context);
                   },
-                  child: const Text('Apply'),
+                  child: const Text('নিশ্চিত করুন'),
                 ),
               ],
             );

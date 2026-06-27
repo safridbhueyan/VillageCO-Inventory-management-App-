@@ -59,7 +59,7 @@ class _Sidebar extends StatelessWidget {
       child: SafeArea(
         child: Column(
           children: [
-            // Header
+            // Header (Bangla Brand)
             Padding(
               padding: const EdgeInsets.all(24.0),
               child: Row(
@@ -96,16 +96,17 @@ class _Sidebar extends StatelessWidget {
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         Text(
-                          'VillageCO',
+                          'ভিলেজকো',
                           style: theme.textTheme.titleMedium?.copyWith(
                             fontWeight: FontWeight.bold,
                             letterSpacing: 0.5,
                           ),
                         ),
                         Text(
-                          'Inventory & POS',
+                          'স্টোর ও পিওএস',
                           style: theme.textTheme.bodySmall?.copyWith(
                             color: theme.colorScheme.onSurfaceVariant,
+                            fontWeight: FontWeight.w600,
                           ),
                         ),
                       ],
@@ -116,7 +117,7 @@ class _Sidebar extends StatelessWidget {
             ),
             const Divider(height: 1),
             const SizedBox(height: 16),
-            // Navigation Items
+            // Navigation Items (Bangla Labels)
             Expanded(
               child: ListView(
                 padding: const EdgeInsets.symmetric(horizontal: 16),
@@ -124,56 +125,49 @@ class _Sidebar extends StatelessWidget {
                   _SidebarItem(
                     icon: Icons.dashboard_outlined,
                     activeIcon: Icons.dashboard,
-                    label: 'Dashboard',
+                    label: 'ড্যাশবোর্ড',
                     path: '/dashboard',
                     currentPath: currentPath,
                   ),
                   _SidebarItem(
                     icon: Icons.shopping_bag_outlined,
                     activeIcon: Icons.shopping_bag,
-                    label: 'Products',
+                    label: 'পণ্য তালিকা',
                     path: '/products',
                     currentPath: currentPath,
                   ),
                   _SidebarItem(
                     icon: Icons.inventory_2_outlined,
                     activeIcon: Icons.inventory_2,
-                    label: 'Inventory & Stock',
+                    label: 'স্টক ও ইনভেন্টরি',
                     path: '/inventory',
                     currentPath: currentPath,
                   ),
                   _SidebarItem(
                     icon: Icons.point_of_sale_outlined,
                     activeIcon: Icons.point_of_sale,
-                    label: 'POS Workspace',
+                    label: 'বিক্রয় কেন্দ্র (POS)',
                     path: '/pos',
-                    currentPath: currentPath,
-                  ),
-                  _SidebarItem(
-                    icon: Icons.local_shipping_outlined,
-                    activeIcon: Icons.local_shipping,
-                    label: 'Suppliers',
-                    path: '/suppliers',
                     currentPath: currentPath,
                   ),
                   _SidebarItem(
                     icon: Icons.bar_chart_outlined,
                     activeIcon: Icons.bar_chart,
-                    label: 'Reports & Analytics',
+                    label: 'রিপোর্ট ও লাভ-ক্ষতি',
                     path: '/reports',
                     currentPath: currentPath,
                   ),
                   _SidebarItem(
                     icon: Icons.settings_outlined,
                     activeIcon: Icons.settings,
-                    label: 'Settings',
+                    label: 'সেটিংস',
                     path: '/settings',
                     currentPath: currentPath,
                   ),
                 ],
               ),
             ),
-            // Footer
+            // Footer (Bangla Info)
             const Divider(height: 1),
             Padding(
               padding: const EdgeInsets.all(16.0),
@@ -182,10 +176,11 @@ class _Sidebar extends StatelessWidget {
                   CircleAvatar(
                     backgroundColor: theme.colorScheme.secondaryContainer,
                     child: Text(
-                      'AD',
+                      'অ্যাড',
                       style: TextStyle(
                         color: theme.colorScheme.onSecondaryContainer,
                         fontWeight: FontWeight.bold,
+                        fontSize: 12,
                       ),
                     ),
                   ),
@@ -195,19 +190,19 @@ class _Sidebar extends StatelessWidget {
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         Text(
-                          'Administrator',
-                          style: TextStyle(fontWeight: FontWeight.w600),
+                          'অ্যাডমিনিস্ট্রেটর',
+                          style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13),
                         ),
                         Text(
-                          'Local Session',
-                          style: TextStyle(fontSize: 12, color: Colors.grey),
+                          'চলতি সেশন',
+                          style: TextStyle(fontSize: 11, color: Colors.grey),
                         ),
                       ],
                     ),
                   ),
                   IconButton(
                     icon: const Icon(Icons.lock_open_outlined),
-                    tooltip: 'Lock Session',
+                    tooltip: 'লক সেশন',
                     onPressed: () {
                       context.go('/login');
                     },
@@ -282,7 +277,7 @@ class _SidebarItem extends StatelessWidget {
                   label,
                   style: theme.textTheme.bodyMedium?.copyWith(
                     color: isActive ? theme.colorScheme.primary : theme.colorScheme.onSurface,
-                    fontWeight: isActive ? FontWeight.bold : FontWeight.w500,
+                    fontWeight: isActive ? FontWeight.bold : FontWeight.w600,
                   ),
                 ),
               ),
@@ -310,8 +305,6 @@ class _BottomNavBar extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-
     int getIndex() {
       if (currentLocation.startsWith('/products')) return 1;
       if (currentLocation.startsWith('/pos')) return 2;
@@ -345,27 +338,27 @@ class _BottomNavBar extends StatelessWidget {
         NavigationDestination(
           icon: Icon(Icons.dashboard_outlined),
           selectedIcon: Icon(Icons.dashboard),
-          label: 'Dashboard',
+          label: 'ড্যাশবোর্ড',
         ),
         NavigationDestination(
           icon: Icon(Icons.shopping_bag_outlined),
           selectedIcon: Icon(Icons.shopping_bag),
-          label: 'Products',
+          label: 'পণ্য',
         ),
         NavigationDestination(
           icon: Icon(Icons.point_of_sale_outlined),
           selectedIcon: Icon(Icons.point_of_sale),
-          label: 'POS',
+          label: 'বিক্রি',
         ),
         NavigationDestination(
           icon: Icon(Icons.bar_chart_outlined),
           selectedIcon: Icon(Icons.bar_chart),
-          label: 'Reports',
+          label: 'রিপোর্ট',
         ),
         NavigationDestination(
           icon: Icon(Icons.settings_outlined),
           selectedIcon: Icon(Icons.settings),
-          label: 'Settings',
+          label: 'সেটিংস',
         ),
       ],
     );

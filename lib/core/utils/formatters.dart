@@ -1,7 +1,7 @@
 import 'package:intl/intl.dart';
 
 class Formatters {
-  static String currency(double amount, {String symbol = '\$'}) {
+  static String currency(double amount, {String symbol = '৳'}) {
     final formatter = NumberFormat.currency(symbol: symbol, decimalDigits: 2);
     return formatter.format(amount);
   }

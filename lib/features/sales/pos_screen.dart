@@ -1,3 +1,4 @@
+import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_animate/flutter_animate.dart';
@@ -7,11 +8,10 @@ import '../../core/database/database_providers.dart';
 import '../../core/utils/formatters.dart';
 import '../products/products_controller.dart';
 import '../categories/categories_controller.dart';
-import '../suppliers/suppliers_controller.dart'; // We can use suppliers or customers provider if any
+import '../suppliers/suppliers_controller.dart'; 
 import '../reports/reports_controller.dart';
 import 'pos_controller.dart';
 
-// Fetch customer lists for POS selector
 final posCustomersListProvider = FutureProvider<List<Customer>>((ref) async {
   final db = ref.watch(databaseProvider);
   return db.select(db.customers).get();
@@ -53,7 +53,6 @@ class _PosScreenState extends ConsumerState<PosScreen> with SingleTickerProvider
     final categoriesAsync = ref.watch(categoriesControllerProvider);
     final customersAsync = ref.watch(posCustomersListProvider);
 
-    // Apply inline POS search query filter to product list
     final filteredProducts = productsAsync.maybeWhen(
       data: (list) {
         if (_productSearchQuery.isEmpty) return list;
@@ -71,24 +70,22 @@ class _PosScreenState extends ConsumerState<PosScreen> with SingleTickerProvider
     if (isDesktop) {
       return Scaffold(
         appBar: AppBar(
-          title: const Text('POS terminal', style: TextStyle(fontWeight: FontWeight.bold)),
+          title: const Text('বিক্রয় কেন্দ্র (POS)', style: TextStyle(fontWeight: FontWeight.bold)),
           actions: [
             IconButton(
               icon: const Icon(Icons.delete_sweep_outlined),
-              tooltip: 'Clear Cart',
+              tooltip: 'কার্ট খালি করুন',
               onPressed: () => ref.read(posCartProvider.notifier).clearCart(),
             ),
           ],
         ),
         body: Row(
           children: [
-            // Left Workspace: Catalog
             Expanded(
               flex: 5,
               child: _buildCatalogPanel(context, filteredProducts, categoriesAsync),
             ),
             const VerticalDivider(width: 1),
-            // Right Workspace: Cart & Checkout
             Expanded(
               flex: 4,
               child: _buildCheckoutPanel(context, cart, customersAsync),
@@ -97,24 +94,23 @@ class _PosScreenState extends ConsumerState<PosScreen> with SingleTickerProvider
         ),
       );
     } else {
-      // Mobile screen: Tabbed Workspace
       return Scaffold(
         appBar: AppBar(
-          title: const Text('POS Terminal', style: TextStyle(fontWeight: FontWeight.bold)),
+          title: const Text('বিক্রয় কেন্দ্র (POS)', style: TextStyle(fontWeight: FontWeight.bold)),
           bottom: TabBar(
             controller: _tabController,
             indicatorColor: theme.colorScheme.primary,
             labelColor: theme.colorScheme.primary,
             unselectedLabelColor: theme.colorScheme.onSurfaceVariant,
             tabs: [
-              const Tab(icon: Icon(Icons.grid_view_rounded), text: 'Catalog'),
+              const Tab(icon: Icon(Icons.grid_view_rounded), text: 'পণ্য তালিকা'),
               Tab(
                 icon: Badge(
                   label: Text(cart.items.length.toString()),
                   isLabelVisible: cart.items.isNotEmpty,
                   child: const Icon(Icons.shopping_cart_outlined),
                 ),
-                text: 'Cart',
+                text: 'কার্ট',
               ),
             ],
           ),
@@ -130,7 +126,7 @@ class _PosScreenState extends ConsumerState<PosScreen> with SingleTickerProvider
     }
   }
 
-  // PANEL 1: Product Selector Catalog
+  // Panel 1: Product Selector
   Widget _buildCatalogPanel(
     BuildContext context,
     List<ProductWithDetails> products,
@@ -143,13 +139,12 @@ class _PosScreenState extends ConsumerState<PosScreen> with SingleTickerProvider
       color: theme.colorScheme.background,
       child: Column(
         children: [
-          // Search box
           Padding(
             padding: const EdgeInsets.all(16.0),
             child: TextField(
               controller: _searchController,
               decoration: InputDecoration(
-                hintText: 'Search catalog by name or barcode...',
+                hintText: 'নাম বা বারকোড দিয়ে পণ্য খুঁজুন...',
                 prefixIcon: const Icon(Icons.search),
                 suffixIcon: _productSearchQuery.isNotEmpty
                     ? IconButton(
@@ -167,14 +162,13 @@ class _PosScreenState extends ConsumerState<PosScreen> with SingleTickerProvider
               },
             ),
           ),
-          // Categories horizontal list
           SingleChildScrollView(
             scrollDirection: Axis.horizontal,
             padding: const EdgeInsets.only(left: 16.0, bottom: 12.0),
             child: Row(
               children: [
                 ActionChip(
-                  label: const Text('All Categories'),
+                  label: const Text('সব পণ্য'),
                   onPressed: () {
                     ref.read(productsFilterProvider.notifier).update((s) => s.copyWith(categoryId: null));
                   },
@@ -204,10 +198,9 @@ class _PosScreenState extends ConsumerState<PosScreen> with SingleTickerProvider
               ],
             ),
           ),
-          // Product Grid
           Expanded(
             child: products.isEmpty
-                ? const Center(child: Text('No matching products found.'))
+                ? const Center(child: Text('ম্যাচিং কোনো পণ্য পাওয়া যায়নি।'))
                 : GridView.builder(
                     padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
                     gridDelegate: const SliverGridDelegateWithMaxCrossAxisExtent(
@@ -235,7 +228,7 @@ class _PosScreenState extends ConsumerState<PosScreen> with SingleTickerProvider
                                   ref.read(posCartProvider.notifier).addItem(p);
                                   ScaffoldMessenger.of(context).showSnackBar(
                                     SnackBar(
-                                      content: Text('${p.name} added to cart'),
+                                      content: Text('${p.name} কার্টে যোগ হয়েছে'),
                                       duration: const Duration(milliseconds: 600),
                                     ),
                                   );
@@ -255,10 +248,20 @@ class _PosScreenState extends ConsumerState<PosScreen> with SingleTickerProvider
                                         color: theme.colorScheme.surfaceVariant.withOpacity(0.3),
                                         borderRadius: BorderRadius.circular(8),
                                       ),
-                                      child: Icon(
-                                        Icons.shopping_bag_outlined,
-                                        color: theme.colorScheme.onSurfaceVariant.withOpacity(0.4),
-                                      ),
+                                      child: p.imagePath != null && File(p.imagePath!).existsSync()
+                                          ? ClipRRect(
+                                              borderRadius: BorderRadius.circular(8),
+                                              child: Image.file(
+                                                File(p.imagePath!),
+                                                fit: BoxFit.cover,
+                                                width: double.infinity,
+                                                height: double.infinity,
+                                              ),
+                                            )
+                                          : Icon(
+                                              Icons.shopping_bag_outlined,
+                                              color: theme.colorScheme.onSurfaceVariant.withOpacity(0.4),
+                                            ),
                                     ),
                                   ),
                                   const SizedBox(height: 6),
@@ -275,7 +278,7 @@ class _PosScreenState extends ConsumerState<PosScreen> with SingleTickerProvider
                                   ),
                                   const SizedBox(height: 4),
                                   Text(
-                                    isOut ? 'Out of Stock' : '${Formatters.number(p.currentStock)} ${p.unit} left',
+                                    isOut ? 'স্টক খালি' : '${Formatters.number(p.currentStock)} ${p.unit} অবশিষ্ট',
                                     style: TextStyle(
                                       fontSize: 10,
                                       color: isOut ? Colors.red : Colors.grey,
@@ -296,7 +299,7 @@ class _PosScreenState extends ConsumerState<PosScreen> with SingleTickerProvider
     );
   }
 
-  // PANEL 2: Active Cart & Checkout details
+  // Panel 2: Cart & Checkout (Simplified flat Taka discounts)
   Widget _buildCheckoutPanel(
     BuildContext context,
     PosCartState cart,
@@ -311,11 +314,10 @@ class _PosScreenState extends ConsumerState<PosScreen> with SingleTickerProvider
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text(
-            'Active Cart',
+            'চলতি কার্ট',
             style: theme.textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold),
           ),
           const SizedBox(height: 12),
-          // Cart Items List
           Expanded(
             child: cart.items.isEmpty
                 ? const Center(
@@ -324,7 +326,7 @@ class _PosScreenState extends ConsumerState<PosScreen> with SingleTickerProvider
                       children: [
                         Icon(Icons.shopping_cart_outlined, size: 48, color: Colors.grey),
                         SizedBox(height: 8),
-                        Text('Cart is empty', style: TextStyle(color: Colors.grey)),
+                        Text('কার্ট খালি রয়েছে', style: TextStyle(color: Colors.grey)),
                       ],
                     ),
                   )
@@ -378,33 +380,30 @@ class _PosScreenState extends ConsumerState<PosScreen> with SingleTickerProvider
           const Divider(),
           const SizedBox(height: 8),
           
-          // Customer & Discount controls
           Row(
             children: [
-              // Customer selection dropdown
               Expanded(
                 child: customersAsync.maybeWhen(
                   data: (customers) => DropdownButtonFormField<Customer?>(
                     value: cart.selectedCustomer,
                     isExpanded: true,
-                    decoration: const InputDecoration(labelText: 'Customer', border: OutlineInputBorder(), contentPadding: EdgeInsets.symmetric(horizontal: 10, vertical: 8)),
+                    decoration: const InputDecoration(labelText: 'কাস্টমার', border: OutlineInputBorder(), contentPadding: EdgeInsets.symmetric(horizontal: 10, vertical: 8)),
                     items: [
-                      const DropdownMenuItem(value: null, child: Text('Anonymous Customer')),
+                      const DropdownMenuItem(value: null, child: Text('সাধারণ কাস্টমার')),
                       ...customers.map((c) => DropdownMenuItem(value: c, child: Text(c.name))),
                     ],
                     onChanged: (val) {
                       ref.read(posCartProvider.notifier).setCustomer(val);
                     },
                   ),
-                  orElse: () => const Text('Loading customers...'),
+                  orElse: () => const Text('কাস্টমার তালিকা লোড হচ্ছে...'),
                 ),
               ),
               const SizedBox(width: 12),
-              // Discount button
               OutlinedButton.icon(
                 onPressed: () => _showDiscountDialog(context, cart),
                 icon: const Icon(Icons.percent_rounded, size: 18),
-                label: Text(cart.discount > 0 ? 'Disc: \$${Formatters.number(cart.discountAmount)}' : 'Discount'),
+                label: Text(cart.discount > 0 ? 'ছাড়: ৳${Formatters.number(cart.discountAmount)}' : 'ডিসকাউন্ট'),
                 style: OutlinedButton.styleFrom(
                   padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
                   shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
@@ -414,12 +413,11 @@ class _PosScreenState extends ConsumerState<PosScreen> with SingleTickerProvider
           ),
           const SizedBox(height: 12),
 
-          // Payment Methods Segmented Button
           SegmentedButton<String>(
             segments: const [
-              ButtonSegment(value: 'Cash', label: Text('Cash'), icon: Icon(Icons.money)),
-              ButtonSegment(value: 'Mobile Banking', label: Text('Mobile'), icon: Icon(Icons.phone_iphone)),
-              ButtonSegment(value: 'Card', label: Text('Card'), icon: Icon(Icons.credit_card)),
+              ButtonSegment(value: 'Cash', label: Text('ক্যাশ'), icon: Icon(Icons.money)),
+              ButtonSegment(value: 'Mobile Banking', label: Text('মোবাইল ব্যাংকিং'), icon: Icon(Icons.phone_iphone)),
+              ButtonSegment(value: 'Card', label: Text('কার্ড'), icon: Icon(Icons.credit_card)),
             ],
             selected: {cart.paymentMethod},
             onSelectionChanged: (set) {
@@ -429,15 +427,14 @@ class _PosScreenState extends ConsumerState<PosScreen> with SingleTickerProvider
           
           const SizedBox(height: 16),
 
-          // Invoice Summaries
           Column(
             children: [
-              _buildCheckoutSummaryRow('Subtotal', Formatters.currency(cart.subtotal)),
+              _buildCheckoutSummaryRow('উপ-মোট বিল', Formatters.currency(cart.subtotal)),
               if (cart.discount > 0)
-                _buildCheckoutSummaryRow('Discount', '- ${Formatters.currency(cart.discountAmount)}', color: Colors.red),
+                _buildCheckoutSummaryRow('ডিসকাউন্ট ছাড়', '- ${Formatters.currency(cart.discountAmount)}', color: Colors.red),
               const Divider(height: 16),
               _buildCheckoutSummaryRow(
-                'Total Bill',
+                'মোট পরিশোধযোগ্য বিল',
                 Formatters.currency(cart.total),
                 isBold: true,
                 fontSize: 18,
@@ -447,7 +444,6 @@ class _PosScreenState extends ConsumerState<PosScreen> with SingleTickerProvider
           ),
           const SizedBox(height: 16),
 
-          // Checkout CTA button
           SizedBox(
             width: double.infinity,
             height: 52,
@@ -461,23 +457,20 @@ class _PosScreenState extends ConsumerState<PosScreen> with SingleTickerProvider
                   ? null
                   : () async {
                       try {
-                        // complete sale in DB and get sale log back
                         final completedSale = await ref.read(posCartProvider.notifier).completeSale();
-                        // reload history
                         ref.invalidate(salesHistoryProvider);
                         ref.invalidate(dashboardMetricsProvider);
-                        // show receipt invoice popup dialog
                         if (mounted) {
                           _showInvoiceReceiptDialog(context, completedSale, cart);
                         }
                       } catch (e) {
                         ScaffoldMessenger.of(context).showSnackBar(
-                          SnackBar(content: Text('Checkout failed: $e')),
+                          SnackBar(content: Text('বিক্রি সম্পন্ন করতে ত্রুটি: $e')),
                         );
                       }
                     },
               child: const Text(
-                'Complete Checkout',
+                'বিক্রি সম্পন্ন করুন',
                 style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
               ),
             ),
@@ -514,51 +507,21 @@ class _PosScreenState extends ConsumerState<PosScreen> with SingleTickerProvider
     );
   }
 
-  // Discount configuration dialog
+  // Simplified Taka Discount Dialog
   void _showDiscountDialog(BuildContext context, PosCartState cart) {
     final discountController = TextEditingController(text: cart.discount.toString());
-    bool isPercent = cart.isPercentageDiscount;
 
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
-        title: const Text('Apply Order Discount'),
-        content: StatefulBuilder(
-          builder: (context, setDialogState) {
-            return Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                TextField(
-                  controller: discountController,
-                  decoration: InputDecoration(
-                    labelText: 'Discount Rate',
-                    prefixText: isPercent ? null : '\$',
-                    suffixText: isPercent ? '%' : null,
-                    border: const OutlineInputBorder(),
-                  ),
-                  keyboardType: TextInputType.number,
-                ),
-                const SizedBox(height: 12),
-                 Wrap(
-                   spacing: 12,
-                   runSpacing: 8,
-                   alignment: WrapAlignment.center,
-                   children: [
-                     ChoiceChip(
-                       label: const Text('Flat Discount'),
-                       selected: !isPercent,
-                       onSelected: (val) => setDialogState(() => isPercent = false),
-                     ),
-                     ChoiceChip(
-                       label: const Text('Percentage (%)'),
-                       selected: isPercent,
-                       onSelected: (val) => setDialogState(() => isPercent = true),
-                     ),
-                   ],
-                 ),
-              ],
-            );
-          },
+        title: const Text('অর্ডার ডিসকাউন্ট (টাকা)'),
+        content: TextField(
+          controller: discountController,
+          decoration: const InputDecoration(
+            labelText: 'ডিসকাউন্টের পরিমাণ (৳)',
+            border: OutlineInputBorder(),
+          ),
+          keyboardType: TextInputType.number,
         ),
         actions: [
           TextButton(
@@ -567,26 +530,26 @@ class _PosScreenState extends ConsumerState<PosScreen> with SingleTickerProvider
               ref.read(posCartProvider.notifier).applyDiscount(0.0);
               Navigator.pop(context);
             },
-            child: const Text('Remove Discount', style: TextStyle(color: Colors.red)),
+            child: const Text('ডিসকাউন্ট মুছুন', style: TextStyle(color: Colors.red)),
           ),
-          TextButton(onPressed: () => Navigator.pop(context), child: const Text('Cancel')),
+          TextButton(onPressed: () => Navigator.pop(context), child: const Text('বাতিল')),
           ElevatedButton(
             onPressed: () {
               final amt = double.tryParse(discountController.text) ?? 0.0;
-              ref.read(posCartProvider.notifier).applyDiscount(amt, isPercentage: isPercent);
+              ref.read(posCartProvider.notifier).applyDiscount(amt, isPercentage: false);
               Navigator.pop(context);
             },
-            child: const Text('Apply'),
+            child: const Text('প্রয়োগ করুন'),
           ),
         ],
       ),
     );
   }
 
-  // Printable Invoice Receipt popup
+  // Invoice Receipt dialog (Bangla)
   void _showInvoiceReceiptDialog(BuildContext context, Sale sale, PosCartState cartStateAtCheckout) {
     final theme = Theme.of(context);
-    final itemsList = cartStateAtCheckout.items; // snapshot of items checked out
+    final itemsList = cartStateAtCheckout.items;
     final discount = cartStateAtCheckout.discountAmount;
     final subtotal = cartStateAtCheckout.subtotal;
     final total = cartStateAtCheckout.total;
@@ -604,32 +567,28 @@ class _PosScreenState extends ConsumerState<PosScreen> with SingleTickerProvider
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-              // Header
-              const Text('VILLAGECO INVENTORY', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 18, color: Colors.black)),
-              const Text('Retail Grocery Store & POS Terminal', style: TextStyle(fontSize: 11, color: Colors.grey)),
-              const Text('Phone: +1 555-0199', style: TextStyle(fontSize: 10, color: Colors.grey)),
+              const Text('ভিলেজকো স্টোর', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 18, color: Colors.black)),
+              const Text('মুদি দোকান ও পিওএস কেন্দ্র', style: TextStyle(fontSize: 11, color: Colors.grey)),
+              const Text('মোবাইল: +৮৮০ ১৭০০০০০০০০', style: TextStyle(fontSize: 10, color: Colors.grey)),
               const SizedBox(height: 12),
               const Divider(color: Colors.black38, thickness: 1),
               
-              // Metadata
-              _buildReceiptMetaRow('Invoice ID', sale.id.substring(0, 8).toUpperCase()),
-              _buildReceiptMetaRow('Date/Time', Formatters.dateTime(sale.date)),
-              _buildReceiptMetaRow('Payment Method', sale.paymentMethod),
-              _buildReceiptMetaRow('Customer', customer?.name ?? 'Walk-in'),
+              _buildReceiptMetaRow('রশিদ নং', sale.id.substring(0, 8).toUpperCase()),
+              _buildReceiptMetaRow('তারিখ ও সময়', Formatters.dateTime(sale.date)),
+              _buildReceiptMetaRow('পেমেন্ট পদ্ধতি', sale.paymentMethod == 'Cash' ? 'ক্যাশ' : (sale.paymentMethod == 'Card' ? 'কার্ড' : 'মোবাইল ব্যাংকিং')),
+              _buildReceiptMetaRow('ক্রেতার নাম', customer?.name ?? 'সাধারণ কাস্টমার'),
               const Divider(color: Colors.black38, thickness: 1),
               
-              // Column headers
               const Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
-                  Expanded(flex: 3, child: Text('Item Description', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 11, color: Colors.black))),
-                  Expanded(flex: 1, child: Text('Qty', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 11, color: Colors.black), textAlign: TextAlign.center)),
-                  Expanded(flex: 2, child: Text('Total', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 11, color: Colors.black), textAlign: TextAlign.right)),
+                  Expanded(flex: 3, child: Text('পণ্যের বিবরণ', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 11, color: Colors.black))),
+                  Expanded(flex: 1, child: Text('পরিমাণ', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 11, color: Colors.black), textAlign: TextAlign.center)),
+                  Expanded(flex: 2, child: Text('মোট টাকা', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 11, color: Colors.black), textAlign: TextAlign.right)),
                 ],
               ),
               const SizedBox(height: 6),
               
-              // Items List
               Flexible(
                 child: SingleChildScrollView(
                   child: Column(
@@ -673,22 +632,20 @@ class _PosScreenState extends ConsumerState<PosScreen> with SingleTickerProvider
               ),
               const Divider(color: Colors.black38, thickness: 1),
 
-              // Total block
-              _buildReceiptFinancialRow('Subtotal', Formatters.currency(subtotal)),
+              _buildReceiptFinancialRow('উপ-মোট বিল', Formatters.currency(subtotal)),
               if (discount > 0)
-                _buildReceiptFinancialRow('Discount Applied', '- ${Formatters.currency(discount)}'),
+                _buildReceiptFinancialRow('ডিসকাউন্ট ছাড়', '- ${Formatters.currency(discount)}'),
               const SizedBox(height: 4),
               Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
-                  const Text('GRAND TOTAL', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13, color: Colors.black)),
-                  Text(Formatters.currency(total), style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14, color: Colors.black)),
+                  const Text('পরিশোধযোগ্য মোট বিল', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 12, color: Colors.black)),
+                  Text(Formatters.currency(total), style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13, color: Colors.black)),
                 ],
               ),
               const SizedBox(height: 16),
-              const Text('Thank You for Shopping at VillageCO!', style: TextStyle(fontStyle: FontStyle.italic, fontSize: 11, color: Colors.black)),
+              const Text('ভিলেজকো স্টোরে কেনাকাটার জন্য ধন্যবাদ!', style: TextStyle(fontStyle: FontStyle.italic, fontSize: 11, color: Colors.black)),
               const SizedBox(height: 8),
-              // Barcode mock
               const Icon(Icons.bar_chart, size: 50, color: Colors.black54),
             ],
           ),
@@ -696,16 +653,16 @@ class _PosScreenState extends ConsumerState<PosScreen> with SingleTickerProvider
         actions: [
           OutlinedButton.icon(
             icon: const Icon(Icons.print),
-            label: const Text('Print Receipt'),
+            label: const Text('রশিদ প্রিন্ট করুন'),
             onPressed: () {
               ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(content: Text('Connecting to thermal receipt printer...')),
+                const SnackBar(content: Text('থার্মাল প্রিন্টারের সাথে সংযোগ করা হচ্ছে...')),
               );
             },
           ),
           ElevatedButton(
             onPressed: () => Navigator.pop(context),
-            child: const Text('New Order'),
+            child: const Text('নতুন অর্ডার'),
           ),
         ],
       ),
