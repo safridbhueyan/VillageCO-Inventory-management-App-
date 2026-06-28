@@ -344,8 +344,10 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                       decoration: const InputDecoration(labelText: 'ক্যাটাগরির নাম', border: OutlineInputBorder()),
                     ),
                     const SizedBox(height: 10),
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                    Wrap(
+                      spacing: 8,
+                      runSpacing: 8,
+                      alignment: WrapAlignment.center,
                       children: [
                         'local_cafe',
                         'fastfood',
@@ -375,8 +377,10 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                       }).toList(),
                     ),
                     const SizedBox(height: 10),
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                    Wrap(
+                      spacing: 12,
+                      runSpacing: 8,
+                      alignment: WrapAlignment.center,
                       children: [
                         '0xFF008060',
                         '0xFFFF8C00',
