@@ -337,6 +337,7 @@ class _InventoryScreenState extends ConsumerState<InventoryScreen> with SingleTi
                       // Transaction Type
                       DropdownButtonFormField<String>(
                         value: selectedType,
+                        isExpanded: true,
                         decoration: const InputDecoration(labelText: 'পরিবর্তনের ধরন', border: OutlineInputBorder()),
                         items: const [
                           DropdownMenuItem(value: 'Stock In', child: Text('স্টক যোগ করুন (Stock In)')),
@@ -368,6 +369,7 @@ class _InventoryScreenState extends ConsumerState<InventoryScreen> with SingleTi
                       // Reason Dropdown
                       DropdownButtonFormField<String>(
                         value: reason,
+                        isExpanded: true,
                         decoration: const InputDecoration(labelText: 'কারণ', border: OutlineInputBorder()),
                         items: selectedType == 'Stock In'
                             ? const [
