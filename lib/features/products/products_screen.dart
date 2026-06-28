@@ -5,12 +5,12 @@ import 'package:drift/drift.dart' as drift;
 import 'package:flutter_slidable/flutter_slidable.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 import 'package:uuid/uuid.dart';
-import 'package:image_picker/image_picker.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:path/path.dart' as p;
 
 import '../../core/database/database.dart';
 import '../../core/utils/formatters.dart';
+import '../../core/utils/image_utils.dart';
 import 'products_controller.dart';
 import '../categories/categories_controller.dart';
 import '../suppliers/suppliers_controller.dart';
@@ -744,7 +744,7 @@ class _ProductsScreenState extends ConsumerState<ProductsScreen> {
           builder: (context, ref, child) {
             final categoriesAsync = ref.watch(categoriesControllerProvider);
             final theme = Theme.of(context);
-            
+
             return StatefulBuilder(
               builder: (context, setDialogState) {
                 return AlertDialog(
@@ -755,52 +755,73 @@ class _ProductsScreenState extends ConsumerState<ProductsScreen> {
                       child: Column(
                         mainAxisSize: MainAxisSize.min,
                         children: [
-                          // Image Selector
-                          GestureDetector(
-                            onTap: () async {
-                              try {
-                                final picker = ImagePicker();
-                                final XFile? image = await picker.pickImage(
-                                  source: ImageSource.gallery,
-                                  maxWidth: 600,
-                                  maxHeight: 600,
-                                );
-                                if (image != null) {
-                                  final appDir = await getApplicationDocumentsDirectory();
-                                  final filename = 'prod_${DateTime.now().millisecondsSinceEpoch}${p.extension(image.path)}';
-                                  final savedFile = await File(image.path).copy(p.join(appDir.path, filename));
-                                  setDialogState(() {
-                                    imagePath = savedFile.path;
-                                  });
+                          // Image Selector — Camera / Gallery → Crop
+                          Builder(
+                            builder: (pickerContext) => GestureDetector(
+                              onTap: () async {
+                                // Use root scaffold context to avoid dialog context going stale
+                                final scaffoldCtx = context;
+                                try {
+                                  final File? result =
+                                      await ImageUtils.pickAndCropImage(
+                                          scaffoldCtx);
+                                  if (result != null) {
+                                    final appDir =
+                                        await getApplicationDocumentsDirectory();
+                                    final ext = p.extension(result.path);
+                                    final filename =
+                                        'prod_${DateTime.now().millisecondsSinceEpoch}${ext.isEmpty ? '.jpg' : ext}';
+                                    final destPath =
+                                        p.join(appDir.path, filename);
+                                    // Only copy if the file isn't already in app docs dir
+                                    final savedPath =
+                                        result.path.startsWith(appDir.path)
+                                            ? result.path
+                                            : (await result.copy(destPath))
+                                                .path;
+                                    setDialogState(() {
+                                      imagePath = savedPath;
+                                    });
+                                  }
+                                } catch (e) {
+                                  debugPrint('Image pick/crop error: $e');
+                                  if (scaffoldCtx.mounted) {
+                                    ScaffoldMessenger.of(scaffoldCtx)
+                                        .showSnackBar(
+                                      SnackBar(
+                                          content: Text(
+                                              'ছবি আপলোড ব্যর্থ হয়েছে: $e')),
+                                    );
+                                  }
                                 }
-                              } catch (e) {
-                                ScaffoldMessenger.of(context).showSnackBar(
-                                  SnackBar(content: Text('ছবি আপলোড ব্যর্থ হয়েছে: $e')),
-                                );
-                              }
-                            },
+                              },
                             child: Container(
-                              height: 120,
+                              height: 130,
                               width: double.infinity,
                               decoration: BoxDecoration(
-                                color: theme.colorScheme.surfaceVariant.withOpacity(0.3),
+                                color: theme.colorScheme.surfaceVariant
+                                    .withOpacity(0.3),
                                 borderRadius: BorderRadius.circular(12),
                                 border: Border.all(
-                                  color: theme.colorScheme.outlineVariant.withOpacity(0.5),
+                                  color: theme.colorScheme.outlineVariant
+                                      .withOpacity(0.5),
                                 ),
                               ),
-                              child: imagePath != null && File(imagePath!).existsSync()
+                              child: imagePath != null &&
+                                      File(imagePath!).existsSync()
                                   ? Stack(
                                       children: [
                                         ClipRRect(
-                                          borderRadius: BorderRadius.circular(12),
+                                          borderRadius:
+                                              BorderRadius.circular(12),
                                           child: Image.file(
                                             File(imagePath!),
                                             width: double.infinity,
-                                            height: 120,
+                                            height: 130,
                                             fit: BoxFit.cover,
                                           ),
                                         ),
+                                        // Remove button
                                         Positioned(
                                           right: 8,
                                           top: 8,
@@ -809,7 +830,9 @@ class _ProductsScreenState extends ConsumerState<ProductsScreen> {
                                             radius: 16,
                                             child: IconButton(
                                               padding: EdgeInsets.zero,
-                                              icon: const Icon(Icons.close, size: 16, color: Colors.white),
+                                              icon: const Icon(Icons.close,
+                                                  size: 16,
+                                                  color: Colors.white),
                                               onPressed: () {
                                                 setDialogState(() {
                                                   imagePath = null;
@@ -818,29 +841,106 @@ class _ProductsScreenState extends ConsumerState<ProductsScreen> {
                                             ),
                                           ),
                                         ),
+                                        // Edit badge
+                                        Positioned(
+                                          left: 8,
+                                          top: 8,
+                                          child: Container(
+                                            padding: const EdgeInsets
+                                                .symmetric(
+                                                    horizontal: 8,
+                                                    vertical: 4),
+                                            decoration: BoxDecoration(
+                                              color: Colors.black54,
+                                              borderRadius:
+                                                  BorderRadius.circular(8),
+                                            ),
+                                            child: const Row(
+                                              mainAxisSize: MainAxisSize.min,
+                                              children: [
+                                                Icon(Icons.crop,
+                                                    size: 12,
+                                                    color: Colors.white),
+                                                SizedBox(width: 4),
+                                                Text(
+                                                  'পরিবর্তন করুন',
+                                                  style: TextStyle(
+                                                    color: Colors.white,
+                                                    fontSize: 10,
+                                                    fontWeight:
+                                                        FontWeight.bold,
+                                                  ),
+                                                ),
+                                              ],
+                                            ),
+                                          ),
+                                        ),
                                       ],
                                     )
                                   : Column(
-                                      mainAxisAlignment: MainAxisAlignment.center,
+                                      mainAxisAlignment:
+                                          MainAxisAlignment.center,
                                       children: [
-                                        Icon(
-                                          Icons.add_a_photo_outlined,
-                                          size: 32,
-                                          color: theme.colorScheme.onSurfaceVariant.withOpacity(0.6),
+                                        Row(
+                                          mainAxisAlignment:
+                                              MainAxisAlignment.center,
+                                          children: [
+                                            Icon(
+                                              Icons.camera_alt_rounded,
+                                              size: 28,
+                                              color: theme
+                                                  .colorScheme
+                                                  .primary
+                                                  .withOpacity(0.7),
+                                            ),
+                                            const SizedBox(width: 12),
+                                            Container(
+                                              width: 1,
+                                              height: 28,
+                                              color: theme
+                                                  .colorScheme.outlineVariant,
+                                            ),
+                                            const SizedBox(width: 12),
+                                            Icon(
+                                              Icons.photo_library_rounded,
+                                              size: 28,
+                                              color: theme
+                                                  .colorScheme
+                                                  .secondary
+                                                  .withOpacity(0.7),
+                                            ),
+                                          ],
                                         ),
-                                        const SizedBox(height: 8),
+                                        const SizedBox(height: 10),
                                         Text(
-                                          'পণ্যের ছবি যোগ করুন',
+                                          'ক্যামেরা বা গ্যালারি থেকে ছবি যোগ করুন',
                                           style: TextStyle(
                                             fontSize: 12,
                                             fontWeight: FontWeight.w600,
-                                            color: theme.colorScheme.onSurfaceVariant.withOpacity(0.8),
+                                            color: theme
+                                                .colorScheme
+                                                .onSurfaceVariant
+                                                .withOpacity(0.8),
+                                          ),
+                                          textAlign: TextAlign.center,
+                                        ),
+                                        const SizedBox(height: 4),
+                                        Text(
+                                          'ট্যাপ করলে ক্রপ করার সুযোগ পাবেন',
+                                          style: TextStyle(
+                                            fontSize: 10,
+                                            color: theme
+                                                .colorScheme
+                                                .onSurfaceVariant
+                                                .withOpacity(0.5),
                                           ),
                                         ),
                                       ],
                                     ),
                             ),
                           ),
+                          ), // closes Builder
+
                           const SizedBox(height: 16),
                           
                           TextField(
