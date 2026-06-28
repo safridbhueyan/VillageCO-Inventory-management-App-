@@ -277,7 +277,15 @@ class _ReportsScreenState extends ConsumerState<ReportsScreen> with SingleTicker
           child: Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              const Text('দোকানের আনুষঙ্গিক খরচ সমূহ', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
+              const Expanded(
+                child: Text(
+                  'দোকানের আনুষঙ্গিক খরচ সমূহ',
+                  style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis,
+                ),
+              ),
+              const SizedBox(width: 8),
               ElevatedButton.icon(
                 onPressed: () => _showAddExpenseDialog(context),
                 icon: const Icon(Icons.add),
