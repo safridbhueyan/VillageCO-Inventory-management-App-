@@ -58,6 +58,8 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    // Watch settings provider so it starts loading on launch and stays updated.
+    ref.watch(settingsControllerProvider);
 
     return Scaffold(
       body: Container(
