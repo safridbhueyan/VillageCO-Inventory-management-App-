@@ -148,7 +148,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                                     );
                                 if (context.mounted) {
                                   ScaffoldMessenger.of(context).showSnackBar(
-                                    const SnackBar(content: Text('দোকানের প্রোফাইল আপডেট করা হয়েছে!')),
+                                    const SnackBar(content: Text('দোকানের প্রোফাইল আপডেট করা হয়েছে!')),
                                   );
                                 }
                               }
@@ -362,133 +362,156 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
             final categoriesAsync = ref.watch(categoriesControllerProvider);
 
             return AlertDialog(
+              backgroundColor: Colors.white,
               title: const Text('ক্যাটাগরি সমূহ ম্যানেজ করুন'),
               content: SizedBox(
                 width: 400,
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Flexible(
-                      child: categoriesAsync.maybeWhen(
-                        data: (list) {
-                          if (list.isEmpty) return const Padding(padding: EdgeInsets.all(16.0), child: Text('কোনো ক্যাটাগরি তৈরি করা হয়নি।'));
-                          return ListView.separated(
-                            shrinkWrap: true,
-                            itemCount: list.length,
-                            separatorBuilder: (_, __) => const Divider(),
-                            itemBuilder: (context, index) {
-                              final cat = list[index];
-                              return ListTile(
-                                leading: CircleAvatar(
-                                  backgroundColor: Color(int.parse(cat.color)),
-                                  child: const Icon(Icons.category, color: Colors.white, size: 16),
-                                ),
-                                title: Text(cat.name, style: const TextStyle(fontWeight: FontWeight.w600)),
-                                trailing: IconButton(
-                                  icon: const Icon(Icons.delete_outline, color: Colors.red),
-                                  onPressed: () {
-                                    ref.read(categoriesControllerProvider.notifier).deleteCategory(cat.id);
-                                    ref.invalidate(productsListProvider);
-                                  },
-                                ),
+                child: SingleChildScrollView(
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      ConstrainedBox(
+                        constraints: BoxConstraints(
+                          maxHeight: MediaQuery.of(context).size.height * 0.25,
+                        ),
+                        child: categoriesAsync.maybeWhen(
+                          data: (list) {
+                            if (list.isEmpty) {
+                              return const Padding(
+                                padding: EdgeInsets.symmetric(vertical: 16.0),
+                                child: Text('কোনো ক্যাটাগরি তৈরি করা হয়নি।'),
                               );
-                            },
-                          );
-                        },
-                        orElse: () => const CircularProgressIndicator(),
-                      ),
-                    ),
-                    const Divider(),
-                    const SizedBox(height: 8),
-                    const Text('নতুন ক্যাটাগরি তৈরি করুন', style: TextStyle(fontWeight: FontWeight.bold)),
-                    const SizedBox(height: 12),
-                    TextField(
-                      controller: catNameController,
-                      decoration: const InputDecoration(labelText: 'ক্যাটাগরির নাম', border: OutlineInputBorder()),
-                    ),
-                    const SizedBox(height: 10),
-                    Wrap(
-                      spacing: 8,
-                      runSpacing: 8,
-                      alignment: WrapAlignment.center,
-                      children: [
-                        'local_cafe',
-                        'fastfood',
-                        'shopping_basket',
-                        'grass',
-                        'soap',
-                        'cleaning_services',
-                      ].map((icName) {
-                        IconData iconData;
-                        switch (icName) {
-                          case 'local_cafe': iconData = Icons.local_cafe; break;
-                          case 'fastfood': iconData = Icons.fastfood; break;
-                          case 'shopping_basket': iconData = Icons.shopping_basket; break;
-                          case 'grass': iconData = Icons.grass; break;
-                          case 'soap': iconData = Icons.soap; break;
-                          default: iconData = Icons.cleaning_services;
-                        }
-                        final isSelected = selectedIcon == icName;
-                        return IconButton.filled(
-                          style: IconButton.styleFrom(
-                            backgroundColor: isSelected ? theme.colorScheme.primary : theme.colorScheme.surfaceVariant,
-                            foregroundColor: isSelected ? theme.colorScheme.onPrimary : theme.colorScheme.onSurfaceVariant,
-                          ),
-                          icon: Icon(iconData, size: 18),
-                          onPressed: () => setDialogState(() => selectedIcon = icName),
-                        );
-                      }).toList(),
-                    ),
-                    const SizedBox(height: 10),
-                    Wrap(
-                      spacing: 12,
-                      runSpacing: 8,
-                      alignment: WrapAlignment.center,
-                      children: [
-                        '0xFF008060',
-                        '0xFFFF8C00',
-                        '0xFF4682B4',
-                        '0xFFDAA520',
-                        '0xFFBA55D3',
-                      ].map((hexStr) {
-                        final isSelected = selectedColor == hexStr;
-                        return InkWell(
-                          onTap: () => setDialogState(() => selectedColor = hexStr),
-                          child: Container(
-                            width: 24,
-                            height: 24,
-                            decoration: BoxDecoration(
-                              shape: BoxShape.circle,
-                              color: Color(int.parse(hexStr)),
-                              border: isSelected ? Border.all(color: Colors.black, width: 2) : null,
-                            ),
-                          ),
-                        );
-                      }).toList(),
-                    ),
-                    const SizedBox(height: 16),
-                    SizedBox(
-                      width: double.infinity,
-                      child: ElevatedButton(
-                        onPressed: () {
-                          final name = catNameController.text.trim();
-                          if (name.isNotEmpty) {
-                            ref.read(categoriesControllerProvider.notifier).addCategory(
-                                  name,
-                                  selectedIcon,
-                                  selectedColor,
+                            }
+                            return ListView.separated(
+                              shrinkWrap: true,
+                              itemCount: list.length,
+                              separatorBuilder: (_, __) => const Divider(),
+                              itemBuilder: (context, index) {
+                                final cat = list[index];
+                                return ListTile(
+                                  contentPadding: EdgeInsets.zero,
+                                  leading: CircleAvatar(
+                                    backgroundColor: Color(int.parse(cat.color)),
+                                    child: const Icon(Icons.category, color: Colors.white, size: 16),
+                                  ),
+                                  title: Text(cat.name, style: const TextStyle(fontWeight: FontWeight.w600)),
+                                  trailing: IconButton(
+                                    icon: const Icon(Icons.delete_outline, color: Colors.red),
+                                    onPressed: () {
+                                      ref.read(categoriesControllerProvider.notifier).deleteCategory(cat.id);
+                                      ref.invalidate(productsListProvider);
+                                    },
+                                  ),
                                 );
-                            catNameController.clear();
-                          }
-                        },
-                        child: const Text('ক্যাটাগরি যোগ করুন'),
+                              },
+                            );
+                          },
+                          orElse: () => const Center(child: CircularProgressIndicator()),
+                        ),
                       ),
-                    ),
-                  ],
+                      const Divider(height: 24),
+                      const Text(
+                        'নতুন ক্যাটাগরি তৈরি করুন',
+                        style: TextStyle(fontWeight: FontWeight.bold),
+                      ),
+                      const SizedBox(height: 12),
+                      TextField(
+                        controller: catNameController,
+                        decoration: const InputDecoration(
+                          labelText: 'ক্যাটাগরির নাম',
+                          border: OutlineInputBorder(),
+                        ),
+                      ),
+                      const SizedBox(height: 12),
+                      const Text('আইকন নির্বাচন করুন'),
+                      const SizedBox(height: 8),
+                      Wrap(
+                        spacing: 8,
+                        runSpacing: 8,
+                        children: [
+                          'local_cafe',
+                          'fastfood',
+                          'shopping_basket',
+                          'grass',
+                          'soap',
+                          'cleaning_services',
+                        ].map((icName) {
+                          IconData iconData;
+                          switch (icName) {
+                            case 'local_cafe': iconData = Icons.local_cafe; break;
+                            case 'fastfood': iconData = Icons.fastfood; break;
+                            case 'shopping_basket': iconData = Icons.shopping_basket; break;
+                            case 'grass': iconData = Icons.grass; break;
+                            case 'soap': iconData = Icons.soap; break;
+                            default: iconData = Icons.cleaning_services;
+                          }
+                          final isSelected = selectedIcon == icName;
+                          return IconButton.filled(
+                            style: IconButton.styleFrom(
+                              backgroundColor: isSelected ? theme.colorScheme.primary : theme.colorScheme.surfaceVariant,
+                              foregroundColor: isSelected ? theme.colorScheme.onPrimary : theme.colorScheme.onSurfaceVariant,
+                            ),
+                            icon: Icon(iconData, size: 18),
+                            onPressed: () => setDialogState(() => selectedIcon = icName),
+                          );
+                        }).toList(),
+                      ),
+                      const SizedBox(height: 12),
+                      const Text('রঙ নির্বাচন করুন'),
+                      const SizedBox(height: 8),
+                      Wrap(
+                        spacing: 12,
+                        runSpacing: 8,
+                        children: [
+                          '0xFF008060',
+                          '0xFFFF8C00',
+                          '0xFF4682B4',
+                          '0xFFDAA520',
+                          '0xFFBA55D3',
+                        ].map((hexStr) {
+                          final isSelected = selectedColor == hexStr;
+                          return InkWell(
+                            onTap: () => setDialogState(() => selectedColor = hexStr),
+                            child: Container(
+                              width: 24,
+                              height: 24,
+                              decoration: BoxDecoration(
+                                shape: BoxShape.circle,
+                                color: Color(int.parse(hexStr)),
+                                border: isSelected ? Border.all(color: Colors.black, width: 2) : null,
+                              ),
+                            ),
+                          );
+                        }).toList(),
+                      ),
+                      const SizedBox(height: 16),
+                      SizedBox(
+                        width: double.infinity,
+                        child: ElevatedButton(
+                          onPressed: () {
+                            final name = catNameController.text.trim();
+                            if (name.isNotEmpty) {
+                              ref.read(categoriesControllerProvider.notifier).addCategory(
+                                    name,
+                                    selectedIcon,
+                                    selectedColor,
+                                  );
+                              catNameController.clear();
+                            }
+                          },
+                          child: const Text('ক্যাটাগরি যোগ করুন'),
+                        ),
+                      ),
+                    ],
+                  ),
                 ),
               ),
               actions: [
-                TextButton(onPressed: () => Navigator.pop(context), child: const Text('বন্ধ করুন')),
+                TextButton(
+                  onPressed: () => Navigator.pop(context),
+                  child: const Text('বন্ধ করুন'),
+                ),
               ],
             );
           },
@@ -587,7 +610,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('ডেটা এখানে এক্সপোর্ট করা হয়েছে: $path'),
+            content: Text('ডেটা এখানে এক্সপোর্ট করা হয়েছে: $path'),
             duration: const Duration(seconds: 4),
           ),
         );
@@ -595,7 +618,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('ব্যাকআপ ব্যর্থ হয়েছে: $e')),
+          SnackBar(content: Text('ব্যাকআপ ব্যর্থ হয়েছে: $e')),
         );
       }
     }
@@ -643,12 +666,12 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                 if (context.mounted) {
                   Navigator.pop(context);
                   ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(content: Text('ডেটা সফলভাবে পুনরুদ্ধার করা হয়েছে!')),
+                    const SnackBar(content: Text('ডেটা সফলভাবে পুনরুদ্ধার করা হয়েছে!')),
                   );
                 }
               } catch (e) {
                 ScaffoldMessenger.of(context).showSnackBar(
-                  SnackBar(content: Text('JSON ব্যাকআপ ফাইলটি সঠিক নয়: $e')),
+                  SnackBar(content: Text('JSON ব্যাকআপ ফাইলটি সঠিক নয়: $e')),
                 );
               }
             },
@@ -678,61 +701,88 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
         {"id": "cust2", "name": "ফাতেমা বেগম", "phone": "01851234567", "email": "fatima@gmail.com", "address": "গুলশান, ঢাকা"}
       ],
       "products": [
-        {"id": "p1", "name": "কোকাকোলা ২৫০ মিলি", "barcode": "88010203040", "categoryId": "c1", "brand": "কোকাকোলা", "buyingPrice": 30.00, "sellingPrice": 35.00, "currentStock": 120.0, "minimumStock": 30.0, "unit": "pcs", "supplierId": "s1", "description": "কোকাকোলা সফট ড্রিংক ক্যান।", "isArchived": false, "isFavorite": true},
-        {"id": "p2", "name": "স্প্রাইট ২৫০ মিলি", "barcode": "88010203045", "categoryId": "c1", "brand": "কোকাকোলা", "buyingPrice": 30.00, "sellingPrice": 35.00, "currentStock": 80.0, "minimumStock": 20.0, "unit": "pcs", "supplierId": "s1", "description": "স্প্রাইট সফট ড্রিংক।", "isArchived": false, "isFavorite": false},
-        {"id": "p3", "name": "বসুন্ধরা আটা ২ কেজি", "barcode": "88010203052", "categoryId": "c4", "brand": "বসুন্ধরা", "buyingPrice": 120.00, "sellingPrice": 135.00, "currentStock": 40.0, "minimumStock": 10.0, "unit": "bag", "supplierId": "s2", "description": "প্যাকেটজাত সাদা ময়দা/আটা।", "isArchived": false, "isFavorite": true},
-        {"id": "p4", "name": "মিনিকেট চাল ২৫ কেজি", "barcode": "88010203058", "categoryId": "c4", "brand": "রশিদ রাইস", "buyingPrice": 1600.00, "sellingPrice": 1750.00, "currentStock": 8.0, "minimumStock": 15.0, "unit": "bag", "supplierId": "s2", "description": "প্রিমিয়াম মিনিকেট চালের বস্তা।", "isArchived": false, "isFavorite": true},
-        {"id": "p5", "name": "লেস পটেটো চিপস মাসালা", "barcode": "88010203061", "categoryId": "c2", "brand": "পেপসিকো", "buyingPrice": 18.00, "sellingPrice": 25.00, "currentStock": 15.0, "minimumStock": 25.0, "unit": "pcs", "supplierId": "s1", "description": "লেস ম্যাজিক মাসালা চিপস।", "isArchived": false, "isFavorite": false},
-        {"id": "p6", "name": "লিপটন ব্ল্যাক টি ১০০ ব্যাগ", "barcode": "88010203070", "categoryId": "c3", "brand": "ইউনিলিভার", "buyingPrice": 220.00, "sellingPrice": 270.00, "currentStock": 25.0, "minimumStock": 5.0, "unit": "pcs", "supplierId": "s1", "description": "লিপটন ব্ল্যাক টি ব্যাগ।", "isArchived": false, "isFavorite": false}
+        {"id": "p1", "name": "কোকাকোলা ২৫০ মিলি", "barcode": "88010203040", "categoryId": "c1", "brand": "কোকাকোলা", "buyingPrice": 30.00, "sellingPrice": 35.00, "currentStock": 120.0, "minimumStock": 30.0, "unit": "pcs", "supplierId": "s1", "description": "কোকাকোলা সফট ড্রিংক ক্যান।", "imageUrl": "https://images.unsplash.com/photo-1622483767028-3f66f32aef97?q=80&w=400", "isArchived": false, "isFavorite": true},
+        {"id": "p2", "name": "স্প্রাইট ২৫০ মিলি", "barcode": "88010203045", "categoryId": "c1", "brand": "কোকাকোলা", "buyingPrice": 30.00, "sellingPrice": 35.00, "currentStock": 80.0, "minimumStock": 20.0, "unit": "pcs", "supplierId": "s1", "description": "স্প্রাইট সফট ড্রিংক।", "imageUrl": "https://images.unsplash.com/photo-1625772290748-160b6160168f?q=80&w=400", "isArchived": false, "isFavorite": false},
+        {"id": "p3", "name": "বসুন্ধরা আটা ২ কেজি", "barcode": "88010203052", "categoryId": "c4", "brand": "বসুন্ধরা", "buyingPrice": 120.00, "sellingPrice": 135.00, "currentStock": 40.0, "minimumStock": 10.0, "unit": "bag", "supplierId": "s2", "description": "প্যাকেটজাত সাদা ময়দা/আটা।", "imageUrl": "https://images.unsplash.com/photo-1574316071802-0d684efa7bf5?q=80&w=400", "isArchived": false, "isFavorite": true},
+        {"id": "p4", "name": "মিনিকেট চাল ২৫ কেজি", "barcode": "88010203058", "categoryId": "c4", "brand": "রশিদ রাইস", "buyingPrice": 1600.00, "sellingPrice": 1750.00, "currentStock": 8.0, "minimumStock": 15.0, "unit": "bag", "supplierId": "s2", "description": "প্রিমিয়াম মিনিকেট চালের বস্তা।", "imageUrl": "https://images.unsplash.com/photo-1586201375761-83865001e31c?q=80&w=400", "isArchived": false, "isFavorite": true},
+        {"id": "p5", "name": "লেস পটেটো চিপস মাসালা", "barcode": "88010203061", "categoryId": "c2", "brand": "পেপসিকো", "buyingPrice": 18.00, "sellingPrice": 25.00, "currentStock": 15.0, "minimumStock": 25.0, "unit": "pcs", "supplierId": "s1", "description": "লেস ম্যাজিক মাসালা চিপস।", "imageUrl": "https://images.unsplash.com/photo-1566478989037-eec170784d0b?q=80&w=400", "isArchived": false, "isFavorite": false},
+        {"id": "p6", "name": "লিপটন ব্ল্যাক টি ১০০ ব্যাগ", "barcode": "88010203070", "categoryId": "c3", "brand": "ইউনিলিভার", "buyingPrice": 220.00, "sellingPrice": 270.00, "currentStock": 25.0, "minimumStock": 5.0, "unit": "pcs", "supplierId": "s1", "description": "লিপটন ব্ল্যাক টি ব্যাগ।", "imageUrl": "https://images.unsplash.com/photo-1576092768241-dec231879fc3?q=80&w=400", "isArchived": false, "isFavorite": false}
       ]
     }
     ''';
 
+    final screenContext = context;
+
     showDialog(
       context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('ডেমো ডেটা লোড করবেন?'),
-        content: const Text('সতর্কতা: এটি করলে আপনার বর্তমান পণ্য, ক্যাটাগরি এবং বিক্রির হিসাব মুছে যাবে এবং পরীক্ষামূলক নতুন ডেমো পণ্যের তালিকা লোড হবে।'),
-        actions: [
-          TextButton(onPressed: () => Navigator.pop(context), child: const Text('বাতিল')),
-          ElevatedButton(
-            onPressed: () async {
-              Navigator.pop(context); // Close confirm dialog
-              
-              // Show loading spinner dialog
-              showDialog(
-                context: context,
-                barrierDismissible: false,
-                builder: (context) => const Center(child: CircularProgressIndicator()),
-              );
+      barrierDismissible: false,
+      builder: (dialogCtx) {
+        bool isLoading = false;
+        return StatefulBuilder(
+          builder: (context, setDialogState) {
+            return PopScope(
+              canPop: !isLoading,
+              child: AlertDialog(
+                title: const Text('ডেমো ডেটা লোড করবেন?'),
+                content: isLoading
+                    ? const SizedBox(
+                        height: 100,
+                        child: Center(
+                          child: Column(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
+                              CircularProgressIndicator(),
+                              SizedBox(height: 16),
+                              Text('ডেমো ডেটা লোড হচ্ছে, অনুগ্রহ করে অপেক্ষা করুন...'),
+                            ],
+                          ),
+                        ),
+                      )
+                    : const Text('সতর্কতা: এটি করলে আপনার বর্তমান পণ্য, ক্যাটাগরি এবং বিক্রির হিসাব মুছে যাবে এবং পরীক্ষামূলক নতুন ডেমো পণ্যের তালিকা লোড হবে।'),
+                actions: isLoading
+                    ? []
+                    : [
+                        TextButton(
+                          onPressed: () => Navigator.pop(dialogCtx),
+                          child: const Text('বাতিল'),
+                        ),
+                        ElevatedButton(
+                          onPressed: () async {
+                            setDialogState(() {
+                              isLoading = true;
+                            });
 
-              try {
-                await ref.read(settingsControllerProvider.notifier).importFromJson(demoJson);
-                ref.invalidate(productsListProvider);
-                ref.invalidate(categoriesControllerProvider);
-                ref.invalidate(suppliersControllerProvider);
-                ref.invalidate(salesHistoryProvider);
-                ref.invalidate(dashboardMetricsProvider);
+                            try {
+                              await ref.read(settingsControllerProvider.notifier).importFromJson(demoJson);
+                              ref.invalidate(productsListProvider);
+                              ref.invalidate(categoriesControllerProvider);
+                              ref.invalidate(suppliersControllerProvider);
+                              ref.invalidate(salesHistoryProvider);
+                              ref.invalidate(dashboardMetricsProvider);
 
-                if (context.mounted) {
-                  Navigator.pop(context); // Close loading spinner dialog
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(content: Text('ডেমো পণ্যের ডেটাসেট লোড সম্পন্ন হয়েছে! ড্যাশবোর্ড দেখুন।')),
-                  );
-                }
-              } catch (e) {
-                if (context.mounted) {
-                  Navigator.pop(context); // Close loading spinner dialog
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    SnackBar(content: Text('ডেমো ডেটা লোড ব্যর্থ: $e')),
-                  );
-                }
-              }
-            },
-            child: const Text('ডেমো ডেটা লোড'),
-          ),
-        ],
-      ),
+                              if (screenContext.mounted) {
+                                Navigator.pop(dialogCtx); // Close the dialog
+                                ScaffoldMessenger.of(screenContext).showSnackBar(
+                                  const SnackBar(content: Text('ডেমো পণ্যের ডেটাসেট লোড সম্পন্ন হয়েছে! ড্যাশবোর্ড দেখুন।')),
+                                );
+                              }
+                            } catch (e) {
+                              if (screenContext.mounted) {
+                                Navigator.pop(dialogCtx); // Close the dialog
+                                ScaffoldMessenger.of(screenContext).showSnackBar(
+                                  SnackBar(content: Text('ডেমো ডেটা লোড ব্যর্থ: $e')),
+                                );
+                              }
+                            }
+                          },
+                          child: const Text('ডেমো ডেটা লোড'),
+                        ),
+                      ],
+              ),
+            );
+          },
+        );
+      },
     );
   }
 }
