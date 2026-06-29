@@ -94,10 +94,10 @@ class DashboardScreen extends ConsumerWidget {
                     Container(
                       padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
                       decoration: BoxDecoration(
-                        color: const Color(0xFF00B074).withOpacity(0.08),
+                        color: theme.colorScheme.primary.withOpacity(0.08),
                         borderRadius: BorderRadius.circular(20),
                         border: Border.all(
-                          color: const Color(0xFF00B074).withOpacity(0.2),
+                          color: theme.colorScheme.primary.withOpacity(0.2),
                           width: 1,
                         ),
                       ),
@@ -107,8 +107,8 @@ class DashboardScreen extends ConsumerWidget {
                           Container(
                             width: 8,
                             height: 8,
-                            decoration: const BoxDecoration(
-                              color: Color(0xFF00B074),
+                            decoration: BoxDecoration(
+                              color: theme.colorScheme.primary,
                               shape: BoxShape.circle,
                             ),
                           ),
@@ -145,31 +145,45 @@ class DashboardScreen extends ConsumerWidget {
                       title: "আজকের বিক্রি",
                       value: Formatters.currency(metrics.todaySales),
                       icon: Icons.today_rounded,
-                      iconColor: theme.colorScheme.primary,
-                      bgColor: theme.colorScheme.primary.withOpacity(0.08),
+                      gradient: const LinearGradient(
+                        colors: [Color(0xFF059669), Color(0xFF10B981)],
+                        begin: Alignment.topLeft,
+                        end: Alignment.bottomRight,
+                      ),
                     ),
                     _MetricCard(
                       title: "মজুদ পণ্যের মূল্য",
                       value: Formatters.currency(metrics.inventoryValue),
                       icon: Icons.inventory_2_outlined,
-                      iconColor: const Color(0xFF0EA5E9), // Cyan
-                      bgColor: const Color(0xFF0EA5E9).withOpacity(0.08),
+                      gradient: const LinearGradient(
+                        colors: [Color(0xFF0284C7), Color(0xFF38BDF8)],
+                        begin: Alignment.topLeft,
+                        end: Alignment.bottomRight,
+                      ),
                     ),
                     _MetricCard(
                       title: "আজকের নিট লাভ",
                       value: Formatters.currency(metrics.netProfit),
                       icon: Icons.trending_up_rounded,
-                      iconColor: const Color(0xFF00B074), // Green
-                      bgColor: const Color(0xFF00B074).withOpacity(0.08),
-                      valueColor: metrics.netProfit >= 0 ? const Color(0xFF00B074) : Colors.redAccent,
+                      gradient: LinearGradient(
+                        colors: metrics.netProfit >= 0
+                            ? [const Color(0xFF059669), const Color(0xFF34D399)]
+                            : [const Color(0xFFDC2626), const Color(0xFFF87171)],
+                        begin: Alignment.topLeft,
+                        end: Alignment.bottomRight,
+                      ),
                     ),
                     _MetricCard(
                       title: "কম স্টক পণ্য",
                       value: metrics.lowStockProducts.toString(),
                       icon: Icons.warning_amber_rounded,
-                      iconColor: const Color(0xFFF59E0B), // Orange
-                      bgColor: const Color(0xFFF59E0B).withOpacity(0.08),
-                      valueColor: metrics.lowStockProducts > 0 ? const Color(0xFFF59E0B) : null,
+                      gradient: LinearGradient(
+                        colors: metrics.lowStockProducts > 0
+                            ? [const Color(0xFFD97706), const Color(0xFFFBBF24)]
+                            : [const Color(0xFF4B5563), const Color(0xFF9CA3AF)],
+                        begin: Alignment.topLeft,
+                        end: Alignment.bottomRight,
+                      ),
                     ),
                   ],
                 ).animate().slideY(begin: 0.08, duration: 400.ms, curve: Curves.easeOutCubic),
@@ -611,7 +625,7 @@ class DashboardScreen extends ConsumerWidget {
                           Container(
                             padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
                             decoration: BoxDecoration(
-                              color: const Color(0xFF00B074).withOpacity(0.08),
+                              color: theme.colorScheme.primary.withOpacity(0.08),
                               borderRadius: BorderRadius.circular(4),
                             ),
                             child: const Text(
@@ -641,33 +655,30 @@ class _MetricCard extends StatelessWidget {
   final String title;
   final String value;
   final IconData icon;
+  final Gradient gradient;
+  final Color textColor;
   final Color iconColor;
-  final Color bgColor;
-  final Color? valueColor;
+  final Color iconBgColor;
 
   const _MetricCard({
     required this.title,
     required this.value,
     required this.icon,
-    required this.iconColor,
-    required this.bgColor,
-    this.valueColor,
+    required this.gradient,
+    this.textColor = Colors.white,
+    this.iconColor = Colors.white,
+    this.iconBgColor = const Color(0x33FFFFFF), // white with 20% opacity
   });
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
     return Container(
       decoration: BoxDecoration(
-        color: theme.colorScheme.surface,
+        gradient: gradient,
         borderRadius: BorderRadius.circular(20),
-        border: Border.all(
-          color: theme.colorScheme.outlineVariant.withOpacity(0.4),
-          width: 1,
-        ),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.015),
+            color: Colors.black.withOpacity(0.05),
             blurRadius: 10,
             offset: const Offset(0, 4),
           ),
@@ -680,7 +691,7 @@ class _MetricCard extends StatelessWidget {
             Container(
               padding: const EdgeInsets.all(12),
               decoration: BoxDecoration(
-                color: bgColor,
+                color: iconBgColor,
                 borderRadius: BorderRadius.circular(14),
               ),
               child: Icon(
@@ -697,9 +708,10 @@ class _MetricCard extends StatelessWidget {
                 children: [
                   Text(
                     title,
-                    style: theme.textTheme.bodySmall?.copyWith(
-                      color: theme.colorScheme.onSurfaceVariant,
+                    style: TextStyle(
+                      color: textColor.withOpacity(0.85),
                       fontWeight: FontWeight.bold,
+                      fontSize: 12,
                     ),
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
@@ -707,9 +719,10 @@ class _MetricCard extends StatelessWidget {
                   const SizedBox(height: 4),
                   Text(
                     value,
-                    style: theme.textTheme.titleLarge?.copyWith(
+                    style: TextStyle(
                       fontWeight: FontWeight.bold,
-                      color: valueColor ?? theme.colorScheme.onSurface,
+                      color: textColor,
+                      fontSize: 18,
                     ),
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
