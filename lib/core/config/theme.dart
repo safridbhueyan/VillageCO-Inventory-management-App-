@@ -4,7 +4,7 @@ import 'package:flex_color_scheme/flex_color_scheme.dart';
 
 class AppTheme {
   // Vibrant Brand Colors
-  static const Color brandGreen = Color(0xFF00B074); // Vibrant Mint Green (Stripe/Shopify inspired)
+  static const Color brandGreen = Color(0xFF059669); // Emerald Green
   static const Color brandSlate = Color(0xFF0F172A); // Slate 900
   static const Color brandOrange = Color(0xFFF59E0B); // Amber/Orange 500
 
@@ -15,10 +15,12 @@ class AppTheme {
         secondary: brandSlate,
         tertiary: brandOrange,
       ),
-      surfaceMode: FlexSurfaceMode.levelSurfacesLowScaffold,
-      blendLevel: 4,
+      scaffoldBackground: Colors.white,
+      appBarBackground: Colors.white,
+      surfaceMode: FlexSurfaceMode.level,
+      blendLevel: 0,
       subThemesData: const FlexSubThemesData(
-        blendOnLevel: 8,
+        blendOnLevel: 0,
         blendOnColors: false,
         useTextTheme: true,
         useM2StyleDividerInM3: false,
