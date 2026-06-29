@@ -1,6 +1,9 @@
 import 'dart:convert';
+import 'dart:io';
+import 'package:flutter/foundation.dart' show consolidateHttpClientResponseBytes;
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:drift/drift.dart';
+import 'package:path_provider/path_provider.dart';
 import '../../core/database/database.dart';
 import '../../core/database/database_providers.dart';
 
@@ -86,6 +89,29 @@ class SettingsController extends AsyncNotifier<AppSettingsTableData> {
     return const JsonEncoder.withIndent('  ').convert(data);
   }
 
+  Future<String?> _downloadProductImage(String url, String id) async {
+    try {
+      final appDir = await getApplicationDocumentsDirectory();
+      final productsDir = Directory('${appDir.path}/products');
+      if (!await productsDir.exists()) {
+        await productsDir.create(recursive: true);
+      }
+      final file = File('${productsDir.path}/$id.jpg');
+      
+      final client = HttpClient()..connectionTimeout = const Duration(seconds: 2);
+      final request = await client.getUrl(Uri.parse(url));
+      final response = await request.close();
+      if (response.statusCode == 200) {
+        final bytes = await consolidateHttpClientResponseBytes(response);
+        await file.writeAsBytes(bytes);
+        return file.path;
+      }
+    } catch (e) {
+      print('Error downloading product image: $e');
+    }
+    return null;
+  }
+
   // Restore data from JSON
   Future<void> importFromJson(String jsonStr) async {
     final Map<String, dynamic> data = jsonDecode(jsonStr);
@@ -124,7 +150,15 @@ class SettingsController extends AsyncNotifier<AppSettingsTableData> {
       // Insert Products
       if (data['products'] != null) {
         for (var item in data['products']) {
-          await _db.into(_db.products).insert(Product.fromJson(item));
+          String? imagePath;
+          if (item['imageUrl'] != null) {
+            imagePath = await _downloadProductImage(item['imageUrl'], item['id']);
+          }
+          final Map<String, dynamic> productJson = Map<String, dynamic>.from(item);
+          if (imagePath != null) {
+            productJson['imagePath'] = imagePath;
+          }
+          await _db.into(_db.products).insert(Product.fromJson(productJson));
         }
       }
       // Insert Sales
