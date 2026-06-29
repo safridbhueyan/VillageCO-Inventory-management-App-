@@ -1,6 +1,10 @@
 import 'dart:io';
+import 'dart:ui' as ui;
 import 'package:flutter/material.dart';
+import 'package:flutter/rendering.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:share_plus/share_plus.dart';
+import '../../core/utils/pdf_generator.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:path/path.dart' as p;
 import 'package:fl_chart/fl_chart.dart';
@@ -20,6 +24,8 @@ class ReportsScreen extends ConsumerStatefulWidget {
 
 class _ReportsScreenState extends ConsumerState<ReportsScreen> with SingleTickerProviderStateMixin {
   late TabController _tabController;
+  final GlobalKey _historyReceiptKey = GlobalKey();
+  final GlobalKey _profitLossKey = GlobalKey();
 
   @override
   void initState() {
@@ -86,37 +92,56 @@ class _ReportsScreenState extends ConsumerState<ReportsScreen> with SingleTicker
               Text('লাভ-ক্ষতি বিবরণী', style: theme.textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold)),
               const SizedBox(height: 12),
               
-              Card(
-                color: theme.colorScheme.surfaceVariant.withOpacity(0.2),
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(16),
-                  side: BorderSide(color: theme.colorScheme.outlineVariant.withOpacity(0.5)),
-                ),
-                child: Padding(
-                  padding: const EdgeInsets.all(20.0),
-                  child: Column(
-                    children: [
-                      _buildPlRow('আজকের বিক্রির পরিমাণ', Formatters.currency(metrics.todaySales), isPositive: true),
-                      const SizedBox(height: 10),
-                      _buildPlRow('মজুদ পণ্যের মূল্য', Formatters.currency(metrics.inventoryValue)),
-                      const SizedBox(height: 10),
-                      _buildPlRow('মোট খরচের পরিমাণ', '- ${Formatters.currency(metrics.totalExpenses)}', isNegative: true),
-                      const Divider(height: 24),
-                      _buildPlRow(
-                        'আজকের নিট লাভ',
-                        Formatters.currency(metrics.netProfit),
-                        isBold: true,
-                        fontSize: 16,
-                        isPositive: metrics.netProfit >= 0,
-                        isNegative: metrics.netProfit < 0,
+              RepaintBoundary(
+                key: _profitLossKey,
+                child: Container(
+                  color: Colors.white,
+                  padding: const EdgeInsets.all(12.0),
+                  child: Card(
+                    color: Colors.white,
+                    elevation: 0,
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(16),
+                      side: BorderSide(color: theme.colorScheme.outlineVariant.withOpacity(0.5)),
+                    ),
+                    child: Padding(
+                      padding: const EdgeInsets.all(20.0),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          const Text(
+                            'লাভ-ক্ষতি বিবরণী (Profit & Loss Statement)',
+                            style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16, color: Colors.black),
+                          ),
+                          const SizedBox(height: 4),
+                          Text(
+                            'তারিখ: ${Formatters.dateTime(DateTime.now())}',
+                            style: const TextStyle(fontSize: 10, color: Colors.black54),
+                          ),
+                          const Divider(height: 24, color: Colors.black38),
+                          _buildPlRow('আজকের বিক্রির পরিমাণ', Formatters.currency(metrics.todaySales), isPositive: true),
+                          const SizedBox(height: 10),
+                          _buildPlRow('মজুদ পণ্যের মূল্য', Formatters.currency(metrics.inventoryValue)),
+                          const SizedBox(height: 10),
+                          _buildPlRow('মোট খরচের পরিমাণ', '- ${Formatters.currency(metrics.totalExpenses)}', isNegative: true),
+                          const Divider(height: 24, color: Colors.black38),
+                          _buildPlRow(
+                            'আজকের নিট লাভ',
+                            Formatters.currency(metrics.netProfit),
+                            isBold: true,
+                            fontSize: 16,
+                            isPositive: metrics.netProfit >= 0,
+                            isNegative: metrics.netProfit < 0,
+                          ),
+                        ],
                       ),
-                    ],
+                    ),
                   ),
                 ),
               ),
               const SizedBox(height: 24),
               
-              Text('রিপোর্ট এক্সপোর্ট করুন', style: theme.textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold)),
+              Text('রিপোর্ট এক্সপোর্ট ও প্রিন্ট করুন', style: theme.textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold)),
               const SizedBox(height: 12),
               Row(
                 children: [
@@ -126,25 +151,33 @@ class _ReportsScreenState extends ConsumerState<ReportsScreen> with SingleTicker
                         padding: const EdgeInsets.symmetric(vertical: 16),
                         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
                       ),
-                      onPressed: () => _exportCsvData(),
+                      onPressed: () => _exportProfitLossCsv(metrics),
                       icon: const Icon(Icons.download_rounded),
-                      label: const Text('CSV শীট ডাউনলোড'),
+                      label: const Text('CSV শীট'),
                     ),
                   ),
-                  const SizedBox(width: 12),
+                  const SizedBox(width: 8),
                   Expanded(
                     child: OutlinedButton.icon(
                       style: OutlinedButton.styleFrom(
                         padding: const EdgeInsets.symmetric(vertical: 16),
                         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
                       ),
-                      onPressed: () {
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          const SnackBar(content: Text('PDF রিপোর্ট তৈরি করা হচ্ছে...')),
-                        );
-                      },
+                      onPressed: () => _exportProfitLossPdf(metrics),
                       icon: const Icon(Icons.picture_as_pdf_outlined),
                       label: const Text('PDF ডাউনলোড'),
+                    ),
+                  ),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: OutlinedButton.icon(
+                      style: OutlinedButton.styleFrom(
+                        padding: const EdgeInsets.symmetric(vertical: 16),
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                      ),
+                      onPressed: () => _printProfitLoss(metrics),
+                      icon: const Icon(Icons.print_outlined),
+                      label: const Text('প্রিন্ট'),
                     ),
                   ),
                 ],
@@ -479,7 +512,6 @@ class _ReportsScreenState extends ConsumerState<ReportsScreen> with SingleTicker
     );
   }
 
-  // Invoice detailed dialog from log click
   void _showInvoiceReceiptDetails(BuildContext context, SaleWithDetails saleWithDetails) {
     final sale = saleWithDetails.sale;
     final customer = saleWithDetails.customer;
@@ -492,93 +524,157 @@ class _ReportsScreenState extends ConsumerState<ReportsScreen> with SingleTicker
         surfaceTintColor: Colors.transparent,
         content: SizedBox(
           width: 380,
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              const Text('ভিলেজকো স্টোর', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 18, color: Colors.black)),
-              const Text('বিক্রির রশিদের কপি', style: TextStyle(fontSize: 11, color: Colors.grey)),
-              const SizedBox(height: 12),
-              const Divider(color: Colors.black38, thickness: 1),
-              _buildReceiptMetaRow('রশিদ নং', sale.id.substring(0, 8).toUpperCase()),
-              _buildReceiptMetaRow('তারিখ ও সময়', Formatters.dateTime(sale.date)),
-              _buildReceiptMetaRow('পেমেন্ট পদ্ধতি', sale.paymentMethod == 'Cash' ? 'ক্যাশ' : (sale.paymentMethod == 'Card' ? 'কার্ড' : 'মোবাইল ব্যাংকিং')),
-              _buildReceiptMetaRow('ক্রেতা', customer?.name ?? 'সাধারণ কাস্টমার'),
-              const Divider(color: Colors.black38, thickness: 1),
-              const Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  Expanded(flex: 3, child: Text('পণ্যের বিবরণ', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 11, color: Colors.black))),
-                  Expanded(flex: 1, child: Text('পরিমাণ', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 11, color: Colors.black), textAlign: TextAlign.center)),
-                  Expanded(flex: 2, child: Text('মোট টাকা', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 11, color: Colors.black), textAlign: TextAlign.right)),
-                ],
-              ),
-              const SizedBox(height: 6),
-              Flexible(
-                child: SingleChildScrollView(
-                  child: Column(
-                    children: itemsList.map((item) {
-                      final subtotal = item.item.price * item.item.quantity;
-                      return Padding(
-                        padding: const EdgeInsets.symmetric(vertical: 3.0),
-                        child: Row(
-                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                          children: [
-                            Expanded(
-                              flex: 3,
-                              child: Text(
-                                item.product.name,
-                                style: const TextStyle(fontSize: 11, color: Colors.black),
-                                maxLines: 1,
-                                overflow: TextOverflow.ellipsis,
+          height: MediaQuery.of(context).size.height * 0.75,
+          child: SingleChildScrollView(
+            child: RepaintBoundary(
+              key: _historyReceiptKey,
+              child: Container(
+                color: Colors.white,
+                padding: const EdgeInsets.all(24.0),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    const Text('ভিলেজকো স্টোর', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 18, color: Colors.black)),
+                    const Text('বিক্রির রশিদের কপি', style: TextStyle(fontSize: 11, color: Colors.grey)),
+                    const SizedBox(height: 12),
+                    const Divider(color: Colors.black38, thickness: 1),
+                    _buildReceiptMetaRow('রশিদ নং', sale.id.substring(0, 8).toUpperCase()),
+                    _buildReceiptMetaRow('তারিখ ও সময়', Formatters.dateTime(sale.date)),
+                    _buildReceiptMetaRow('পেমেন্ট পদ্ধতি', sale.paymentMethod == 'Cash' ? 'ক্যাশ' : (sale.paymentMethod == 'Card' ? 'কার্ড' : 'মোবাইল ব্যাংকিং')),
+                    _buildReceiptMetaRow('ক্রেতা', customer?.name ?? 'সাধারণ কাস্টমার'),
+                    const Divider(color: Colors.black38, thickness: 1),
+                    const Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        Expanded(flex: 3, child: Text('পণ্যের বিবরণ', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 11, color: Colors.black))),
+                        Expanded(flex: 1, child: Text('পরিমাণ', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 11, color: Colors.black), textAlign: TextAlign.center)),
+                        Expanded(flex: 2, child: Text('মোট টাকা', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 11, color: Colors.black), textAlign: TextAlign.right)),
+                      ],
+                    ),
+                    const SizedBox(height: 6),
+                    Column(
+                      children: itemsList.map((item) {
+                        final subtotal = item.item.price * item.item.quantity;
+                        return Padding(
+                          padding: const EdgeInsets.symmetric(vertical: 3.0),
+                          child: Row(
+                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                            children: [
+                              Expanded(
+                                flex: 3,
+                                child: Text(
+                                  item.product.name,
+                                  style: const TextStyle(fontSize: 11, color: Colors.black),
+                                  maxLines: 1,
+                                  overflow: TextOverflow.ellipsis,
+                                ),
                               ),
-                            ),
-                            Expanded(
-                              flex: 1,
-                              child: Text(
-                                '${Formatters.number(item.item.quantity)} ${item.product.unit}',
-                                style: const TextStyle(fontSize: 11, color: Colors.black),
-                                textAlign: TextAlign.center,
+                              Expanded(
+                                flex: 1,
+                                child: Text(
+                                  '${Formatters.number(item.item.quantity)} ${item.product.unit}',
+                                  style: const TextStyle(fontSize: 11, color: Colors.black),
+                                  textAlign: TextAlign.center,
+                                ),
                               ),
-                            ),
-                            Expanded(
-                              flex: 2,
-                              child: Text(
-                                Formatters.currency(subtotal),
-                                style: const TextStyle(fontSize: 11, color: Colors.black),
-                                textAlign: TextAlign.right,
+                              Expanded(
+                                flex: 2,
+                                child: Text(
+                                  Formatters.currency(subtotal),
+                                  style: const TextStyle(fontSize: 11, color: Colors.black),
+                                  textAlign: TextAlign.right,
+                                ),
                               ),
-                            ),
-                          ],
-                        ),
-                      );
-                    }).toList(),
-                  ),
+                            ],
+                          ),
+                        );
+                      }).toList(),
+                    ),
+                    const Divider(color: Colors.black38, thickness: 1),
+                    _buildReceiptFinancialRow('উপ-মোট বিল', Formatters.currency(sale.subtotal)),
+                    _buildReceiptFinancialRow('ডিসকাউন্ট ছাড়', '- ${Formatters.currency(sale.discount)}'),
+                    const SizedBox(height: 4),
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        const Text('পরিশোধযোগ্য মোট বিল', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 12, color: Colors.black)),
+                        Text(Formatters.currency(sale.total), style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13, color: Colors.black)),
+                      ],
+                    ),
+                  ],
                 ),
               ),
-              const Divider(color: Colors.black38, thickness: 1),
-              _buildReceiptFinancialRow('উপ-মোট বিল', Formatters.currency(sale.subtotal)),
-              _buildReceiptFinancialRow('ডিসকাউন্ট ছাড়', '- ${Formatters.currency(sale.discount)}'),
-              const SizedBox(height: 4),
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  const Text('পরিশোধযোগ্য মোট বিল', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 12, color: Colors.black)),
-                  Text(Formatters.currency(sale.total), style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13, color: Colors.black)),
-                ],
-              ),
-            ],
+            ),
           ),
         ),
         actions: [
           TextButton(onPressed: () => Navigator.pop(context), child: const Text('বন্ধ করুন')),
-          ElevatedButton.icon(
+          OutlinedButton.icon(
             icon: const Icon(Icons.print),
-            label: const Text('রশিদ প্রিন্ট করুন'),
-            onPressed: () {
-              Navigator.pop(context);
-              ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(content: Text('থার্মাল প্রিন্টারে সংযোগ পাঠানো হচ্ছে...')),
-              );
+            label: const Text('প্রিন্ট'),
+            onPressed: () async {
+              try {
+                final itemsMapped = itemsList.map((item) => {
+                  'name': item.product.name,
+                  'qty': '${Formatters.number(item.item.quantity)} ${item.product.unit}',
+                  'total': Formatters.currency(item.item.price * item.item.quantity),
+                }).toList();
+
+                await PdfGenerator.printTextReceipt(
+                  saleId: sale.id,
+                  dateStr: Formatters.dateTime(sale.date),
+                  paymentMethod: sale.paymentMethod == 'Cash' ? 'ক্যাশ' : (sale.paymentMethod == 'Card' ? 'কার্ড' : 'মোবাইল ব্যাংকিং'),
+                  customerName: customer?.name ?? 'সাধারণ কাস্টমার',
+                  items: itemsMapped,
+                  subtotal: sale.subtotal,
+                  discount: sale.discount,
+                  total: sale.total,
+                  paidAmount: sale.total, // Assume paid amount is total for historic receipt print
+                );
+              } catch (e) {
+                if (context.mounted) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(content: Text('প্রিন্ট ব্যর্থ হয়েছে: $e')),
+                  );
+                }
+              }
+            },
+          ),
+          OutlinedButton.icon(
+            icon: const Icon(Icons.picture_as_pdf_rounded),
+            label: const Text('PDF রসিদ'),
+            onPressed: () async {
+              try {
+                final itemsMapped = itemsList.map((item) => {
+                  'name': item.product.name,
+                  'qty': '${Formatters.number(item.item.quantity)} ${item.product.unit}',
+                  'total': Formatters.currency(item.item.price * item.item.quantity),
+                }).toList();
+
+                await PdfGenerator.generateAndSaveTextReceipt(
+                  saleId: sale.id,
+                  dateStr: Formatters.dateTime(sale.date),
+                  paymentMethod: sale.paymentMethod == 'Cash' ? 'ক্যাশ' : (sale.paymentMethod == 'Card' ? 'কার্ড' : 'মোবাইল ব্যাংকিং'),
+                  customerName: customer?.name ?? 'সাধারণ কাস্টমার',
+                  items: itemsMapped,
+                  subtotal: sale.subtotal,
+                  discount: sale.discount,
+                  total: sale.total,
+                  paidAmount: sale.total,
+                );
+
+                if (context.mounted) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(content: Text('রসিদটি সফলভাবে ডাউনলোড করা হয়েছে')),
+                  );
+                }
+              } catch (e) {
+                if (context.mounted) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(content: Text('PDF তৈরি করতে ব্যর্থ: $e')),
+                  );
+                }
+              }
             },
           ),
         ],
@@ -650,6 +746,78 @@ class _ReportsScreenState extends ConsumerState<ReportsScreen> with SingleTicker
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(content: Text('ডাউনলোড ব্যর্থ হয়েছে: $e')),
+        );
+      }
+    }
+  }
+
+  Future<void> _exportProfitLossCsv(DashboardMetrics metrics) async {
+    try {
+      final buffer = StringBuffer();
+      buffer.writeln('বিবরণ,টাকা');
+      buffer.writeln('আজকের বিক্রির পরিমাণ,${metrics.todaySales}');
+      buffer.writeln('মজুদ পণ্যের মূল্য,${metrics.inventoryValue}');
+      buffer.writeln('মোট খরচের পরিমাণ,-${metrics.totalExpenses}');
+      buffer.writeln('আজকের নিট লাভ,${metrics.netProfit}');
+
+      final downloadsDir = Platform.isAndroid 
+          ? Directory('/storage/emulated/0/Download') 
+          : await getDownloadsDirectory();
+          
+      final targetDir = downloadsDir ?? await getApplicationDocumentsDirectory();
+      final file = File('${targetDir.path}/profit_loss_report_${DateTime.now().millisecondsSinceEpoch}.csv');
+      await file.writeAsString(buffer.toString());
+
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('লাভ-ক্ষতি বিবরণী CSV-তে ডাউনলোড হয়েছে: ${file.path}')),
+        );
+      }
+      await Share.shareXFiles([XFile(file.path)], text: 'Profit & Loss CSV Report');
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('CSV রপ্তানি ব্যর্থ: $e')),
+        );
+      }
+    }
+  }
+
+  Future<void> _exportProfitLossPdf(DashboardMetrics metrics) async {
+    try {
+      await PdfGenerator.generateAndSaveTextProfitLoss(
+        todaySales: metrics.todaySales,
+        inventoryValue: metrics.inventoryValue,
+        totalExpenses: metrics.totalExpenses,
+        netProfit: metrics.netProfit,
+      );
+
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('লাভ-ক্ষতি PDF রিপোর্ট ডাউনলোড সম্পন্ন হয়েছে')),
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('PDF তৈরি করতে ব্যর্থ: $e')),
+        );
+      }
+    }
+  }
+
+  Future<void> _printProfitLoss(DashboardMetrics metrics) async {
+    try {
+      await PdfGenerator.printTextProfitLoss(
+        todaySales: metrics.todaySales,
+        inventoryValue: metrics.inventoryValue,
+        totalExpenses: metrics.totalExpenses,
+        netProfit: metrics.netProfit,
+      );
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('প্রিন্ট ব্যর্থ হয়েছে: $e')),
         );
       }
     }
