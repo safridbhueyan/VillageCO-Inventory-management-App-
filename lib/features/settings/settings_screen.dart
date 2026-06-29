@@ -13,6 +13,7 @@ import '../../core/database/database_providers.dart';
 import '../../core/utils/formatters.dart';
 import '../../core/utils/csv_helper.dart';
 import 'settings_controller.dart';
+import '../../widgets/shared/main_layout.dart';
 import '../categories/categories_controller.dart';
 import '../products/products_controller.dart';
 import '../reports/reports_controller.dart';
@@ -339,6 +340,34 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                     ),
                   ),
                 ),
+                const SizedBox(height: 24),
+                Text('সেশন ও লগআউট', style: theme.textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold)),
+                const SizedBox(height: 12),
+                Card(
+                  elevation: 0,
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(16),
+                    side: BorderSide(color: theme.colorScheme.outlineVariant.withOpacity(0.5)),
+                  ),
+                  child: Padding(
+                    padding: const EdgeInsets.all(16.0),
+                    child: Column(
+                      children: [
+                        ListTile(
+                          contentPadding: EdgeInsets.zero,
+                          leading: const Icon(Icons.logout_rounded, color: Colors.red),
+                          title: const Text(
+                            'লগআউট ও দৈনিক ক্লোজিং রিপোর্ট',
+                            style: TextStyle(color: Colors.red, fontWeight: FontWeight.bold),
+                          ),
+                          subtitle: const Text('লগআউট করুন এবং আজকের দৈনিক লেনদেনের PDF রিপোর্ট সংরক্ষণ করুন'),
+                          trailing: const Icon(Icons.arrow_forward_ios, size: 14, color: Colors.red),
+                          onTap: () => logoutAndGenerateClosingReport(context, ref),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
               ],
             ),
           );
@@ -362,7 +391,6 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
             final categoriesAsync = ref.watch(categoriesControllerProvider);
 
             return AlertDialog(
-              backgroundColor: Colors.white,
               title: const Text('ক্যাটাগরি সমূহ ম্যানেজ করুন'),
               content: SizedBox(
                 width: 400,
@@ -479,7 +507,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                               decoration: BoxDecoration(
                                 shape: BoxShape.circle,
                                 color: Color(int.parse(hexStr)),
-                                border: isSelected ? Border.all(color: Colors.black, width: 2) : null,
+                                border: isSelected ? Border.all(color: theme.colorScheme.onSurface, width: 2) : null,
                               ),
                             ),
                           );
