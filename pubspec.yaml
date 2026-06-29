@@ -53,6 +53,12 @@ dependencies:
   uuid: ^4.4.0
   freezed_annotation: ^2.4.4
   json_annotation: ^4.9.0
+  pdf: ^3.11.1
+  excel: ^4.0.3
+  file_picker: ^8.0.3
+  share_plus: ^10.1.0
+  printing: ^5.14.3
+  bangla_pdf: ^1.0.6
 
 dev_dependencies:
   flutter_test:
