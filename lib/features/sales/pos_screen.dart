@@ -2,10 +2,12 @@ import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_animate/flutter_animate.dart';
+import 'package:uuid/uuid.dart';
 
 import '../../core/database/database.dart';
 import '../../core/database/database_providers.dart';
 import '../../core/utils/formatters.dart';
+import '../../core/utils/pdf_generator.dart';
 import '../products/products_controller.dart';
 import '../categories/categories_controller.dart';
 import '../suppliers/suppliers_controller.dart'; 
@@ -27,6 +29,7 @@ class PosScreen extends ConsumerStatefulWidget {
 class _PosScreenState extends ConsumerState<PosScreen> with SingleTickerProviderStateMixin {
   late TabController _tabController;
   final TextEditingController _searchController = TextEditingController();
+  final TextEditingController _paidAmountController = TextEditingController();
   String _productSearchQuery = '';
 
   @override
@@ -39,6 +42,7 @@ class _PosScreenState extends ConsumerState<PosScreen> with SingleTickerProvider
   void dispose() {
     _tabController.dispose();
     _searchController.dispose();
+    _paidAmountController.dispose();
     super.dispose();
   }
 
@@ -310,84 +314,98 @@ class _PosScreenState extends ConsumerState<PosScreen> with SingleTickerProvider
     return Container(
       color: theme.colorScheme.surface,
       padding: const EdgeInsets.all(20.0),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(
-            'চলতি কার্ট',
-            style: theme.textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold),
-          ),
-          const SizedBox(height: 12),
-          Expanded(
-            child: cart.items.isEmpty
-                ? const Center(
-                    child: Column(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        Icon(Icons.shopping_cart_outlined, size: 48, color: Colors.grey),
-                        SizedBox(height: 8),
-                        Text('কার্ট খালি রয়েছে', style: TextStyle(color: Colors.grey)),
-                      ],
+      child: SingleChildScrollView(
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              'চলতি কার্ট',
+              style: theme.textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold),
+            ),
+            const SizedBox(height: 12),
+            ConstrainedBox(
+              constraints: const BoxConstraints(maxHeight: 280),
+              child: cart.items.isEmpty
+                  ? const Center(
+                      child: Column(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          Icon(Icons.shopping_cart_outlined, size: 48, color: Colors.grey),
+                          SizedBox(height: 8),
+                          Text('কার্ট খালি রয়েছে', style: TextStyle(color: Colors.grey)),
+                        ],
+                      ),
+                    )
+                  : ListView.separated(
+                      shrinkWrap: true,
+                      itemCount: cart.items.length,
+                      separatorBuilder: (_, __) => const Divider(height: 1),
+                      itemBuilder: (context, index) {
+                        final item = cart.items[index];
+                        return ListTile(
+                          contentPadding: EdgeInsets.zero,
+                          title: Text(item.product.name, style: const TextStyle(fontWeight: FontWeight.bold)),
+                          subtitle: Text(Formatters.currency(item.customPrice)),
+                          trailing: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              IconButton(
+                                icon: const Icon(Icons.remove_circle_outline),
+                                onPressed: () {
+                                  ref.read(posCartProvider.notifier).updateQuantity(
+                                        item.product.id,
+                                        item.quantity - 1,
+                                      );
+                                },
+                              ),
+                              Text(
+                                Formatters.number(item.quantity),
+                                style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14),
+                              ),
+                              IconButton(
+                                icon: const Icon(Icons.add_circle_outline),
+                                onPressed: () {
+                                  ref.read(posCartProvider.notifier).updateQuantity(
+                                        item.product.id,
+                                        item.quantity + 1,
+                                      );
+                                },
+                              ),
+                              const SizedBox(width: 8),
+                              IconButton(
+                                icon: const Icon(Icons.delete_outline, color: Colors.red),
+                                onPressed: () {
+                                  ref.read(posCartProvider.notifier).removeItem(item.product.id);
+                                },
+                              ),
+                            ],
+                          ),
+                        );
+                      },
                     ),
-                  )
-                : ListView.separated(
-                    itemCount: cart.items.length,
-                    separatorBuilder: (_, __) => const Divider(height: 1),
-                    itemBuilder: (context, index) {
-                      final item = cart.items[index];
-                      return ListTile(
-                        contentPadding: EdgeInsets.zero,
-                        title: Text(item.product.name, style: const TextStyle(fontWeight: FontWeight.bold)),
-                        subtitle: Text(Formatters.currency(item.customPrice)),
-                        trailing: Row(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            IconButton(
-                              icon: const Icon(Icons.remove_circle_outline),
-                              onPressed: () {
-                                ref.read(posCartProvider.notifier).updateQuantity(
-                                      item.product.id,
-                                      item.quantity - 1,
-                                    );
-                              },
-                            ),
-                            Text(
-                              Formatters.number(item.quantity),
-                              style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14),
-                            ),
-                            IconButton(
-                              icon: const Icon(Icons.add_circle_outline),
-                              onPressed: () {
-                                ref.read(posCartProvider.notifier).updateQuantity(
-                                      item.product.id,
-                                      item.quantity + 1,
-                                    );
-                              },
-                            ),
-                            const SizedBox(width: 8),
-                            IconButton(
-                              icon: const Icon(Icons.delete_outline, color: Colors.red),
-                              onPressed: () {
-                                ref.read(posCartProvider.notifier).removeItem(item.product.id);
-                              },
-                            ),
-                          ],
-                        ),
-                      );
-                    },
-                  ),
-          ),
-          const Divider(),
-          const SizedBox(height: 8),
+            ),
+            const Divider(),
+            const SizedBox(height: 8),
           
           Row(
             children: [
               Expanded(
                 child: customersAsync.maybeWhen(
                   data: (customers) => DropdownButtonFormField<Customer?>(
-                    value: cart.selectedCustomer,
+                    value: (cart.selectedCustomer != null && customers.any((c) => c.id == cart.selectedCustomer!.id))
+                        ? customers.firstWhere((c) => c.id == cart.selectedCustomer!.id)
+                        : null,
                     isExpanded: true,
-                    decoration: const InputDecoration(labelText: 'কাস্টমার', border: OutlineInputBorder(), contentPadding: EdgeInsets.symmetric(horizontal: 10, vertical: 8)),
+                    decoration: InputDecoration(
+                      labelText: 'কাস্টমার',
+                      border: const OutlineInputBorder(),
+                      contentPadding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+                      suffixIcon: IconButton(
+                        icon: const Icon(Icons.person_add_alt_1_rounded, size: 20),
+                        tooltip: 'নতুন কাস্টমার যোগ করুন',
+                        onPressed: () => _showAddCustomerDialog(context, ref),
+                      ),
+                    ),
                     items: [
                       const DropdownMenuItem(value: null, child: Text('সাধারণ কাস্টমার')),
                       ...customers.map((c) => DropdownMenuItem(value: c, child: Text(c.name))),
@@ -427,6 +445,20 @@ class _PosScreenState extends ConsumerState<PosScreen> with SingleTickerProvider
           
           const SizedBox(height: 16),
 
+          TextField(
+            controller: _paidAmountController,
+            decoration: const InputDecoration(
+              labelText: 'পরিশোধিত টাকা (Paid Amount)',
+              border: OutlineInputBorder(),
+              prefixText: '৳ ',
+            ),
+            keyboardType: const TextInputType.numberWithOptions(decimal: true),
+            onChanged: (val) {
+              setState(() {});
+            },
+          ),
+          const SizedBox(height: 12),
+
           Column(
             children: [
               _buildCheckoutSummaryRow('উপ-মোট বিল', Formatters.currency(cart.subtotal)),
@@ -440,6 +472,16 @@ class _PosScreenState extends ConsumerState<PosScreen> with SingleTickerProvider
                 fontSize: 18,
                 color: theme.colorScheme.primary,
               ),
+              if (_paidAmountController.text.isNotEmpty) ...[
+                const SizedBox(height: 4),
+                _buildCheckoutSummaryRow('পরিশোধিত টাকা', Formatters.currency(double.tryParse(_paidAmountController.text) ?? 0.0)),
+                _buildCheckoutSummaryRow(
+                  (double.tryParse(_paidAmountController.text) ?? 0.0) >= cart.total ? 'ফেরতযোগ্য টাকা' : 'বাকি বিল',
+                  Formatters.currency(((double.tryParse(_paidAmountController.text) ?? 0.0) - cart.total).abs()),
+                  color: (double.tryParse(_paidAmountController.text) ?? 0.0) >= cart.total ? Colors.green : Colors.orange,
+                  isBold: true,
+                ),
+              ],
             ],
           ),
           const SizedBox(height: 16),
@@ -457,11 +499,13 @@ class _PosScreenState extends ConsumerState<PosScreen> with SingleTickerProvider
                   ? null
                   : () async {
                       try {
+                        final paidVal = double.tryParse(_paidAmountController.text) ?? 0.0;
                         final completedSale = await ref.read(posCartProvider.notifier).completeSale();
+                        _paidAmountController.clear();
                         ref.invalidate(salesHistoryProvider);
                         ref.invalidate(dashboardMetricsProvider);
                         if (mounted) {
-                          _showInvoiceReceiptDialog(context, completedSale, cart);
+                          _showInvoiceReceiptDialog(context, completedSale, cart, paidVal);
                         }
                       } catch (e) {
                         ScaffoldMessenger.of(context).showSnackBar(
@@ -477,6 +521,7 @@ class _PosScreenState extends ConsumerState<PosScreen> with SingleTickerProvider
           ),
         ],
       ),
+     ),
     );
   }
 
@@ -547,7 +592,7 @@ class _PosScreenState extends ConsumerState<PosScreen> with SingleTickerProvider
   }
 
   // Invoice Receipt dialog (Bangla)
-  void _showInvoiceReceiptDialog(BuildContext context, Sale sale, PosCartState cartStateAtCheckout) {
+  void _showInvoiceReceiptDialog(BuildContext context, Sale sale, PosCartState cartStateAtCheckout, double paidAmount) {
     final theme = Theme.of(context);
     final itemsList = cartStateAtCheckout.items;
     final discount = cartStateAtCheckout.discountAmount;
@@ -643,6 +688,14 @@ class _PosScreenState extends ConsumerState<PosScreen> with SingleTickerProvider
                   Text(Formatters.currency(total), style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13, color: Colors.black)),
                 ],
               ),
+              if (paidAmount > 0) ...[
+                const SizedBox(height: 4),
+                _buildReceiptFinancialRow('পরিশোধিত টাকা', Formatters.currency(paidAmount)),
+                _buildReceiptFinancialRow(
+                  paidAmount >= total ? 'ফেরতযোগ্য টাকা' : 'বাকি বিল',
+                  Formatters.currency((paidAmount - total).abs()),
+                ),
+              ],
               const SizedBox(height: 16),
               const Text('ভিলেজকো স্টোরে কেনাকাটার জন্য ধন্যবাদ!', style: TextStyle(fontStyle: FontStyle.italic, fontSize: 11, color: Colors.black)),
               const SizedBox(height: 8),
@@ -653,11 +706,64 @@ class _PosScreenState extends ConsumerState<PosScreen> with SingleTickerProvider
         actions: [
           OutlinedButton.icon(
             icon: const Icon(Icons.print),
-            label: const Text('রশিদ প্রিন্ট করুন'),
-            onPressed: () {
-              ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(content: Text('থার্মাল প্রিন্টারের সাথে সংযোগ করা হচ্ছে...')),
-              );
+            label: const Text('প্রিন্ট'),
+            onPressed: () async {
+              try {
+                final itemsMapped = itemsList.map((item) => {
+                  'name': item.product.name,
+                  'qty': '${Formatters.number(item.quantity)} ${item.product.unit}',
+                  'total': Formatters.currency(item.subtotal),
+                }).toList();
+
+                await PdfGenerator.printTextReceipt(
+                  saleId: sale.id,
+                  dateStr: Formatters.dateTime(sale.date),
+                  paymentMethod: sale.paymentMethod == 'Cash' ? 'ক্যাশ' : (sale.paymentMethod == 'Card' ? 'কার্ড' : 'মোবাইল ব্যাংকিং'),
+                  customerName: customer?.name ?? 'সাধারণ কাস্টমার',
+                  items: itemsMapped,
+                  subtotal: subtotal,
+                  discount: discount,
+                  total: total,
+                  paidAmount: paidAmount,
+                );
+              } catch (e) {
+                if (context.mounted) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(content: Text('প্রিন্ট ব্যর্থ হয়েছে: $e')),
+                  );
+                }
+              }
+            },
+          ),
+          OutlinedButton.icon(
+            icon: const Icon(Icons.picture_as_pdf_rounded),
+            label: const Text('PDF রসিদ'),
+            onPressed: () async {
+              try {
+                final itemsMapped = itemsList.map((item) => {
+                  'name': item.product.name,
+                  'qty': '${Formatters.number(item.quantity)} ${item.product.unit}',
+                  'total': Formatters.currency(item.subtotal),
+                }).toList();
+
+                await PdfGenerator.generateAndSaveTextReceipt(
+                  saleId: sale.id,
+                  dateStr: Formatters.dateTime(sale.date),
+                  paymentMethod: sale.paymentMethod == 'Cash' ? 'ক্যাশ' : (sale.paymentMethod == 'Card' ? 'কার্ড' : 'মোবাইল ব্যাংকিং'),
+                  customerName: customer?.name ?? 'সাধারণ কাস্টমার',
+                  items: itemsMapped,
+                  subtotal: subtotal,
+                  discount: discount,
+                  total: total,
+                  paidAmount: paidAmount,
+                );
+              } catch (e) {
+                if (context.mounted) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(content: Text('PDF ডাউনলোড ব্যর্থ: $e')),
+                  );
+                }
+              }
             },
           ),
           ElevatedButton(
@@ -690,6 +796,83 @@ class _PosScreenState extends ConsumerState<PosScreen> with SingleTickerProvider
         children: [
           Text(label, style: const TextStyle(fontSize: 11, color: Colors.black54)),
           Text(value, style: const TextStyle(fontSize: 11, color: Colors.black, fontWeight: FontWeight.w500)),
+        ],
+      ),
+    );
+  }
+
+  void _showAddCustomerDialog(BuildContext context, WidgetRef ref) {
+    final nameController = TextEditingController();
+    final phoneController = TextEditingController();
+    final formKey = GlobalKey<FormState>();
+
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('নতুন কাস্টমার যোগ করুন'),
+        content: Form(
+          key: formKey,
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              TextFormField(
+                controller: nameController,
+                decoration: const InputDecoration(
+                  labelText: 'কাস্টমারের নাম (Name)',
+                  border: OutlineInputBorder(),
+                ),
+                validator: (val) => val == null || val.trim().isEmpty ? 'নাম লিখুন' : null,
+              ),
+              const SizedBox(height: 12),
+              TextFormField(
+                controller: phoneController,
+                decoration: const InputDecoration(
+                  labelText: 'মোবাইল নাম্বার (Mobile Number)',
+                  border: OutlineInputBorder(),
+                ),
+                keyboardType: TextInputType.phone,
+                validator: (val) => val == null || val.trim().isEmpty ? 'মোবাইল নাম্বার লিখুন' : null,
+              ),
+            ],
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('বাতিল'),
+          ),
+          ElevatedButton(
+            onPressed: () async {
+              if (formKey.currentState?.validate() ?? false) {
+                final name = nameController.text.trim();
+                final phone = phoneController.text.trim();
+                final id = const Uuid().v4();
+
+                final db = ref.read(databaseProvider);
+                final customer = Customer(
+                  id: id,
+                  name: name,
+                  phone: phone,
+                );
+
+                await db.into(db.customers).insert(customer);
+                
+                // Refresh list
+                ref.invalidate(posCustomersListProvider);
+                
+                // Select the new customer
+                ref.read(posCartProvider.notifier).setCustomer(customer);
+
+                if (context.mounted) {
+                  Navigator.pop(context);
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(content: Text('$name কাস্টমার হিসেবে যোগ করা হয়েছে')),
+                  );
+                }
+              }
+            },
+            child: const Text('যোগ করুন'),
+          ),
         ],
       ),
     );
