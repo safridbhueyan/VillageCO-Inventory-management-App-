@@ -37,9 +37,16 @@ class SettingsController extends AsyncNotifier<AppSettingsTableData> {
   Future<void> updateSettings(AppSettingsTableCompanion companion) async {
     state = const AsyncValue.loading();
     state = await AsyncValue.guard(() async {
-      await (_db.update(_db.appSettingsTable)
+      final rowsUpdated = await (_db.update(_db.appSettingsTable)
             ..where((t) => t.id.equals(1)))
           .write(companion);
+      if (rowsUpdated == 0) {
+        // If the settings row is missing, initialize it first and write settings again.
+        await _getOrInitSettings();
+        await (_db.update(_db.appSettingsTable)
+              ..where((t) => t.id.equals(1)))
+            .write(companion);
+      }
       return _getOrInitSettings();
     });
   }
