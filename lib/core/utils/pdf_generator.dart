@@ -356,6 +356,232 @@ class PdfGenerator {
     await Share.shareXFiles([XFile(file.path)], text: 'Profit & Loss Report');
   }
 
+  static Future<pw.Document> _buildDailyReportPdfDocument({
+    required double todaySales,
+    required double totalExpenses,
+    required double netProfit,
+    required int totalTransactionsCount,
+    required List<Map<String, dynamic>> todaySalesList,
+  }) async {
+    final pdf = pw.Document();
+    final defaultFont = BanglaFontManager().defaultFont;
+    final regularStyle = pw.TextStyle(font: defaultFont, fontSize: 10, fontWeight: pw.FontWeight.normal);
+    final titleStyle = pw.TextStyle(font: defaultFont, fontSize: 18, fontWeight: pw.FontWeight.bold);
+    final subTitleStyle = pw.TextStyle(font: defaultFont, fontSize: 12, fontWeight: pw.FontWeight.bold);
+    final headerStyle = pw.TextStyle(font: defaultFont, fontSize: 10, fontWeight: pw.FontWeight.bold);
+
+    pdf.addPage(
+      pw.MultiPage(
+        pageFormat: PdfPageFormat.a4,
+        margin: const pw.EdgeInsets.all(24),
+        build: (pw.Context context) {
+          return [
+            pw.Center(
+              child: pw.Column(
+                children: [
+                  Text('ভিলেজকো স্টোর', style: titleStyle, banglaStyle: titleStyle),
+                  pw.SizedBox(height: 4),
+                  Text('দৈনিক লেনদেন রিপোর্ট (Daily Transaction Report)', style: subTitleStyle, banglaStyle: subTitleStyle),
+                  pw.SizedBox(height: 4),
+                  Text('তারিখ: ${Formatters.date(DateTime.now())} • সময়: ${Formatters.dateTime(DateTime.now()).split(" ").last}', style: regularStyle, banglaStyle: regularStyle),
+                  pw.SizedBox(height: 8),
+                  pw.Divider(thickness: 1, color: PdfColors.black),
+                ],
+              ),
+            ),
+            pw.SizedBox(height: 16),
+            
+            // Financial Summary Block
+            Text('আর্থিক সারসংক্ষেপ (Financial Summary)', style: subTitleStyle, banglaStyle: subTitleStyle),
+            pw.SizedBox(height: 8),
+            pw.Table(
+              border: pw.TableBorder.all(color: PdfColors.grey400, width: 0.5),
+              children: [
+                pw.TableRow(
+                  decoration: const pw.BoxDecoration(color: PdfColors.grey200),
+                  children: [
+                    pw.Padding(
+                      padding: const pw.EdgeInsets.all(8),
+                      child: Text('খাত', style: headerStyle, banglaStyle: headerStyle),
+                    ),
+                    pw.Padding(
+                      padding: const pw.EdgeInsets.all(8),
+                      child: Text('পরিমাণ (টাকা)', style: headerStyle, banglaStyle: headerStyle, textAlign: pw.TextAlign.right),
+                    ),
+                  ],
+                ),
+                pw.TableRow(
+                  children: [
+                    pw.Padding(
+                      padding: const pw.EdgeInsets.all(8),
+                      child: Text('আজকের মোট বিক্রি', style: regularStyle, banglaStyle: regularStyle),
+                    ),
+                    pw.Padding(
+                      padding: const pw.EdgeInsets.all(8),
+                      child: Text('TK ${todaySales.toStringAsFixed(2)}', style: regularStyle, banglaStyle: regularStyle, textAlign: pw.TextAlign.right),
+                    ),
+                  ],
+                ),
+                pw.TableRow(
+                  children: [
+                    pw.Padding(
+                      padding: const pw.EdgeInsets.all(8),
+                      child: Text('আজকের মোট খরচ', style: regularStyle, banglaStyle: regularStyle),
+                    ),
+                    pw.Padding(
+                      padding: const pw.EdgeInsets.all(8),
+                      child: Text('-TK ${totalExpenses.toStringAsFixed(2)}', style: regularStyle, banglaStyle: regularStyle, textAlign: pw.TextAlign.right),
+                    ),
+                  ],
+                ),
+                pw.TableRow(
+                  decoration: pw.BoxDecoration(
+                    color: netProfit >= 0 ? PdfColors.green50 : PdfColors.red50,
+                  ),
+                  children: [
+                    pw.Padding(
+                      padding: const pw.EdgeInsets.all(8),
+                      child: Text('আজকের নিট লাভ', style: headerStyle, banglaStyle: headerStyle),
+                    ),
+                    pw.Padding(
+                      padding: const pw.EdgeInsets.all(8),
+                      child: Text('TK ${netProfit.toStringAsFixed(2)}', style: headerStyle, banglaStyle: headerStyle, textAlign: pw.TextAlign.right),
+                    ),
+                  ],
+                ),
+                pw.TableRow(
+                  children: [
+                    pw.Padding(
+                      padding: const pw.EdgeInsets.all(8),
+                      child: Text('মোট লেনদেন সংখ্যা', style: regularStyle, banglaStyle: regularStyle),
+                    ),
+                    pw.Padding(
+                      padding: const pw.EdgeInsets.all(8),
+                      child: Text('$totalTransactionsCount টি', style: regularStyle, banglaStyle: regularStyle, textAlign: pw.TextAlign.right),
+                    ),
+                  ],
+                ),
+              ],
+            ),
+            pw.SizedBox(height: 24),
+            
+            // Transactions list
+            Text('আজকের বিক্রয় বিবরণী (Today\'s Sales list)', style: subTitleStyle, banglaStyle: subTitleStyle),
+            pw.SizedBox(height: 8),
+            if (todaySalesList.isEmpty)
+              pw.Padding(
+                padding: const pw.EdgeInsets.all(12),
+                child: Text('আজকে কোনো বিক্রির লেনদেন হয়নি।', style: regularStyle, banglaStyle: regularStyle),
+              )
+            else
+              pw.Table(
+                border: pw.TableBorder.all(color: PdfColors.grey400, width: 0.5),
+                columnWidths: {
+                  0: const pw.FlexColumnWidth(2),
+                  1: const pw.FlexColumnWidth(2),
+                  2: const pw.FlexColumnWidth(3),
+                  3: const pw.FlexColumnWidth(2),
+                  4: const pw.FlexColumnWidth(2),
+                },
+                children: [
+                  pw.TableRow(
+                    decoration: const pw.BoxDecoration(color: PdfColors.grey200),
+                    children: [
+                      pw.Padding(
+                        padding: const pw.EdgeInsets.all(6),
+                        child: Text('রশিদ নং', style: headerStyle, banglaStyle: headerStyle),
+                      ),
+                      pw.Padding(
+                        padding: const pw.EdgeInsets.all(6),
+                        child: Text('সময়', style: headerStyle, banglaStyle: headerStyle),
+                      ),
+                      pw.Padding(
+                        padding: const pw.EdgeInsets.all(6),
+                        child: Text('কাস্টমার', style: headerStyle, banglaStyle: headerStyle),
+                      ),
+                      pw.Padding(
+                        padding: const pw.EdgeInsets.all(6),
+                        child: Text('পদ্ধতি', style: headerStyle, banglaStyle: headerStyle),
+                      ),
+                      pw.Padding(
+                        padding: const pw.EdgeInsets.all(6),
+                        child: Text('মোট বিল', style: headerStyle, banglaStyle: headerStyle, textAlign: pw.TextAlign.right),
+                      ),
+                    ],
+                  ),
+                  ...todaySalesList.map((sale) {
+                    return pw.TableRow(
+                      children: [
+                        pw.Padding(
+                          padding: const pw.EdgeInsets.all(6),
+                          child: Text(sale['id'].toString().substring(0, 8).toUpperCase(), style: regularStyle, banglaStyle: regularStyle),
+                        ),
+                        pw.Padding(
+                          padding: const pw.EdgeInsets.all(6),
+                          child: Text(sale['time'] as String, style: regularStyle, banglaStyle: regularStyle),
+                        ),
+                        pw.Padding(
+                          padding: const pw.EdgeInsets.all(6),
+                          child: Text(sale['customer'] as String, style: regularStyle, banglaStyle: regularStyle),
+                        ),
+                        pw.Padding(
+                          padding: const pw.EdgeInsets.all(6),
+                          child: Text(sale['payment'] as String, style: regularStyle, banglaStyle: regularStyle),
+                        ),
+                        pw.Padding(
+                          padding: const pw.EdgeInsets.all(6),
+                          child: Text('TK ${sale['amount']}', style: regularStyle, banglaStyle: regularStyle, textAlign: pw.TextAlign.right),
+                        ),
+                      ],
+                    );
+                  }),
+                ],
+              ),
+            pw.SizedBox(height: 40),
+            pw.Divider(thickness: 0.5, color: PdfColors.grey),
+            pw.Center(
+              child: Text('ভিলেজকো স্টোর - দৈনিক লেনদেন রিপোর্ট ক্লোজিং সেশন', style: regularStyle, banglaStyle: regularStyle),
+            ),
+          ];
+        },
+      ),
+    );
+    return pdf;
+  }
+
+  static Future<String> generateAndSaveDailyTransactionReport({
+    required double todaySales,
+    required double totalExpenses,
+    required double netProfit,
+    required int totalTransactionsCount,
+    required List<Map<String, dynamic>> todaySalesList,
+  }) async {
+    final pdf = await _buildDailyReportPdfDocument(
+      todaySales: todaySales,
+      totalExpenses: totalExpenses,
+      netProfit: netProfit,
+      totalTransactionsCount: totalTransactionsCount,
+      todaySalesList: todaySalesList,
+    );
+
+    final pdfBytes = await pdf.save();
+    
+    Directory? downloadsDir;
+    if (Platform.isAndroid) {
+      downloadsDir = Directory('/storage/emulated/0/Download');
+      if (!await downloadsDir.exists()) {
+        downloadsDir = await getExternalStorageDirectory();
+      }
+    } else if (Platform.isMacOS || Platform.isWindows || Platform.isLinux) {
+      downloadsDir = await getDownloadsDirectory();
+    }
+    downloadsDir ??= await getApplicationDocumentsDirectory();
+    
+    final file = File('${downloadsDir.path}/daily_closing_report_${DateTime.now().year}-${DateTime.now().month}-${DateTime.now().day}_${DateTime.now().millisecondsSinceEpoch}.pdf');
+    await file.writeAsBytes(pdfBytes);
+    return file.path;
+  }
+
   static Future<void> printTextProfitLoss({
     required double todaySales,
     required double inventoryValue,
