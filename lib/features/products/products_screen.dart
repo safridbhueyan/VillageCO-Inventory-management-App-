@@ -736,9 +736,10 @@ class _ProductsScreenState extends ConsumerState<ProductsScreen> {
 
     String? nameError;
 
-    showDialog(
+    showModalBottomSheet(
       context: context,
-      barrierDismissible: false,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
       builder: (context) {
         return Consumer(
           builder: (context, ref, child) {
@@ -747,390 +748,415 @@ class _ProductsScreenState extends ConsumerState<ProductsScreen> {
 
             return StatefulBuilder(
               builder: (context, setDialogState) {
-                return AlertDialog(
-                  title: Text(isEdit ? 'পণ্যের বিবরণ সংশোধন' : 'নতুন পণ্য যোগ করুন'),
-                  content: SizedBox(
-                    width: 500,
-                    child: SingleChildScrollView(
-                      child: Column(
-                        mainAxisSize: MainAxisSize.min,
+                return Container(
+                  decoration: BoxDecoration(
+                    color: theme.colorScheme.surface,
+                    borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
+                  ),
+                  padding: EdgeInsets.only(
+                    left: 20,
+                    right: 20,
+                    top: 20,
+                    bottom: MediaQuery.of(context).viewInsets.bottom + 20,
+                  ),
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: [
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
                         children: [
-                          // Image Selector — Camera / Gallery → Crop
-                          Builder(
-                            builder: (pickerContext) => GestureDetector(
-                              onTap: () async {
-                                // Use root scaffold context to avoid dialog context going stale
-                                final scaffoldCtx = context;
-                                try {
-                                  final File? result =
-                                      await ImageUtils.pickAndCropImage(
-                                          scaffoldCtx);
-                                  if (result != null) {
-                                    final appDir =
-                                        await getApplicationDocumentsDirectory();
-                                    final ext = p.extension(result.path);
-                                    final filename =
-                                        'prod_${DateTime.now().millisecondsSinceEpoch}${ext.isEmpty ? '.jpg' : ext}';
-                                    final destPath =
-                                        p.join(appDir.path, filename);
-                                    // Only copy if the file isn't already in app docs dir
-                                    final savedPath =
-                                        result.path.startsWith(appDir.path)
-                                            ? result.path
-                                            : (await result.copy(destPath))
-                                                .path;
-                                    setDialogState(() {
-                                      imagePath = savedPath;
-                                    });
-                                  }
-                                } catch (e) {
-                                  debugPrint('Image pick/crop error: $e');
-                                  if (scaffoldCtx.mounted) {
-                                    ScaffoldMessenger.of(scaffoldCtx)
-                                        .showSnackBar(
-                                      SnackBar(
-                                          content: Text(
-                                              'ছবি আপলোড ব্যর্থ হয়েছে: $e')),
-                                    );
-                                  }
-                                }
-                              },
-                            child: Container(
-                              height: 130,
-                              width: double.infinity,
-                              decoration: BoxDecoration(
-                                color: theme.colorScheme.surfaceVariant
-                                    .withOpacity(0.3),
-                                borderRadius: BorderRadius.circular(12),
-                                border: Border.all(
-                                  color: theme.colorScheme.outlineVariant
-                                      .withOpacity(0.5),
-                                ),
-                              ),
-                              child: imagePath != null &&
-                                      File(imagePath!).existsSync()
-                                  ? Stack(
-                                      children: [
-                                        ClipRRect(
-                                          borderRadius:
-                                              BorderRadius.circular(12),
-                                          child: Image.file(
-                                            File(imagePath!),
-                                            width: double.infinity,
-                                            height: 130,
-                                            fit: BoxFit.cover,
-                                          ),
-                                        ),
-                                        // Remove button
-                                        Positioned(
-                                          right: 8,
-                                          top: 8,
-                                          child: CircleAvatar(
-                                            backgroundColor: Colors.black54,
-                                            radius: 16,
-                                            child: IconButton(
-                                              padding: EdgeInsets.zero,
-                                              icon: const Icon(Icons.close,
-                                                  size: 16,
-                                                  color: Colors.white),
-                                              onPressed: () {
-                                                setDialogState(() {
-                                                  imagePath = null;
-                                                });
-                                              },
-                                            ),
-                                          ),
-                                        ),
-                                        // Edit badge
-                                        Positioned(
-                                          left: 8,
-                                          top: 8,
-                                          child: Container(
-                                            padding: const EdgeInsets
-                                                .symmetric(
-                                                    horizontal: 8,
-                                                    vertical: 4),
-                                            decoration: BoxDecoration(
-                                              color: Colors.black54,
-                                              borderRadius:
-                                                  BorderRadius.circular(8),
-                                            ),
-                                            child: const Row(
-                                              mainAxisSize: MainAxisSize.min,
-                                              children: [
-                                                Icon(Icons.crop,
-                                                    size: 12,
-                                                    color: Colors.white),
-                                                SizedBox(width: 4),
-                                                Text(
-                                                  'পরিবর্তন করুন',
-                                                  style: TextStyle(
-                                                    color: Colors.white,
-                                                    fontSize: 10,
-                                                    fontWeight:
-                                                        FontWeight.bold,
-                                                  ),
-                                                ),
-                                              ],
-                                            ),
-                                          ),
-                                        ),
-                                      ],
-                                    )
-                                  : Column(
-                                      mainAxisAlignment:
-                                          MainAxisAlignment.center,
-                                      children: [
-                                        Row(
-                                          mainAxisAlignment:
-                                              MainAxisAlignment.center,
-                                          children: [
-                                            Icon(
-                                              Icons.camera_alt_rounded,
-                                              size: 28,
-                                              color: theme
-                                                  .colorScheme
-                                                  .primary
-                                                  .withOpacity(0.7),
-                                            ),
-                                            const SizedBox(width: 12),
-                                            Container(
-                                              width: 1,
-                                              height: 28,
-                                              color: theme
-                                                  .colorScheme.outlineVariant,
-                                            ),
-                                            const SizedBox(width: 12),
-                                            Icon(
-                                              Icons.photo_library_rounded,
-                                              size: 28,
-                                              color: theme
-                                                  .colorScheme
-                                                  .secondary
-                                                  .withOpacity(0.7),
-                                            ),
-                                          ],
-                                        ),
-                                        const SizedBox(height: 10),
-                                        Text(
-                                          'ক্যামেরা বা গ্যালারি থেকে ছবি যোগ করুন',
-                                          style: TextStyle(
-                                            fontSize: 12,
-                                            fontWeight: FontWeight.w600,
-                                            color: theme
-                                                .colorScheme
-                                                .onSurfaceVariant
-                                                .withOpacity(0.8),
-                                          ),
-                                          textAlign: TextAlign.center,
-                                        ),
-                                        const SizedBox(height: 4),
-                                        Text(
-                                          'ট্যাপ করলে ক্রপ করার সুযোগ পাবেন',
-                                          style: TextStyle(
-                                            fontSize: 10,
-                                            color: theme
-                                                .colorScheme
-                                                .onSurfaceVariant
-                                                .withOpacity(0.5),
-                                          ),
-                                        ),
-                                      ],
-                                    ),
-                            ),
+                          Text(
+                            isEdit ? 'পণ্যের বিবরণ সংশোধন' : 'নতুন পণ্য যোগ করুন',
+                            style: theme.textTheme.titleLarge?.copyWith(fontWeight: FontWeight.bold),
                           ),
-                          ), // closes Builder
-
-                          const SizedBox(height: 16),
-                          
-                          TextField(
-                            controller: nameController,
-                            decoration: InputDecoration(
-                              labelText: 'পণ্যের নাম *', 
-                              border: const OutlineInputBorder(),
-                              errorText: nameError,
-                            ),
-                          ),
-                          const SizedBox(height: 12),
-                          Row(
-                            children: [
-                              Expanded(
-                                child: TextField(
-                                  controller: barcodeController,
-                                  decoration: const InputDecoration(
-                                    labelText: 'বারকোড (ঐচ্ছিক)',
-                                    border: OutlineInputBorder(),
-                                  ),
-                                ),
-                              ),
-                              const SizedBox(width: 8),
-                              IconButton.filledTonal(
-                                icon: const Icon(Icons.qr_code_scanner),
-                                tooltip: 'বারকোড জেনারেট',
-                                onPressed: () {
-                                  final randomBarcode = List.generate(12, (_) => (Uuid().v4().hashCode % 10).toString()).join();
-                                  setDialogState(() {
-                                    barcodeController.text = randomBarcode;
-                                  });
-                                },
-                              ),
-                            ],
-                          ),
-                          const SizedBox(height: 12),
-                          Row(
-                            children: [
-                              Expanded(
-                                child: TextField(
-                                  controller: brandController,
-                                  decoration: const InputDecoration(labelText: 'ব্র্যান্ড/লেবেল (ঐচ্ছিক)', border: OutlineInputBorder()),
-                                ),
-                              ),
-                              const SizedBox(width: 12),
-                              Expanded(
-                                child: DropdownButtonFormField<String>(
-                                  value: selectedUnit,
-                                  isExpanded: true,
-                                  decoration: const InputDecoration(labelText: 'একক', border: OutlineInputBorder()),
-                                  items: const [
-                                    DropdownMenuItem(value: 'pcs', child: Text('টি (pcs)')),
-                                    DropdownMenuItem(value: 'kg', child: Text('কেজি (kg)')),
-                                    DropdownMenuItem(value: 'pack', child: Text('প্যাকেট (pack)')),
-                                    DropdownMenuItem(value: 'liter', child: Text('লিটার (liter)')),
-                                    DropdownMenuItem(value: 'bag', child: Text('ব্যাগ (bag)')),
-                                  ],
-                                  onChanged: (val) {
-                                    if (val != null) setDialogState(() => selectedUnit = val);
-                                  },
-                                ),
-                              ),
-                            ],
-                          ),
-                          const SizedBox(height: 12),
-                          categoriesAsync.maybeWhen(
-                            data: (categories) => DropdownButtonFormField<String>(
-                              value: selectedCategoryId,
-                              isExpanded: true,
-                              decoration: const InputDecoration(labelText: 'ক্যাটাগরি সিলেক্ট করুন', border: OutlineInputBorder()),
-                              items: [
-                                const DropdownMenuItem(value: null, child: Text('ক্যাটাগরি ছাড়া')),
-                                ...categories.map((c) => DropdownMenuItem(value: c.id, child: Text(c.name))),
-                              ],
-                              onChanged: (val) => setDialogState(() => selectedCategoryId = val),
-                            ),
-                            orElse: () => const SizedBox.shrink(),
-                          ),
-                          const SizedBox(height: 12),
-                          Row(
-                            children: [
-                              Expanded(
-                                child: TextField(
-                                  controller: buyPriceController,
-                                  decoration: const InputDecoration(labelText: 'ক্রয়মূল্য (টাকা) *', border: OutlineInputBorder(), prefixText: '৳'),
-                                  keyboardType: TextInputType.number,
-                                ),
-                              ),
-                              const SizedBox(width: 12),
-                              Expanded(
-                                child: TextField(
-                                  controller: sellPriceController,
-                                  decoration: const InputDecoration(labelText: 'বিক্রয়মূল্য (টাকা) *', border: OutlineInputBorder(), prefixText: '৳'),
-                                  keyboardType: TextInputType.number,
-                                ),
-                              ),
-                            ],
-                          ),
-                          const SizedBox(height: 12),
-                          Row(
-                            children: [
-                              Expanded(
-                                child: TextField(
-                                  controller: stockController,
-                                  enabled: !isEdit,
-                                  decoration: InputDecoration(
-                                    labelText: isEdit ? 'স্টক পরিবর্তন হবে না' : 'প্রারম্ভিক স্টক *',
-                                    border: const OutlineInputBorder(),
-                                  ),
-                                  keyboardType: TextInputType.number,
-                                ),
-                              ),
-                              const SizedBox(width: 12),
-                              Expanded(
-                                child: TextField(
-                                  controller: minStockController,
-                                  decoration: const InputDecoration(labelText: 'সর্বনিম্ন স্টক *', border: OutlineInputBorder()),
-                                  keyboardType: TextInputType.number,
-                                ),
-                              ),
-                            ],
-                          ),
-                          const SizedBox(height: 12),
-                          TextField(
-                            controller: descController,
-                            maxLines: 2,
-                            decoration: const InputDecoration(labelText: 'পণ্যের বিবরণ (ঐচ্ছিক)', border: OutlineInputBorder()),
+                          IconButton(
+                            icon: const Icon(Icons.close),
+                            onPressed: () => Navigator.pop(context),
                           ),
                         ],
                       ),
-                    ),
+                      const Divider(),
+                      const SizedBox(height: 8),
+                      ConstrainedBox(
+                        constraints: BoxConstraints(
+                          maxHeight: MediaQuery.of(context).size.height * 0.55,
+                        ),
+                        child: SingleChildScrollView(
+                          child: Column(
+                            children: [
+                              const SizedBox(height: 8),
+                              // Image Selector — Camera / Gallery → Crop
+                              Builder(
+                                builder: (pickerContext) => GestureDetector(
+                                  onTap: () async {
+                                    // Use root scaffold context to avoid dialog context going stale
+                                    final scaffoldCtx = context;
+                                    try {
+                                      final File? result =
+                                          await ImageUtils.pickAndCropImage(
+                                              scaffoldCtx);
+                                      if (result != null) {
+                                        final appDir =
+                                            await getApplicationDocumentsDirectory();
+                                        final ext = p.extension(result.path);
+                                        final filename =
+                                            'prod_${DateTime.now().millisecondsSinceEpoch}${ext.isEmpty ? '.jpg' : ext}';
+                                        final destPath =
+                                            p.join(appDir.path, filename);
+                                        // Only copy if the file isn't already in app docs dir
+                                        final savedPath =
+                                            result.path.startsWith(appDir.path)
+                                                ? result.path
+                                                : (await result.copy(destPath))
+                                                    .path;
+                                        setDialogState(() {
+                                          imagePath = savedPath;
+                                        });
+                                      }
+                                    } catch (e) {
+                                      debugPrint('Image pick/crop error: $e');
+                                      if (scaffoldCtx.mounted) {
+                                        ScaffoldMessenger.of(scaffoldCtx)
+                                            .showSnackBar(
+                                          SnackBar(
+                                              content: Text(
+                                                  'ছবি আপলোড ব্যর্থ হয়েছে: $e')),
+                                        );
+                                      }
+                                    }
+                                  },
+                                  child: Container(
+                                    height: 120,
+                                    width: double.infinity,
+                                    decoration: BoxDecoration(
+                                      color: theme.colorScheme.surfaceVariant
+                                          .withOpacity(0.3),
+                                      borderRadius: BorderRadius.circular(12),
+                                      border: Border.all(
+                                        color: theme.colorScheme.outlineVariant
+                                            .withOpacity(0.5),
+                                      ),
+                                    ),
+                                    child: imagePath != null &&
+                                            File(imagePath!).existsSync()
+                                        ? Stack(
+                                            children: [
+                                              ClipRRect(
+                                                borderRadius:
+                                                    BorderRadius.circular(12),
+                                                child: Image.file(
+                                                  File(imagePath!),
+                                                  width: double.infinity,
+                                                  height: 120,
+                                                  fit: BoxFit.cover,
+                                                ),
+                                              ),
+                                              Positioned(
+                                                right: 8,
+                                                top: 8,
+                                                child: CircleAvatar(
+                                                  backgroundColor: Colors.black54,
+                                                  radius: 16,
+                                                  child: IconButton(
+                                                    padding: EdgeInsets.zero,
+                                                    icon: const Icon(Icons.close,
+                                                        size: 16,
+                                                        color: Colors.white),
+                                                    onPressed: () {
+                                                      setDialogState(() {
+                                                        imagePath = null;
+                                                      });
+                                                    },
+                                                  ),
+                                                ),
+                                              ),
+                                              Positioned(
+                                                left: 8,
+                                                top: 8,
+                                                child: Container(
+                                                  padding: const EdgeInsets
+                                                      .symmetric(
+                                                          horizontal: 8,
+                                                          vertical: 4),
+                                                  decoration: BoxDecoration(
+                                                    color: Colors.black54,
+                                                    borderRadius:
+                                                        BorderRadius.circular(8),
+                                                  ),
+                                                  child: const Row(
+                                                    mainAxisSize: MainAxisSize.min,
+                                                    children: [
+                                                      Icon(Icons.crop,
+                                                          size: 12,
+                                                          color: Colors.white),
+                                                      SizedBox(width: 4),
+                                                      Text(
+                                                        'পরিবর্তন করুন',
+                                                        style: TextStyle(
+                                                          color: Colors.white,
+                                                          fontSize: 10,
+                                                          fontWeight:
+                                                              FontWeight.bold,
+                                                        ),
+                                                      ),
+                                                    ],
+                                                  ),
+                                                ),
+                                              ),
+                                            ],
+                                          )
+                                        : Column(
+                                            mainAxisAlignment:
+                                                MainAxisAlignment.center,
+                                            children: [
+                                              Row(
+                                                mainAxisAlignment:
+                                                    MainAxisAlignment.center,
+                                                children: [
+                                                  Icon(
+                                                    Icons.camera_alt_rounded,
+                                                    size: 24,
+                                                    color: theme
+                                                        .colorScheme
+                                                        .primary
+                                                        .withOpacity(0.7),
+                                                  ),
+                                                  const SizedBox(width: 12),
+                                                  Container(
+                                                    width: 1,
+                                                    height: 24,
+                                                    color: theme
+                                                        .colorScheme.outlineVariant,
+                                                  ),
+                                                  const SizedBox(width: 12),
+                                                  Icon(
+                                                    Icons.photo_library_rounded,
+                                                    size: 24,
+                                                    color: theme
+                                                        .colorScheme
+                                                        .secondary
+                                                        .withOpacity(0.7),
+                                                  ),
+                                                ],
+                                              ),
+                                              const SizedBox(height: 8),
+                                              Text(
+                                                'ক্যামেরা বা গ্যালারি থেকে ছবি যোগ করুন',
+                                                style: TextStyle(
+                                                  fontSize: 11,
+                                                  fontWeight: FontWeight.w600,
+                                                  color: theme
+                                                      .colorScheme
+                                                      .onSurfaceVariant
+                                                      .withOpacity(0.8),
+                                                ),
+                                                textAlign: TextAlign.center,
+                                              ),
+                                            ],
+                                          ),
+                                  ),
+                                ),
+                              ),
+                              const SizedBox(height: 16),
+                              TextField(
+                                controller: nameController,
+                                decoration: InputDecoration(
+                                  labelText: 'পণ্যের নাম *',
+                                  border: const OutlineInputBorder(),
+                                  errorText: nameError,
+                                ),
+                              ),
+                              const SizedBox(height: 12),
+                              Row(
+                                children: [
+                                  Expanded(
+                                    child: TextField(
+                                      controller: barcodeController,
+                                      decoration: const InputDecoration(
+                                        labelText: 'বারকোড (ঐচ্ছিক)',
+                                        border: OutlineInputBorder(),
+                                      ),
+                                    ),
+                                  ),
+                                  const SizedBox(width: 8),
+                                  IconButton.filledTonal(
+                                    icon: const Icon(Icons.qr_code_scanner),
+                                    tooltip: 'বারকোড জেনারেট',
+                                    onPressed: () {
+                                      final randomBarcode = List.generate(12, (_) => (Uuid().v4().hashCode % 10).toString()).join();
+                                      setDialogState(() {
+                                        barcodeController.text = randomBarcode;
+                                      });
+                                    },
+                                  ),
+                                ],
+                              ),
+                              const SizedBox(height: 12),
+                              Row(
+                                children: [
+                                  Expanded(
+                                    child: TextField(
+                                      controller: brandController,
+                                      decoration: const InputDecoration(labelText: 'ব্র্যান্ড/লেবেল (ঐচ্ছিক)', border: OutlineInputBorder()),
+                                    ),
+                                  ),
+                                  const SizedBox(width: 12),
+                                  Expanded(
+                                    child: DropdownButtonFormField<String>(
+                                      value: selectedUnit,
+                                      isExpanded: true,
+                                      decoration: const InputDecoration(labelText: 'একক', border: OutlineInputBorder()),
+                                      items: const [
+                                        DropdownMenuItem(value: 'pcs', child: Text('টি (pcs)')),
+                                        DropdownMenuItem(value: 'kg', child: Text('কেজি (kg)')),
+                                        DropdownMenuItem(value: 'pack', child: Text('প্যাকেট (pack)')),
+                                        DropdownMenuItem(value: 'liter', child: Text('লিটার (liter)')),
+                                        DropdownMenuItem(value: 'bag', child: Text('ব্যাগ (bag)')),
+                                      ],
+                                      onChanged: (val) {
+                                        if (val != null) setDialogState(() => selectedUnit = val);
+                                      },
+                                    ),
+                                  ),
+                                ],
+                              ),
+                              const SizedBox(height: 12),
+                              categoriesAsync.maybeWhen(
+                                data: (categories) => DropdownButtonFormField<String>(
+                                  value: selectedCategoryId,
+                                  isExpanded: true,
+                                  decoration: const InputDecoration(labelText: 'ক্যাটাগরি সিলেক্ট করুন', border: OutlineInputBorder()),
+                                  items: [
+                                    const DropdownMenuItem(value: null, child: Text('ক্যাটাগরি ছাড়া')),
+                                    ...categories.map((c) => DropdownMenuItem(value: c.id, child: Text(c.name))),
+                                  ],
+                                  onChanged: (val) => setDialogState(() => selectedCategoryId = val),
+                                ),
+                                orElse: () => const SizedBox.shrink(),
+                              ),
+                              const SizedBox(height: 12),
+                              Row(
+                                children: [
+                                  Expanded(
+                                    child: TextField(
+                                      controller: buyPriceController,
+                                      decoration: const InputDecoration(labelText: 'ক্রয়মূল্য (টাকা) *', border: OutlineInputBorder(), prefixText: '৳'),
+                                      keyboardType: TextInputType.number,
+                                    ),
+                                  ),
+                                  const SizedBox(width: 12),
+                                  Expanded(
+                                    child: TextField(
+                                      controller: sellPriceController,
+                                      decoration: const InputDecoration(labelText: 'বিক্রয়মূল্য (টাকা) *', border: OutlineInputBorder(), prefixText: '৳'),
+                                      keyboardType: TextInputType.number,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                              const SizedBox(height: 12),
+                              Row(
+                                children: [
+                                  Expanded(
+                                    child: TextField(
+                                      controller: stockController,
+                                      enabled: !isEdit,
+                                      decoration: InputDecoration(
+                                        labelText: isEdit ? 'স্টক পরিবর্তন হবে না' : 'প্রারম্ভিক স্টক *',
+                                        border: const OutlineInputBorder(),
+                                      ),
+                                      keyboardType: TextInputType.number,
+                                    ),
+                                  ),
+                                  const SizedBox(width: 12),
+                                  Expanded(
+                                    child: TextField(
+                                      controller: minStockController,
+                                      decoration: const InputDecoration(labelText: 'সর্বনিম্ন স্টক *', border: OutlineInputBorder()),
+                                      keyboardType: TextInputType.number,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                              const SizedBox(height: 12),
+                              TextField(
+                                controller: descController,
+                                maxLines: 2,
+                                decoration: const InputDecoration(labelText: 'পণ্যের বিবরণ (ঐচ্ছিক)', border: OutlineInputBorder()),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ),
+                      const SizedBox(height: 16),
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.end,
+                        children: [
+                          TextButton(
+                            onPressed: () => Navigator.pop(context),
+                            child: const Text('বাতিল'),
+                          ),
+                          const SizedBox(width: 12),
+                          ElevatedButton(
+                            style: ElevatedButton.styleFrom(
+                              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                            ),
+                            onPressed: () {
+                              if (nameController.text.trim().isEmpty) {
+                                setDialogState(() {
+                                  nameError = 'পণ্যের নাম আবশ্যক';
+                                });
+                                return;
+                              }
+                              final buyVal = double.tryParse(buyPriceController.text) ?? 0.0;
+                              final sellVal = double.tryParse(sellPriceController.text) ?? 0.0;
+                              final stockVal = double.tryParse(stockController.text) ?? 0.0;
+                              final minVal = double.tryParse(minStockController.text) ?? 0.0;
+
+                              final repo = ref.read(productsRepositoryProvider);
+
+                              if (isEdit) {
+                                final comp = ProductsCompanion(
+                                  name: drift.Value(nameController.text.trim()),
+                                  barcode: drift.Value(barcodeController.text.trim().isEmpty ? null : barcodeController.text.trim()),
+                                  brand: drift.Value(brandController.text.trim().isEmpty ? null : brandController.text.trim()),
+                                  categoryId: drift.Value(selectedCategoryId),
+                                  unit: drift.Value(selectedUnit),
+                                  buyingPrice: drift.Value(buyVal),
+                                  sellingPrice: drift.Value(sellVal),
+                                  minimumStock: drift.Value(minVal),
+                                  imagePath: drift.Value(imagePath),
+                                  description: drift.Value(descController.text.trim().isEmpty ? null : descController.text.trim()),
+                                );
+                                repo.updateProduct(product.id, comp);
+                              } else {
+                                final newId = const Uuid().v4();
+                                final comp = ProductsCompanion(
+                                  id: drift.Value(newId),
+                                  name: drift.Value(nameController.text.trim()),
+                                  barcode: drift.Value(barcodeController.text.trim().isEmpty ? null : barcodeController.text.trim()),
+                                  brand: drift.Value(brandController.text.trim().isEmpty ? null : brandController.text.trim()),
+                                  categoryId: drift.Value(selectedCategoryId),
+                                  unit: drift.Value(selectedUnit),
+                                  buyingPrice: drift.Value(buyVal),
+                                  sellingPrice: drift.Value(sellVal),
+                                  currentStock: drift.Value(stockVal),
+                                  minimumStock: drift.Value(minVal),
+                                  imagePath: drift.Value(imagePath),
+                                  description: drift.Value(descController.text.trim().isEmpty ? null : descController.text.trim()),
+                                );
+                                repo.addProduct(comp);
+                              }
+
+                              Navigator.pop(context);
+                            },
+                            child: const Text('সংরক্ষণ করুন'),
+                          ),
+                        ],
+                      ),
+                    ],
                   ),
-                  actions: [
-                    TextButton(
-                      onPressed: () => Navigator.pop(context),
-                      child: const Text('বাতিল'),
-                    ),
-                    ElevatedButton(
-                      onPressed: () {
-                        if (nameController.text.trim().isEmpty) {
-                          setDialogState(() {
-                            nameError = 'পণ্যের নাম আবশ্যক';
-                          });
-                          return;
-                        }
-                        final buyVal = double.tryParse(buyPriceController.text) ?? 0.0;
-                        final sellVal = double.tryParse(sellPriceController.text) ?? 0.0;
-                        final stockVal = double.tryParse(stockController.text) ?? 0.0;
-                        final minVal = double.tryParse(minStockController.text) ?? 0.0;
-
-                        final repo = ref.read(productsRepositoryProvider);
-
-                        if (isEdit) {
-                          final comp = ProductsCompanion(
-                            name: drift.Value(nameController.text.trim()),
-                            barcode: drift.Value(barcodeController.text.trim().isEmpty ? null : barcodeController.text.trim()),
-                            brand: drift.Value(brandController.text.trim().isEmpty ? null : brandController.text.trim()),
-                            categoryId: drift.Value(selectedCategoryId),
-                            unit: drift.Value(selectedUnit),
-                            buyingPrice: drift.Value(buyVal),
-                            sellingPrice: drift.Value(sellVal),
-                            minimumStock: drift.Value(minVal),
-                            imagePath: drift.Value(imagePath),
-                            description: drift.Value(descController.text.trim().isEmpty ? null : descController.text.trim()),
-                          );
-                          repo.updateProduct(product.id, comp);
-                        } else {
-                          final newId = const Uuid().v4();
-                          final comp = ProductsCompanion(
-                            id: drift.Value(newId),
-                            name: drift.Value(nameController.text.trim()),
-                            barcode: drift.Value(barcodeController.text.trim().isEmpty ? null : barcodeController.text.trim()),
-                            brand: drift.Value(brandController.text.trim().isEmpty ? null : brandController.text.trim()),
-                            categoryId: drift.Value(selectedCategoryId),
-                            unit: drift.Value(selectedUnit),
-                            buyingPrice: drift.Value(buyVal),
-                            sellingPrice: drift.Value(sellVal),
-                            currentStock: drift.Value(stockVal),
-                            minimumStock: drift.Value(minVal),
-                            imagePath: drift.Value(imagePath),
-                            description: drift.Value(descController.text.trim().isEmpty ? null : descController.text.trim()),
-                          );
-                          repo.addProduct(comp);
-                        }
-
-                        Navigator.pop(context);
-                      },
-                      child: const Text('সংরক্ষণ করুন'),
-                    ),
-                  ],
                 );
               },
             );
