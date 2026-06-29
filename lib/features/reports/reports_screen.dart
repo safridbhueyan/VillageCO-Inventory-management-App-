@@ -107,72 +107,68 @@ class _ReportsScreenState extends ConsumerState<ReportsScreen>
               ),
               const SizedBox(height: 12),
 
-              RepaintBoundary(
-                key: _profitLossKey,
-                child: Container(
-                  color: Colors.white,
-                  padding: const EdgeInsets.all(12.0),
-                  child: Card(
-                    color: Colors.white,
-                    elevation: 0,
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(16),
-                      side: BorderSide(
-                        color: theme.colorScheme.outlineVariant.withOpacity(
-                          0.5,
+              Card(
+                elevation: 0,
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(16),
+                  side: BorderSide(
+                    color: theme.colorScheme.outlineVariant.withOpacity(0.5),
+                  ),
+                ),
+                child: Padding(
+                  padding: const EdgeInsets.all(20.0),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        'লাভ-ক্ষতি বিবরণী (Profit & Loss Statement)',
+                        style: TextStyle(
+                          fontWeight: FontWeight.bold,
+                          fontSize: 16,
+                          color: theme.colorScheme.onSurface,
                         ),
                       ),
-                    ),
-                    child: Padding(
-                      padding: const EdgeInsets.all(20.0),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          const Text(
-                            'লাভ-ক্ষতি বিবরণী (Profit & Loss Statement)',
-                            style: TextStyle(
-                              fontWeight: FontWeight.bold,
-                              fontSize: 16,
-                              color: Colors.black,
-                            ),
-                          ),
-                          const SizedBox(height: 4),
-                          Text(
-                            'তারিখ: ${Formatters.dateTime(DateTime.now())}',
-                            style: const TextStyle(
-                              fontSize: 10,
-                              color: Colors.black54,
-                            ),
-                          ),
-                          const Divider(height: 24, color: Colors.black38),
-                          _buildPlRow(
-                            'আজকের বিক্রির পরিমাণ',
-                            Formatters.currency(metrics.todaySales),
-                            isPositive: true,
-                          ),
-                          const SizedBox(height: 10),
-                          _buildPlRow(
-                            'মজুদ পণ্যের মূল্য',
-                            Formatters.currency(metrics.inventoryValue),
-                          ),
-                          const SizedBox(height: 10),
-                          _buildPlRow(
-                            'মোট খরচের পরিমাণ',
-                            '- ${Formatters.currency(metrics.totalExpenses)}',
-                            isNegative: true,
-                          ),
-                          const Divider(height: 24, color: Colors.black38),
-                          _buildPlRow(
-                            'আজকের নিট লাভ',
-                            Formatters.currency(metrics.netProfit),
-                            isBold: true,
-                            fontSize: 16,
-                            isPositive: metrics.netProfit >= 0,
-                            isNegative: metrics.netProfit < 0,
-                          ),
-                        ],
+                      const SizedBox(height: 4),
+                      Text(
+                        'তারিখ: ${Formatters.dateTime(DateTime.now())}',
+                        style: TextStyle(
+                          fontSize: 10,
+                          color: theme.colorScheme.onSurfaceVariant,
+                        ),
                       ),
-                    ),
+                      Divider(
+                        height: 24,
+                        color: theme.colorScheme.outlineVariant,
+                      ),
+                      _buildPlRow(
+                        'আজকের বিক্রির পরিমাণ',
+                        Formatters.currency(metrics.todaySales),
+                        isPositive: true,
+                      ),
+                      const SizedBox(height: 10),
+                      _buildPlRow(
+                        'মজুদ পণ্যের মূল্য',
+                        Formatters.currency(metrics.inventoryValue),
+                      ),
+                      const SizedBox(height: 10),
+                      _buildPlRow(
+                        'মোট খরচের পরিমাণ',
+                        '- ${Formatters.currency(metrics.totalExpenses)}',
+                        isNegative: true,
+                      ),
+                      Divider(
+                        height: 24,
+                        color: theme.colorScheme.outlineVariant,
+                      ),
+                      _buildPlRow(
+                        'আজকের নিট লাভ',
+                        Formatters.currency(metrics.netProfit),
+                        isBold: true,
+                        fontSize: 16,
+                        isPositive: metrics.netProfit >= 0,
+                        isNegative: metrics.netProfit < 0,
+                      ),
+                    ],
                   ),
                 ),
               ),
