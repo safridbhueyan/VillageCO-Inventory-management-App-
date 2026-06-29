@@ -1,15 +1,17 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:flutter_animate/flutter_animate.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import '../settings/settings_controller.dart';
 
-class LoginScreen extends StatefulWidget {
+class LoginScreen extends ConsumerStatefulWidget {
   const LoginScreen({super.key});
 
   @override
-  State<LoginScreen> createState() => _LoginScreenState();
+  ConsumerState<LoginScreen> createState() => _LoginScreenState();
 }
 
-class _LoginScreenState extends State<LoginScreen> {
+class _LoginScreenState extends ConsumerState<LoginScreen> {
   String _pin = '';
   bool _rememberLogin = false;
   String? _errorMessage;
@@ -37,8 +39,13 @@ class _LoginScreenState extends State<LoginScreen> {
   }
 
   void _verifyPin() {
-    // Default admin PIN: 1234
-    if (_pin == '1234') {
+    final settingsAsync = ref.read(settingsControllerProvider);
+    final correctPin = settingsAsync.maybeWhen(
+      data: (settings) => settings.adminPin,
+      orElse: () => '1234',
+    );
+
+    if (_pin == correctPin) {
       context.go('/dashboard');
     } else {
       setState(() {
