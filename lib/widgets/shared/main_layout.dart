@@ -1,14 +1,91 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:flutter_animate/flutter_animate.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:share_plus/share_plus.dart';
+import '../../features/reports/reports_controller.dart';
+import '../../core/utils/pdf_generator.dart';
+import '../../core/utils/formatters.dart';
 
-class MainLayout extends StatelessWidget {
+Future<void> logoutAndGenerateClosingReport(BuildContext context, WidgetRef ref) async {
+  // Show a loading dialog
+  showDialog(
+    context: context,
+    barrierDismissible: false,
+    builder: (context) => const Center(child: CircularProgressIndicator()),
+  );
+
+  try {
+    // 1. Fetch the data
+    final metrics = await ref.read(dashboardMetricsProvider.future);
+    final sales = await ref.read(salesHistoryProvider.future);
+
+    // 2. Filter sales to get only today's transactions
+    final now = DateTime.now();
+    final todaySalesList = sales.where((s) {
+      final date = s.sale.date;
+      return date.year == now.year && date.month == now.month && date.day == now.day;
+    }).map((s) {
+      return {
+        'id': s.sale.id,
+        'time': Formatters.dateTime(s.sale.date).split(" ").last,
+        'customer': s.customer?.name ?? 'সাধারণ কাস্টমার',
+        'payment': s.sale.paymentMethod == 'Cash'
+            ? 'ক্যাশ'
+            : (s.sale.paymentMethod == 'Card'
+                ? 'কার্ড'
+                : 'মোবাইল'),
+        'amount': s.sale.total.toStringAsFixed(2),
+      };
+    }).toList();
+
+    // 3. Generate daily transaction PDF report and save it
+    final reportPath = await PdfGenerator.generateAndSaveDailyTransactionReport(
+      todaySales: metrics.todaySales,
+      totalExpenses: metrics.totalExpenses,
+      netProfit: metrics.netProfit,
+      totalTransactionsCount: todaySalesList.length,
+      todaySalesList: todaySalesList,
+    );
+
+    // Dismiss loading dialog before share sheet to prevent route lock
+    if (context.mounted) {
+      Navigator.of(context, rootNavigator: true).pop();
+    }
+
+    // Show sharing options for the PDF file
+    await Share.shareXFiles([XFile(reportPath)], text: 'দৈনিক ক্লোজিং রিপোর্ট');
+
+    // 4. Log out
+    if (context.mounted) {
+      context.go('/login');
+    }
+  } catch (e) {
+    // Dismiss loading dialog if open
+    if (context.mounted) {
+      try {
+        Navigator.of(context, rootNavigator: true).pop();
+      } catch (_) {}
+    }
+    
+    print('Error generating closing report: $e');
+    // If error occurs, still log out but warn user
+    if (context.mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('ক্লোজিং রিপোর্ট তৈরিতে সমস্যা হয়েছে: $e. লগআউট সম্পন্ন হচ্ছে...')),
+      );
+      context.go('/login');
+    }
+  }
+}
+
+class MainLayout extends ConsumerWidget {
   final Widget child;
 
   const MainLayout({super.key, required this.child});
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     final double width = MediaQuery.of(context).size.width;
     final bool isDesktop = width > 850;
 
@@ -45,11 +122,11 @@ class MainLayout extends StatelessWidget {
   }
 }
 
-class _Sidebar extends StatelessWidget {
+class _Sidebar extends ConsumerWidget {
   const _Sidebar();
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     final currentPath = _getCurrentPath(context);
     final theme = Theme.of(context);
 
@@ -203,9 +280,7 @@ class _Sidebar extends StatelessWidget {
                   IconButton(
                     icon: const Icon(Icons.lock_open_outlined),
                     tooltip: 'লক সেশন',
-                    onPressed: () {
-                      context.go('/login');
-                    },
+                    onPressed: () => logoutAndGenerateClosingReport(context, ref),
                   ),
                 ],
               ),
