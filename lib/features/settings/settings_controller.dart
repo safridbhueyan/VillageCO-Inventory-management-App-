@@ -91,6 +91,7 @@ class SettingsController extends AsyncNotifier<AppSettingsTableData> {
 
   Future<String?> _downloadProductImage(String url, String id) async {
     try {
+      print('Downloading product image for $id from: $url');
       final appDir = await getApplicationDocumentsDirectory();
       final productsDir = Directory('${appDir.path}/products');
       if (!await productsDir.exists()) {
@@ -98,16 +99,19 @@ class SettingsController extends AsyncNotifier<AppSettingsTableData> {
       }
       final file = File('${productsDir.path}/$id.jpg');
       
-      final client = HttpClient()..connectionTimeout = const Duration(seconds: 2);
+      final client = HttpClient()..connectionTimeout = const Duration(seconds: 10);
       final request = await client.getUrl(Uri.parse(url));
       final response = await request.close();
       if (response.statusCode == 200) {
         final bytes = await consolidateHttpClientResponseBytes(response);
         await file.writeAsBytes(bytes);
+        print('Successfully saved image to: ${file.path}');
         return file.path;
+      } else {
+        print('Failed to download image: Status code ${response.statusCode}');
       }
     } catch (e) {
-      print('Error downloading product image: $e');
+      print('Error downloading product image for $id: $e');
     }
     return null;
   }
@@ -199,7 +203,10 @@ class SettingsController extends AsyncNotifier<AppSettingsTableData> {
       }
     });
 
-    ref.invalidateSelf();
+    // Directly update state with fresh settings instead of invalidateSelf(),
+    // which would cause the settings screen to stay in loading indefinitely
+    // if the async rebuild is slow or encounters an issue.
+    state = await AsyncValue.guard(() => _getOrInitSettings());
   }
 }
 
