@@ -5,10 +5,13 @@ import 'package:path_provider/path_provider.dart';
 import 'package:path/path.dart' as p;
 import 'package:uuid/uuid.dart';
 import 'package:drift/drift.dart' as drift;
+import 'package:file_picker/file_picker.dart';
+import 'package:share_plus/share_plus.dart';
 
 import '../../core/database/database.dart';
 import '../../core/database/database_providers.dart';
 import '../../core/utils/formatters.dart';
+import '../../core/utils/csv_helper.dart';
 import 'settings_controller.dart';
 import '../categories/categories_controller.dart';
 import '../products/products_controller.dart';
@@ -30,6 +33,14 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
 
   @override
   Widget build(BuildContext context) {
+    ref.listen<AsyncValue<AppSettingsTableData>>(settingsControllerProvider, (prev, next) {
+      next.whenData((settings) {
+        _shopNameController.text = settings.shopName;
+        _taxRateController.text = settings.taxRate.toString();
+        _selectedCurrency = settings.currency;
+      });
+    });
+
     final settingsAsync = ref.watch(settingsControllerProvider);
     final theme = Theme.of(context);
 
@@ -211,13 +222,15 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                                   _pinController.clear();
                                   if (context.mounted) {
                                     ScaffoldMessenger.of(context).showSnackBar(
-                                      const SnackBar(content: Text('অ্যাডমিন পিন পরিবর্তন সফল হয়েছে!')),
+                                      const SnackBar(content: Text('অ্যাডমিন পিন পরিবর্তন হয়েছে!')),
                                     );
                                   }
                                 } else {
-                                  ScaffoldMessenger.of(context).showSnackBar(
-                                    const SnackBar(content: Text('পিন অবশ্যই ৪-সংখ্যার হতে হবে।')),
-                                  );
+                                  if (context.mounted) {
+                                    ScaffoldMessenger.of(context).showSnackBar(
+                                      const SnackBar(content: Text('পিন ৪ সংখ্যার হতে হবে!')),
+                                    );
+                                  }
                                 }
                               },
                               child: const Text('পিন পরিবর্তন'),
@@ -230,7 +243,6 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                 ),
                 const SizedBox(height: 24),
 
-                // Backup settings section
                 Text('ব্যাকআপ ও ডেটা পুনরুদ্ধার', style: theme.textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold)),
                 const SizedBox(height: 12),
                 Card(
@@ -256,7 +268,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                         ListTile(
                           contentPadding: EdgeInsets.zero,
                           title: const Text('ব্যাকআপ ফাইল রিস্টোর (JSON)'),
-                          subtitle: const Text('পূর্বে এক্সপোর্ট করা JSON ফাইল দিয়ে ডেটা রিস্টোর করুন'),
+                          subtitle: const Text('পূর্বে এক্সপোর্ট করা JSON ফাইল দিয়ে ডেটা রিস্টোর করুন'),
                           trailing: IconButton.filledTonal(
                             icon: const Icon(Icons.cloud_download_outlined),
                             onPressed: () => _importDatabaseBackup(context),
@@ -270,6 +282,57 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                           trailing: IconButton.filledTonal(
                             icon: const Icon(Icons.insights),
                             onPressed: () => _loadDemoStoreData(context),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 24),
+
+                // CSV Import / Export section
+                Text('CSV আমদানি ও রপ্তানি', style: theme.textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold)),
+                const SizedBox(height: 12),
+                Card(
+                  elevation: 0,
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(16),
+                    side: BorderSide(color: theme.colorScheme.outlineVariant.withOpacity(0.5)),
+                  ),
+                  child: Padding(
+                    padding: const EdgeInsets.all(16.0),
+                    child: Column(
+                      children: [
+                        ListTile(
+                          contentPadding: EdgeInsets.zero,
+                          leading: const Icon(Icons.table_chart_outlined),
+                          title: const Text('পণ্য তালিকা CSV রপ্তানি'),
+                          subtitle: const Text('সমস্ত পণ্যের তালিকা .csv ফাইলে সেভ ও শেয়ার করুন'),
+                          trailing: IconButton.filledTonal(
+                            icon: const Icon(Icons.upload_file_outlined),
+                            onPressed: () => _exportProductsCsv(context),
+                          ),
+                        ),
+                        const Divider(),
+                        ListTile(
+                          contentPadding: EdgeInsets.zero,
+                          leading: const Icon(Icons.table_rows_outlined),
+                          title: const Text('পণ্য তালিকা CSV আমদানি'),
+                          subtitle: const Text('.csv ফাইল থেকে নতুন পণ্য আমদানি করুন'),
+                          trailing: IconButton.filledTonal(
+                            icon: const Icon(Icons.download_for_offline_outlined),
+                            onPressed: () => _importProductsCsv(context),
+                          ),
+                        ),
+                        const Divider(),
+                        ListTile(
+                          contentPadding: EdgeInsets.zero,
+                          leading: const Icon(Icons.receipt_long_outlined),
+                          title: const Text('বিক্রয় রিপোর্ট CSV রপ্তানি'),
+                          subtitle: const Text('সমস্ত বিক্রয় লেনদেন .csv ফাইলে সেভ ও শেয়ার করুন'),
+                          trailing: IconButton.filledTonal(
+                            icon: const Icon(Icons.share_outlined),
+                            onPressed: () => _exportSalesCsv(context),
                           ),
                         ),
                       ],
@@ -434,6 +497,84 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
     );
   }
 
+  // CSV Export: Products
+  Future<void> _exportProductsCsv(BuildContext context) async {
+    try {
+      final products = await ref.read(productsListProvider.future);
+      final csvString = CsvHelper.exportProductsToCsv(products);
+
+      final dir = await getApplicationDocumentsDirectory();
+      final path = p.join(dir.path, 'products_export_${DateTime.now().millisecondsSinceEpoch}.csv');
+      final file = File(path);
+      await file.writeAsString(csvString);
+
+      await Share.shareXFiles([XFile(path)], text: 'পণ্য তালিকা CSV');
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('CSV রপ্তানি ব্যর্থ হয়েছে: $e')),
+        );
+      }
+    }
+  }
+
+  // CSV Import: Products
+  Future<void> _importProductsCsv(BuildContext context) async {
+    try {
+      final result = await FilePicker.platform.pickFiles(
+        type: FileType.custom,
+        allowedExtensions: ['csv'],
+      );
+      if (result == null || result.files.single.path == null) return;
+
+      final csvFile = File(result.files.single.path!);
+      final csvString = await csvFile.readAsString();
+      final importedProducts = CsvHelper.importProductsFromCsv(csvString);
+
+      int count = 0;
+      for (final companion in importedProducts) {
+        await ref.read(productsRepositoryProvider).addProduct(companion);
+        count++;
+      }
+
+      ref.invalidate(productsListProvider);
+
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('$count টি পণ্য সফলভাবে আমদানি হয়েছে!')),
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('CSV আমদানি ব্যর্থ হয়েছে: $e')),
+        );
+      }
+    }
+  }
+
+  // CSV Export: Sales
+  Future<void> _exportSalesCsv(BuildContext context) async {
+    try {
+      final salesWithDetails = await ref.read(salesHistoryProvider.future);
+      final sales = salesWithDetails.map((s) => s.sale).toList();
+      final csvString = CsvHelper.exportSalesToCsv(sales);
+
+      final dir = await getApplicationDocumentsDirectory();
+      final path = p.join(dir.path, 'sales_export_${DateTime.now().millisecondsSinceEpoch}.csv');
+      final file = File(path);
+      await file.writeAsString(csvString);
+
+      await Share.shareXFiles([XFile(path)], text: 'বিক্রয় রিপোর্ট CSV');
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('বিক্রয় CSV রপ্তানি ব্যর্থ হয়েছে: $e')),
+        );
+      }
+    }
+  }
+
   // Backup Export
   Future<void> _exportDatabaseBackup(BuildContext context) async {
     try {
@@ -556,6 +697,15 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
           TextButton(onPressed: () => Navigator.pop(context), child: const Text('বাতিল')),
           ElevatedButton(
             onPressed: () async {
+              Navigator.pop(context); // Close confirm dialog
+              
+              // Show loading spinner dialog
+              showDialog(
+                context: context,
+                barrierDismissible: false,
+                builder: (context) => const Center(child: CircularProgressIndicator()),
+              );
+
               try {
                 await ref.read(settingsControllerProvider.notifier).importFromJson(demoJson);
                 ref.invalidate(productsListProvider);
@@ -565,15 +715,18 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                 ref.invalidate(dashboardMetricsProvider);
 
                 if (context.mounted) {
-                  Navigator.pop(context);
+                  Navigator.pop(context); // Close loading spinner dialog
                   ScaffoldMessenger.of(context).showSnackBar(
                     const SnackBar(content: Text('ডেমো পণ্যের ডেটাসেট লোড সম্পন্ন হয়েছে! ড্যাশবোর্ড দেখুন।')),
                   );
                 }
               } catch (e) {
-                ScaffoldMessenger.of(context).showSnackBar(
-                  SnackBar(content: Text('ডেমো ডেটা লোড ব্যর্থ: $e')),
-                );
+                if (context.mounted) {
+                  Navigator.pop(context); // Close loading spinner dialog
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(content: Text('ডেমো ডেটা লোড ব্যর্থ: $e')),
+                  );
+                }
               }
             },
             child: const Text('ডেমো ডেটা লোড'),
