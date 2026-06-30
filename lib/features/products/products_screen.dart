@@ -206,25 +206,23 @@ class _ProductsScreenState extends ConsumerState<ProductsScreen> {
                   },
                 ),
                 const SizedBox(width: 8),
-                categoriesAsync.maybeWhen(
-                  data: (categories) => Row(
-                    children: categories.map((cat) {
-                      final isSelected = filter.categoryId == cat.id;
-                      return Padding(
-                        padding: const EdgeInsets.only(right: 8.0),
-                        child: FilterChip(
-                          label: Text(cat.name),
-                          selected: isSelected,
-                          onSelected: (val) {
-                            ref.read(productsFilterProvider.notifier).update(
-                                  (s) => s.copyWith(categoryId: val ? cat.id : null),
-                                );
-                          },
-                        ),
-                      );
-                    }).toList(),
-                  ),
-                  orElse: () => const SizedBox.shrink(),
+                ...categoriesAsync.maybeWhen(
+                  data: (categories) => categories.map((cat) {
+                    final isSelected = filter.categoryId == cat.id;
+                    return Padding(
+                      padding: const EdgeInsets.only(right: 8.0),
+                      child: FilterChip(
+                        label: Text(cat.name),
+                        selected: isSelected,
+                        onSelected: (val) {
+                          ref.read(productsFilterProvider.notifier).update(
+                                (s) => s.copyWith(categoryId: val ? cat.id : null),
+                              );
+                        },
+                      ),
+                    );
+                  }).toList(),
+                  orElse: () => [],
                 ),
                 const VerticalDivider(width: 16),
                 ...[
@@ -759,10 +757,11 @@ class _ProductsScreenState extends ConsumerState<ProductsScreen> {
                     top: 20,
                     bottom: MediaQuery.of(context).viewInsets.bottom + 20,
                   ),
-                  child: Column(
-                    mainAxisSize: MainAxisSize.min,
-                    crossAxisAlignment: CrossAxisAlignment.stretch,
-                    children: [
+                  child: SingleChildScrollView(
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      crossAxisAlignment: CrossAxisAlignment.stretch,
+                      children: [
                       Row(
                         mainAxisAlignment: MainAxisAlignment.spaceBetween,
                         children: [
@@ -1157,7 +1156,8 @@ class _ProductsScreenState extends ConsumerState<ProductsScreen> {
                       ),
                     ],
                   ),
-                );
+                ),
+              );
               },
             );
           },
