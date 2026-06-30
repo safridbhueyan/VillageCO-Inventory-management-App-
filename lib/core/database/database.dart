@@ -129,6 +129,8 @@ class AppSettingsTable extends Table {
   RealColumn get taxRate => real().withDefault(const Constant(0.0))();
   TextColumn get adminPin => text().withDefault(const Constant('1234'))();
   BoolColumn get isDarkMode => boolean().withDefault(const Constant(false))();
+  TextColumn get pdfSavePath => text().nullable()();
+  TextColumn get csvSavePath => text().nullable()();
 
   @override
   Set<Column> get primaryKey => {id};
@@ -150,7 +152,17 @@ class AppDatabase extends _$AppDatabase {
   AppDatabase([QueryExecutor? e]) : super(e ?? _openConnection());
 
   @override
-  int get schemaVersion => 1;
+  int get schemaVersion => 2;
+
+  @override
+  MigrationStrategy get migration => MigrationStrategy(
+        onUpgrade: (migrator, from, to) async {
+          if (from < 2) {
+            await migrator.addColumn(appSettingsTable, appSettingsTable.pdfSavePath);
+            await migrator.addColumn(appSettingsTable, appSettingsTable.csvSavePath);
+          }
+        },
+      );
 }
 
 LazyDatabase _openConnection() {
