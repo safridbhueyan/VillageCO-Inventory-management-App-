@@ -10,12 +10,16 @@ import 'package:path_provider/path_provider.dart';
 
 import '../../core/utils/excel_helper.dart';
 import '../../core/utils/csv_helper.dart';
+import '../../core/utils/pdf_generator.dart';
+import '../../core/utils/dialog_utils.dart';
+import '../../core/utils/permission_utils.dart';
 
 import '../../core/database/database.dart';
 import '../../core/database/database_providers.dart';
 import '../../core/utils/formatters.dart';
 import '../products/products_controller.dart';
 import '../suppliers/suppliers_controller.dart';
+import '../settings/settings_controller.dart';
 
 class StockHistoryWithDetails {
   final StockHistoryData log;
@@ -610,6 +614,16 @@ class _InventoryScreenState extends ConsumerState<InventoryScreen> with SingleTi
 
   Future<void> _exportInventoryToCsv(BuildContext context) async {
     try {
+      final hasPermission = await PermissionUtils.requestStoragePermission(context);
+      if (!hasPermission) {
+        if (context.mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('স্টোরেজ পারমিশন প্রয়োজন!')),
+          );
+        }
+        return;
+      }
+
       final productsAsync = ref.read(productsListProvider);
       final products = productsAsync.maybeWhen(data: (list) => list, orElse: () => <ProductWithDetails>[]);
       if (products.isEmpty) {
@@ -621,20 +635,16 @@ class _InventoryScreenState extends ConsumerState<InventoryScreen> with SingleTi
       
       final csvData = CsvHelper.exportProductsToCsv(products);
       
-      final downloadsDir = Platform.isAndroid 
-          ? Directory('/storage/emulated/0/Download') 
-          : await getDownloadsDirectory();
-          
-      final targetDir = downloadsDir ?? await getApplicationDocumentsDirectory();
+      final settings = ref.read(settingsControllerProvider).valueOrNull;
+      final csvSavePath = settings?.csvSavePath;
+      final targetDir = await PdfGenerator.getCsvSaveDirectory(csvSavePath);
+
       final file = File('${targetDir.path}/inventory_export_${DateTime.now().millisecondsSinceEpoch}.csv');
       await file.writeAsString(csvData);
 
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('ইনভেন্টরি CSV-তে সেভ হয়েছে: ${file.path}')),
-        );
+        DialogUtils.showSaveSuccessDialog(context, file.path);
       }
-      await Share.shareXFiles([XFile(file.path)], text: 'Inventory CSV Export');
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
