@@ -6,6 +6,8 @@ import 'package:share_plus/share_plus.dart';
 import '../../features/reports/reports_controller.dart';
 import '../../core/utils/pdf_generator.dart';
 import '../../core/utils/formatters.dart';
+import '../../core/utils/dialog_utils.dart';
+import '../../features/settings/settings_controller.dart';
 
 Future<void> logoutAndGenerateClosingReport(BuildContext context, WidgetRef ref) async {
   // Show a loading dialog
@@ -39,6 +41,9 @@ Future<void> logoutAndGenerateClosingReport(BuildContext context, WidgetRef ref)
       };
     }).toList();
 
+    final settings = ref.read(settingsControllerProvider).valueOrNull;
+    final pdfSavePath = settings?.pdfSavePath;
+
     // 3. Generate daily transaction PDF report and save it
     final reportPath = await PdfGenerator.generateAndSaveDailyTransactionReport(
       todaySales: metrics.todaySales,
@@ -46,6 +51,7 @@ Future<void> logoutAndGenerateClosingReport(BuildContext context, WidgetRef ref)
       netProfit: metrics.netProfit,
       totalTransactionsCount: todaySalesList.length,
       todaySalesList: todaySalesList,
+      customSavePath: pdfSavePath,
     );
 
     // Dismiss loading dialog before share sheet to prevent route lock
@@ -53,8 +59,11 @@ Future<void> logoutAndGenerateClosingReport(BuildContext context, WidgetRef ref)
       Navigator.of(context, rootNavigator: true).pop();
     }
 
-    // Show sharing options for the PDF file
-    await Share.shareXFiles([XFile(reportPath)], text: 'দৈনিক ক্লোজিং রিপোর্ট');
+    if (reportPath != null) {
+      if (context.mounted) {
+        DialogUtils.showSaveSuccessDialog(context, reportPath);
+      }
+    }
 
     // 4. Log out
     if (context.mounted) {
