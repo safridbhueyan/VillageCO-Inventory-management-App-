@@ -56,6 +56,23 @@ final productsFilterProvider = StateProvider<ProductsFilterState>((ref) {
   return ProductsFilterState();
 });
 
+final allActiveProductsProvider = FutureProvider<List<ProductWithDetails>>((ref) async {
+  final db = ref.watch(databaseProvider);
+  final query = db.select(db.products).join([
+    leftOuterJoin(db.categories, db.categories.id.equalsExp(db.products.categoryId)),
+    leftOuterJoin(db.suppliers, db.suppliers.id.equalsExp(db.products.supplierId)),
+  ]);
+  query.where(db.products.isArchived.equals(false));
+  final rows = await query.get();
+  return rows.map((row) {
+    return ProductWithDetails(
+      product: row.readTable(db.products),
+      category: row.readTableOrNull(db.categories),
+      supplier: row.readTableOrNull(db.suppliers),
+    );
+  }).toList();
+});
+
 final productsListProvider = FutureProvider<List<ProductWithDetails>>((ref) async {
   final db = ref.watch(databaseProvider);
   final filters = ref.watch(productsFilterProvider);
@@ -153,17 +170,20 @@ class ProductsRepository {
       );
     }
     
+    _ref.invalidate(allActiveProductsProvider);
     _ref.invalidate(productsListProvider);
   }
 
   Future<void> updateProduct(String id, ProductsCompanion product) async {
     await (_db.update(_db.products)..where((t) => t.id.equals(id))).write(product);
+    _ref.invalidate(allActiveProductsProvider);
     _ref.invalidate(productsListProvider);
   }
 
   Future<void> deleteProduct(String id) async {
     await (_db.delete(_db.stockHistory)..where((t) => t.productId.equals(id))).go();
     await (_db.delete(_db.products)..where((t) => t.id.equals(id))).go();
+    _ref.invalidate(allActiveProductsProvider);
     _ref.invalidate(productsListProvider);
   }
 
@@ -197,6 +217,7 @@ class ProductsRepository {
         supplierId: existing.supplierId,
       );
     }
+    _ref.invalidate(allActiveProductsProvider);
     _ref.invalidate(productsListProvider);
   }
 
@@ -204,6 +225,7 @@ class ProductsRepository {
     await (_db.update(_db.products)..where((t) => t.id.equals(id))).write(
       ProductsCompanion(isArchived: Value(archive)),
     );
+    _ref.invalidate(allActiveProductsProvider);
     _ref.invalidate(productsListProvider);
   }
 
@@ -211,6 +233,7 @@ class ProductsRepository {
     await (_db.update(_db.products)..where((t) => t.id.equals(id))).write(
       ProductsCompanion(isFavorite: Value(favorite)),
     );
+    _ref.invalidate(allActiveProductsProvider);
     _ref.invalidate(productsListProvider);
   }
 
@@ -221,6 +244,7 @@ class ProductsRepository {
         await (_db.delete(_db.products)..where((t) => t.id.equals(id))).go();
       }
     });
+    _ref.invalidate(allActiveProductsProvider);
     _ref.invalidate(productsListProvider);
   }
 
@@ -240,6 +264,7 @@ class ProductsRepository {
         );
       }
     });
+    _ref.invalidate(allActiveProductsProvider);
     _ref.invalidate(productsListProvider);
   }
 
@@ -256,6 +281,7 @@ class ProductsRepository {
       reason: reason,
       supplierId: supplierId ?? product.supplierId,
     );
+    _ref.invalidate(allActiveProductsProvider);
     _ref.invalidate(productsListProvider);
   }
 
