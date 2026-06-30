@@ -5,6 +5,8 @@ import 'package:flutter/rendering.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:share_plus/share_plus.dart';
 import '../../core/utils/pdf_generator.dart';
+import '../../core/utils/dialog_utils.dart';
+import '../../core/utils/permission_utils.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:path/path.dart' as p;
 import 'package:fl_chart/fl_chart.dart';
@@ -14,6 +16,8 @@ import '../../core/utils/formatters.dart';
 import 'reports_controller.dart';
 import '../products/products_controller.dart';
 import '../sales/pos_controller.dart';
+import '../settings/settings_controller.dart';
+import '../settings/settings_controller.dart';
 
 class ReportsScreen extends ConsumerStatefulWidget {
   const ReportsScreen({super.key});
@@ -1013,7 +1017,6 @@ class _ReportsScreenState extends ConsumerState<ReportsScreen>
     );
   }
 
-  // Export Sales History
   Future<void> _exportCsvData() async {
     final list = ref.read(salesHistoryProvider).value ?? [];
     if (list.isEmpty) {
@@ -1026,6 +1029,16 @@ class _ReportsScreenState extends ConsumerState<ReportsScreen>
     }
 
     try {
+      final hasPermission = await PermissionUtils.requestStoragePermission(context);
+      if (!hasPermission) {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('স্টোরেজ পারমিশন প্রয়োজন!')),
+          );
+        }
+        return;
+      }
+
       final buffer = StringBuffer();
       buffer.writeln(
         'Invoice ID,Date,Customer,Subtotal,Discount,Total,Payment Method',
@@ -1039,22 +1052,19 @@ class _ReportsScreenState extends ConsumerState<ReportsScreen>
         );
       }
 
-      final dir = await getApplicationDocumentsDirectory();
+      final settings = ref.read(settingsControllerProvider).valueOrNull;
+      final csvSavePath = settings?.csvSavePath;
+      final targetDir = await PdfGenerator.getCsvSaveDirectory(csvSavePath);
+
       final path = p.join(
-        dir.path,
+        targetDir.path,
         'villageco_sales_${DateTime.now().millisecondsSinceEpoch}.csv',
       );
       final file = File(path);
       await file.writeAsString(buffer.toString());
 
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('CSV ফাইল এখানে ডাউনলোড হয়েছে: $path'),
-            action: SnackBarAction(label: 'ঠিক আছে', onPressed: () {}),
-            duration: const Duration(seconds: 4),
-          ),
-        );
+        DialogUtils.showSaveSuccessDialog(context, path);
       }
     } catch (e) {
       if (mounted) {
@@ -1067,6 +1077,16 @@ class _ReportsScreenState extends ConsumerState<ReportsScreen>
 
   Future<void> _exportProfitLossCsv(DashboardMetrics metrics) async {
     try {
+      final hasPermission = await PermissionUtils.requestStoragePermission(context);
+      if (!hasPermission) {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('স্টোরেজ পারমিশন প্রয়োজন!')),
+          );
+        }
+        return;
+      }
+
       final buffer = StringBuffer();
       buffer.writeln('বিবরণ,টাকা');
       buffer.writeln('আজকের বিক্রির পরিমাণ,${metrics.todaySales}');
@@ -1074,29 +1094,18 @@ class _ReportsScreenState extends ConsumerState<ReportsScreen>
       buffer.writeln('মোট খরচের পরিমাণ,-${metrics.totalExpenses}');
       buffer.writeln('আজকের নিট লাভ,${metrics.netProfit}');
 
-      final downloadsDir = Platform.isAndroid
-          ? Directory('/storage/emulated/0/Download')
-          : await getDownloadsDirectory();
+      final settings = ref.read(settingsControllerProvider).valueOrNull;
+      final csvSavePath = settings?.csvSavePath;
+      final targetDir = await PdfGenerator.getCsvSaveDirectory(csvSavePath);
 
-      final targetDir =
-          downloadsDir ?? await getApplicationDocumentsDirectory();
       final file = File(
         '${targetDir.path}/profit_loss_report_${DateTime.now().millisecondsSinceEpoch}.csv',
       );
       await file.writeAsString(buffer.toString());
 
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(
-              'লাভ-ক্ষতি বিবরণী CSV-তে ডাউনলোড হয়েছে: ${file.path}',
-            ),
-          ),
-        );
+        DialogUtils.showSaveSuccessDialog(context, file.path);
       }
-      await Share.shareXFiles([
-        XFile(file.path),
-      ], text: 'Profit & Loss CSV Report');
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(
@@ -1108,19 +1117,31 @@ class _ReportsScreenState extends ConsumerState<ReportsScreen>
 
   Future<void> _exportProfitLossPdf(DashboardMetrics metrics) async {
     try {
-      await PdfGenerator.generateAndSaveTextProfitLoss(
+      final hasPermission = await PermissionUtils.requestStoragePermission(context);
+      if (!hasPermission) {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('স্টোরেজ পারমিশন প্রয়োজন!')),
+          );
+        }
+        return;
+      }
+
+      final settings = ref.read(settingsControllerProvider).valueOrNull;
+      final pdfSavePath = settings?.pdfSavePath;
+
+      final savedPath = await PdfGenerator.generateAndSaveTextProfitLoss(
         todaySales: metrics.todaySales,
         inventoryValue: metrics.inventoryValue,
         totalExpenses: metrics.totalExpenses,
         netProfit: metrics.netProfit,
+        customSavePath: pdfSavePath,
       );
 
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('লাভ-ক্ষতি PDF রিপোর্ট ডাউনলোড সম্পন্ন হয়েছে'),
-          ),
-        );
+      if (savedPath != null) {
+        if (mounted) {
+          DialogUtils.showSaveSuccessDialog(context, savedPath);
+        }
       }
     } catch (e) {
       if (mounted) {
