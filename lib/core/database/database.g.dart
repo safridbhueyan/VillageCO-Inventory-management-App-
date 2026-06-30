@@ -4118,6 +4118,28 @@ class $AppSettingsTableTable extends AppSettingsTable
     ),
     defaultValue: const Constant(false),
   );
+  static const VerificationMeta _pdfSavePathMeta = const VerificationMeta(
+    'pdfSavePath',
+  );
+  @override
+  late final GeneratedColumn<String> pdfSavePath = GeneratedColumn<String>(
+    'pdf_save_path',
+    aliasedName,
+    true,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _csvSavePathMeta = const VerificationMeta(
+    'csvSavePath',
+  );
+  @override
+  late final GeneratedColumn<String> csvSavePath = GeneratedColumn<String>(
+    'csv_save_path',
+    aliasedName,
+    true,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+  );
   @override
   List<GeneratedColumn> get $columns => [
     id,
@@ -4128,6 +4150,8 @@ class $AppSettingsTableTable extends AppSettingsTable
     taxRate,
     adminPin,
     isDarkMode,
+    pdfSavePath,
+    csvSavePath,
   ];
   @override
   String get aliasedName => _alias ?? actualTableName;
@@ -4189,6 +4213,24 @@ class $AppSettingsTableTable extends AppSettingsTable
         ),
       );
     }
+    if (data.containsKey('pdf_save_path')) {
+      context.handle(
+        _pdfSavePathMeta,
+        pdfSavePath.isAcceptableOrUnknown(
+          data['pdf_save_path']!,
+          _pdfSavePathMeta,
+        ),
+      );
+    }
+    if (data.containsKey('csv_save_path')) {
+      context.handle(
+        _csvSavePathMeta,
+        csvSavePath.isAcceptableOrUnknown(
+          data['csv_save_path']!,
+          _csvSavePathMeta,
+        ),
+      );
+    }
     return context;
   }
 
@@ -4230,6 +4272,14 @@ class $AppSettingsTableTable extends AppSettingsTable
         DriftSqlType.bool,
         data['${effectivePrefix}is_dark_mode'],
       )!,
+      pdfSavePath: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}pdf_save_path'],
+      ),
+      csvSavePath: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}csv_save_path'],
+      ),
     );
   }
 
@@ -4249,6 +4299,8 @@ class AppSettingsTableData extends DataClass
   final double taxRate;
   final String adminPin;
   final bool isDarkMode;
+  final String? pdfSavePath;
+  final String? csvSavePath;
   const AppSettingsTableData({
     required this.id,
     required this.shopName,
@@ -4258,6 +4310,8 @@ class AppSettingsTableData extends DataClass
     required this.taxRate,
     required this.adminPin,
     required this.isDarkMode,
+    this.pdfSavePath,
+    this.csvSavePath,
   });
   @override
   Map<String, Expression> toColumns(bool nullToAbsent) {
@@ -4272,6 +4326,12 @@ class AppSettingsTableData extends DataClass
     map['tax_rate'] = Variable<double>(taxRate);
     map['admin_pin'] = Variable<String>(adminPin);
     map['is_dark_mode'] = Variable<bool>(isDarkMode);
+    if (!nullToAbsent || pdfSavePath != null) {
+      map['pdf_save_path'] = Variable<String>(pdfSavePath);
+    }
+    if (!nullToAbsent || csvSavePath != null) {
+      map['csv_save_path'] = Variable<String>(csvSavePath);
+    }
     return map;
   }
 
@@ -4287,6 +4347,12 @@ class AppSettingsTableData extends DataClass
       taxRate: Value(taxRate),
       adminPin: Value(adminPin),
       isDarkMode: Value(isDarkMode),
+      pdfSavePath: pdfSavePath == null && nullToAbsent
+          ? const Value.absent()
+          : Value(pdfSavePath),
+      csvSavePath: csvSavePath == null && nullToAbsent
+          ? const Value.absent()
+          : Value(csvSavePath),
     );
   }
 
@@ -4304,6 +4370,8 @@ class AppSettingsTableData extends DataClass
       taxRate: serializer.fromJson<double>(json['taxRate']),
       adminPin: serializer.fromJson<String>(json['adminPin']),
       isDarkMode: serializer.fromJson<bool>(json['isDarkMode']),
+      pdfSavePath: serializer.fromJson<String?>(json['pdfSavePath']),
+      csvSavePath: serializer.fromJson<String?>(json['csvSavePath']),
     );
   }
   @override
@@ -4318,6 +4386,8 @@ class AppSettingsTableData extends DataClass
       'taxRate': serializer.toJson<double>(taxRate),
       'adminPin': serializer.toJson<String>(adminPin),
       'isDarkMode': serializer.toJson<bool>(isDarkMode),
+      'pdfSavePath': serializer.toJson<String?>(pdfSavePath),
+      'csvSavePath': serializer.toJson<String?>(csvSavePath),
     };
   }
 
@@ -4330,6 +4400,8 @@ class AppSettingsTableData extends DataClass
     double? taxRate,
     String? adminPin,
     bool? isDarkMode,
+    Value<String?> pdfSavePath = const Value.absent(),
+    Value<String?> csvSavePath = const Value.absent(),
   }) => AppSettingsTableData(
     id: id ?? this.id,
     shopName: shopName ?? this.shopName,
@@ -4339,6 +4411,8 @@ class AppSettingsTableData extends DataClass
     taxRate: taxRate ?? this.taxRate,
     adminPin: adminPin ?? this.adminPin,
     isDarkMode: isDarkMode ?? this.isDarkMode,
+    pdfSavePath: pdfSavePath.present ? pdfSavePath.value : this.pdfSavePath,
+    csvSavePath: csvSavePath.present ? csvSavePath.value : this.csvSavePath,
   );
   AppSettingsTableData copyWithCompanion(AppSettingsTableCompanion data) {
     return AppSettingsTableData(
@@ -4352,6 +4426,12 @@ class AppSettingsTableData extends DataClass
       isDarkMode: data.isDarkMode.present
           ? data.isDarkMode.value
           : this.isDarkMode,
+      pdfSavePath: data.pdfSavePath.present
+          ? data.pdfSavePath.value
+          : this.pdfSavePath,
+      csvSavePath: data.csvSavePath.present
+          ? data.csvSavePath.value
+          : this.csvSavePath,
     );
   }
 
@@ -4365,7 +4445,9 @@ class AppSettingsTableData extends DataClass
           ..write('language: $language, ')
           ..write('taxRate: $taxRate, ')
           ..write('adminPin: $adminPin, ')
-          ..write('isDarkMode: $isDarkMode')
+          ..write('isDarkMode: $isDarkMode, ')
+          ..write('pdfSavePath: $pdfSavePath, ')
+          ..write('csvSavePath: $csvSavePath')
           ..write(')'))
         .toString();
   }
@@ -4380,6 +4462,8 @@ class AppSettingsTableData extends DataClass
     taxRate,
     adminPin,
     isDarkMode,
+    pdfSavePath,
+    csvSavePath,
   );
   @override
   bool operator ==(Object other) =>
@@ -4392,7 +4476,9 @@ class AppSettingsTableData extends DataClass
           other.language == this.language &&
           other.taxRate == this.taxRate &&
           other.adminPin == this.adminPin &&
-          other.isDarkMode == this.isDarkMode);
+          other.isDarkMode == this.isDarkMode &&
+          other.pdfSavePath == this.pdfSavePath &&
+          other.csvSavePath == this.csvSavePath);
 }
 
 class AppSettingsTableCompanion extends UpdateCompanion<AppSettingsTableData> {
@@ -4404,6 +4490,8 @@ class AppSettingsTableCompanion extends UpdateCompanion<AppSettingsTableData> {
   final Value<double> taxRate;
   final Value<String> adminPin;
   final Value<bool> isDarkMode;
+  final Value<String?> pdfSavePath;
+  final Value<String?> csvSavePath;
   const AppSettingsTableCompanion({
     this.id = const Value.absent(),
     this.shopName = const Value.absent(),
@@ -4413,6 +4501,8 @@ class AppSettingsTableCompanion extends UpdateCompanion<AppSettingsTableData> {
     this.taxRate = const Value.absent(),
     this.adminPin = const Value.absent(),
     this.isDarkMode = const Value.absent(),
+    this.pdfSavePath = const Value.absent(),
+    this.csvSavePath = const Value.absent(),
   });
   AppSettingsTableCompanion.insert({
     this.id = const Value.absent(),
@@ -4423,6 +4513,8 @@ class AppSettingsTableCompanion extends UpdateCompanion<AppSettingsTableData> {
     this.taxRate = const Value.absent(),
     this.adminPin = const Value.absent(),
     this.isDarkMode = const Value.absent(),
+    this.pdfSavePath = const Value.absent(),
+    this.csvSavePath = const Value.absent(),
   });
   static Insertable<AppSettingsTableData> custom({
     Expression<int>? id,
@@ -4433,6 +4525,8 @@ class AppSettingsTableCompanion extends UpdateCompanion<AppSettingsTableData> {
     Expression<double>? taxRate,
     Expression<String>? adminPin,
     Expression<bool>? isDarkMode,
+    Expression<String>? pdfSavePath,
+    Expression<String>? csvSavePath,
   }) {
     return RawValuesInsertable({
       if (id != null) 'id': id,
@@ -4443,6 +4537,8 @@ class AppSettingsTableCompanion extends UpdateCompanion<AppSettingsTableData> {
       if (taxRate != null) 'tax_rate': taxRate,
       if (adminPin != null) 'admin_pin': adminPin,
       if (isDarkMode != null) 'is_dark_mode': isDarkMode,
+      if (pdfSavePath != null) 'pdf_save_path': pdfSavePath,
+      if (csvSavePath != null) 'csv_save_path': csvSavePath,
     });
   }
 
@@ -4455,6 +4551,8 @@ class AppSettingsTableCompanion extends UpdateCompanion<AppSettingsTableData> {
     Value<double>? taxRate,
     Value<String>? adminPin,
     Value<bool>? isDarkMode,
+    Value<String?>? pdfSavePath,
+    Value<String?>? csvSavePath,
   }) {
     return AppSettingsTableCompanion(
       id: id ?? this.id,
@@ -4465,6 +4563,8 @@ class AppSettingsTableCompanion extends UpdateCompanion<AppSettingsTableData> {
       taxRate: taxRate ?? this.taxRate,
       adminPin: adminPin ?? this.adminPin,
       isDarkMode: isDarkMode ?? this.isDarkMode,
+      pdfSavePath: pdfSavePath ?? this.pdfSavePath,
+      csvSavePath: csvSavePath ?? this.csvSavePath,
     );
   }
 
@@ -4495,6 +4595,12 @@ class AppSettingsTableCompanion extends UpdateCompanion<AppSettingsTableData> {
     if (isDarkMode.present) {
       map['is_dark_mode'] = Variable<bool>(isDarkMode.value);
     }
+    if (pdfSavePath.present) {
+      map['pdf_save_path'] = Variable<String>(pdfSavePath.value);
+    }
+    if (csvSavePath.present) {
+      map['csv_save_path'] = Variable<String>(csvSavePath.value);
+    }
     return map;
   }
 
@@ -4508,7 +4614,9 @@ class AppSettingsTableCompanion extends UpdateCompanion<AppSettingsTableData> {
           ..write('language: $language, ')
           ..write('taxRate: $taxRate, ')
           ..write('adminPin: $adminPin, ')
-          ..write('isDarkMode: $isDarkMode')
+          ..write('isDarkMode: $isDarkMode, ')
+          ..write('pdfSavePath: $pdfSavePath, ')
+          ..write('csvSavePath: $csvSavePath')
           ..write(')'))
         .toString();
   }
@@ -8286,6 +8394,8 @@ typedef $$AppSettingsTableTableCreateCompanionBuilder =
       Value<double> taxRate,
       Value<String> adminPin,
       Value<bool> isDarkMode,
+      Value<String?> pdfSavePath,
+      Value<String?> csvSavePath,
     });
 typedef $$AppSettingsTableTableUpdateCompanionBuilder =
     AppSettingsTableCompanion Function({
@@ -8297,6 +8407,8 @@ typedef $$AppSettingsTableTableUpdateCompanionBuilder =
       Value<double> taxRate,
       Value<String> adminPin,
       Value<bool> isDarkMode,
+      Value<String?> pdfSavePath,
+      Value<String?> csvSavePath,
     });
 
 class $$AppSettingsTableTableFilterComposer
@@ -8345,6 +8457,16 @@ class $$AppSettingsTableTableFilterComposer
 
   ColumnFilters<bool> get isDarkMode => $composableBuilder(
     column: $table.isDarkMode,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get pdfSavePath => $composableBuilder(
+    column: $table.pdfSavePath,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get csvSavePath => $composableBuilder(
+    column: $table.csvSavePath,
     builder: (column) => ColumnFilters(column),
   );
 }
@@ -8397,6 +8519,16 @@ class $$AppSettingsTableTableOrderingComposer
     column: $table.isDarkMode,
     builder: (column) => ColumnOrderings(column),
   );
+
+  ColumnOrderings<String> get pdfSavePath => $composableBuilder(
+    column: $table.pdfSavePath,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get csvSavePath => $composableBuilder(
+    column: $table.csvSavePath,
+    builder: (column) => ColumnOrderings(column),
+  );
 }
 
 class $$AppSettingsTableTableAnnotationComposer
@@ -8431,6 +8563,16 @@ class $$AppSettingsTableTableAnnotationComposer
 
   GeneratedColumn<bool> get isDarkMode => $composableBuilder(
     column: $table.isDarkMode,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<String> get pdfSavePath => $composableBuilder(
+    column: $table.pdfSavePath,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<String> get csvSavePath => $composableBuilder(
+    column: $table.csvSavePath,
     builder: (column) => column,
   );
 }
@@ -8480,6 +8622,8 @@ class $$AppSettingsTableTableTableManager
                 Value<double> taxRate = const Value.absent(),
                 Value<String> adminPin = const Value.absent(),
                 Value<bool> isDarkMode = const Value.absent(),
+                Value<String?> pdfSavePath = const Value.absent(),
+                Value<String?> csvSavePath = const Value.absent(),
               }) => AppSettingsTableCompanion(
                 id: id,
                 shopName: shopName,
@@ -8489,6 +8633,8 @@ class $$AppSettingsTableTableTableManager
                 taxRate: taxRate,
                 adminPin: adminPin,
                 isDarkMode: isDarkMode,
+                pdfSavePath: pdfSavePath,
+                csvSavePath: csvSavePath,
               ),
           createCompanionCallback:
               ({
@@ -8500,6 +8646,8 @@ class $$AppSettingsTableTableTableManager
                 Value<double> taxRate = const Value.absent(),
                 Value<String> adminPin = const Value.absent(),
                 Value<bool> isDarkMode = const Value.absent(),
+                Value<String?> pdfSavePath = const Value.absent(),
+                Value<String?> csvSavePath = const Value.absent(),
               }) => AppSettingsTableCompanion.insert(
                 id: id,
                 shopName: shopName,
@@ -8509,6 +8657,8 @@ class $$AppSettingsTableTableTableManager
                 taxRate: taxRate,
                 adminPin: adminPin,
                 isDarkMode: isDarkMode,
+                pdfSavePath: pdfSavePath,
+                csvSavePath: csvSavePath,
               ),
           withReferenceMapper: (p0) => p0
               .map((e) => (e.readTable(table), BaseReferences(db, table, e)))
