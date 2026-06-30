@@ -67,6 +67,14 @@ class SettingsController extends AsyncNotifier<AppSettingsTableData> {
     ));
   }
 
+  Future<void> updatePdfSavePath(String? path) async {
+    await updateSettings(AppSettingsTableCompanion(pdfSavePath: Value(path)));
+  }
+
+  Future<void> updateCsvSavePath(String? path) async {
+    await updateSettings(AppSettingsTableCompanion(csvSavePath: Value(path)));
+  }
+
   // Backup data to JSON
   Future<String> exportToJson() async {
     final categories = await _db.select(_db.categories).get();
