@@ -10,6 +10,7 @@ import 'package:bangla_pdf/bangla_pdf.dart';
 import '../database/database.dart';
 import '../../features/sales/pos_controller.dart';
 import 'formatters.dart';
+import 'package:permission_handler/permission_handler.dart';
 
 class PdfGenerator {
 
@@ -254,7 +255,43 @@ class PdfGenerator {
     return pdf;
   }
 
-  static Future<void> generateAndSaveTextReceipt({
+  static Future<Directory> getCsvSaveDirectory(String? customSavePath) {
+    return _getSaveDirectory(customSavePath, defaultSubfolder: 'VillageCO/CSVs');
+  }
+
+  static Future<Directory> _getSaveDirectory(String? customSavePath, {required String defaultSubfolder}) async {
+    if (customSavePath != null && customSavePath.isNotEmpty) {
+      final dir = Directory(customSavePath);
+      try {
+        if (!await dir.exists()) {
+          await dir.create(recursive: true);
+        }
+        return dir;
+      } catch (_) {}
+    }
+    Directory? downloadsDir;
+    if (Platform.isAndroid) {
+      downloadsDir = Directory('/storage/emulated/0/Download');
+      if (!await downloadsDir.exists()) {
+        downloadsDir = await getExternalStorageDirectory();
+      }
+    } else if (Platform.isMacOS || Platform.isWindows || Platform.isLinux) {
+      downloadsDir = await getDownloadsDirectory();
+    }
+    downloadsDir ??= await getApplicationDocumentsDirectory();
+    
+    final defaultDir = Directory('${downloadsDir.path}/$defaultSubfolder');
+    try {
+      if (!await defaultDir.exists()) {
+        await defaultDir.create(recursive: true);
+      }
+      return defaultDir;
+    } catch (_) {
+      return downloadsDir;
+    }
+  }
+
+  static Future<String?> generateAndSaveTextReceipt({
     required String saleId,
     required String dateStr,
     required String paymentMethod,
@@ -264,6 +301,7 @@ class PdfGenerator {
     required double discount,
     required double total,
     required double paidAmount,
+    String? customSavePath,
   }) async {
     final pdf = await _buildReceiptPdfDocument(
       saleId: saleId,
@@ -279,20 +317,19 @@ class PdfGenerator {
 
     final pdfBytes = await pdf.save();
     
-    Directory? downloadsDir;
-    if (Platform.isAndroid) {
-      downloadsDir = Directory('/storage/emulated/0/Download');
-      if (!await downloadsDir.exists()) {
-        downloadsDir = await getExternalStorageDirectory();
-      }
-    } else if (Platform.isMacOS || Platform.isWindows || Platform.isLinux) {
-      downloadsDir = await getDownloadsDirectory();
-    }
-    downloadsDir ??= await getApplicationDocumentsDirectory();
-    
+    final downloadsDir = await _getSaveDirectory(customSavePath, defaultSubfolder: 'VillageCO/PDFs');
     final file = File('${downloadsDir.path}/receipt_${saleId.substring(0, 8)}.pdf');
-    await file.writeAsBytes(pdfBytes);
-    await Share.shareXFiles([XFile(file.path)], text: 'Receipt from VillageCO Store');
+    
+    try {
+      await file.writeAsBytes(pdfBytes);
+      return file.path;
+    } catch (e) {
+      final tempDir = await getTemporaryDirectory();
+      final tempFile = File('${tempDir.path}/receipt_${saleId.substring(0, 8)}.pdf');
+      await tempFile.writeAsBytes(pdfBytes);
+      await Share.shareXFiles([XFile(tempFile.path)], text: 'Receipt from VillageCO Store');
+      return null;
+    }
   }
 
   static Future<void> printTextReceipt({
@@ -325,11 +362,12 @@ class PdfGenerator {
     );
   }
 
-  static Future<void> generateAndSaveTextProfitLoss({
+  static Future<String?> generateAndSaveTextProfitLoss({
     required double todaySales,
     required double inventoryValue,
     required double totalExpenses,
     required double netProfit,
+    String? customSavePath,
   }) async {
     final pdf = await _buildProfitLossPdfDocument(
       todaySales: todaySales,
@@ -340,20 +378,19 @@ class PdfGenerator {
 
     final pdfBytes = await pdf.save();
     
-    Directory? downloadsDir;
-    if (Platform.isAndroid) {
-      downloadsDir = Directory('/storage/emulated/0/Download');
-      if (!await downloadsDir.exists()) {
-        downloadsDir = await getExternalStorageDirectory();
-      }
-    } else if (Platform.isMacOS || Platform.isWindows || Platform.isLinux) {
-      downloadsDir = await getDownloadsDirectory();
-    }
-    downloadsDir ??= await getApplicationDocumentsDirectory();
-    
+    final downloadsDir = await _getSaveDirectory(customSavePath, defaultSubfolder: 'VillageCO/PDFs');
     final file = File('${downloadsDir.path}/profit_loss_report_${DateTime.now().millisecondsSinceEpoch}.pdf');
-    await file.writeAsBytes(pdfBytes);
-    await Share.shareXFiles([XFile(file.path)], text: 'Profit & Loss Report');
+    
+    try {
+      await file.writeAsBytes(pdfBytes);
+      return file.path;
+    } catch (e) {
+      final tempDir = await getTemporaryDirectory();
+      final tempFile = File('${tempDir.path}/profit_loss_report_${DateTime.now().millisecondsSinceEpoch}.pdf');
+      await tempFile.writeAsBytes(pdfBytes);
+      await Share.shareXFiles([XFile(tempFile.path)], text: 'Profit & Loss Report');
+      return null;
+    }
   }
 
   static Future<pw.Document> _buildDailyReportPdfDocument({
@@ -549,12 +586,13 @@ class PdfGenerator {
     return pdf;
   }
 
-  static Future<String> generateAndSaveDailyTransactionReport({
+  static Future<String?> generateAndSaveDailyTransactionReport({
     required double todaySales,
     required double totalExpenses,
     required double netProfit,
     required int totalTransactionsCount,
     required List<Map<String, dynamic>> todaySalesList,
+    String? customSavePath,
   }) async {
     final pdf = await _buildDailyReportPdfDocument(
       todaySales: todaySales,
@@ -566,20 +604,19 @@ class PdfGenerator {
 
     final pdfBytes = await pdf.save();
     
-    Directory? downloadsDir;
-    if (Platform.isAndroid) {
-      downloadsDir = Directory('/storage/emulated/0/Download');
-      if (!await downloadsDir.exists()) {
-        downloadsDir = await getExternalStorageDirectory();
-      }
-    } else if (Platform.isMacOS || Platform.isWindows || Platform.isLinux) {
-      downloadsDir = await getDownloadsDirectory();
-    }
-    downloadsDir ??= await getApplicationDocumentsDirectory();
-    
+    final downloadsDir = await _getSaveDirectory(customSavePath, defaultSubfolder: 'VillageCO/PDFs');
     final file = File('${downloadsDir.path}/daily_closing_report_${DateTime.now().year}-${DateTime.now().month}-${DateTime.now().day}_${DateTime.now().millisecondsSinceEpoch}.pdf');
-    await file.writeAsBytes(pdfBytes);
-    return file.path;
+    
+    try {
+      await file.writeAsBytes(pdfBytes);
+      return file.path;
+    } catch (e) {
+      final tempDir = await getTemporaryDirectory();
+      final tempFile = File('${tempDir.path}/daily_closing_report_${DateTime.now().year}-${DateTime.now().month}-${DateTime.now().day}_${DateTime.now().millisecondsSinceEpoch}.pdf');
+      await tempFile.writeAsBytes(pdfBytes);
+      await Share.shareXFiles([XFile(tempFile.path)], text: 'দৈনিক ক্লোজিং রিপোর্ট');
+      return null;
+    }
   }
 
   static Future<void> printTextProfitLoss({
