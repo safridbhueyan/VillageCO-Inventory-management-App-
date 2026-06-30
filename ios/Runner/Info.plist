@@ -51,5 +51,9 @@
 	<string>গ্যালারি থেকে পণ্যের ছবি নির্বাচন করতে অ্যাক্সেস প্রয়োজন।</string>
 	<key>NSMicrophoneUsageDescription</key>
 	<string>ভিডিও রেকর্ড করতে মাইক্রোফোন ব্যবহার করা হতে পারে।</string>
+	<key>UIFileSharingEnabled</key>
+	<true/>
+	<key>LSSupportsOpeningDocumentsInPlace</key>
+	<true/>
 </dict>
 </plist>
