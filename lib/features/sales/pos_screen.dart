@@ -14,6 +14,7 @@ import '../categories/categories_controller.dart';
 import '../reports/reports_controller.dart';
 import '../settings/settings_controller.dart';
 import 'pos_controller.dart';
+import '../../core/database/firebase_sync_service.dart';
 
 final posCustomersListProvider = FutureProvider<List<Customer>>((ref) async {
   final db = ref.watch(databaseProvider);
@@ -655,6 +656,8 @@ class _PosScreenState extends ConsumerState<PosScreen>
                     ? null
                     : () async {
                         try {
+                          final cartItems = List<CartItem>.from(cart.items);
+                          final customer = cart.selectedCustomer;
                           final paidVal =
                               double.tryParse(_paidAmountController.text) ??
                               0.0;
@@ -664,6 +667,21 @@ class _PosScreenState extends ConsumerState<PosScreen>
                           _paidAmountController.clear();
                           ref.invalidate(salesHistoryProvider);
                           ref.invalidate(dashboardMetricsProvider);
+
+                          // Trigger background sale sync & PDF upload to Firebase
+                          final settings = ref.read(settingsControllerProvider).valueOrNull;
+                          if (settings != null) {
+                            ref.read(firebaseSyncServiceProvider).syncSaleOnComplete(
+                              sale: completedSale,
+                              items: cartItems,
+                              paidAmount: paidVal,
+                              customerName: customer?.name ?? 'সাধারণ কাস্টমার',
+                              settings: settings,
+                            ).catchError((e) {
+                              debugPrint('Background sale sync failed: $e');
+                            });
+                          }
+
                           if (mounted) {
                             _showInvoiceReceiptDialog(
                               context,
