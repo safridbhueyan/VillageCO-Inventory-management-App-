@@ -52,7 +52,12 @@ class PdfGenerator {
                 ),
               ),
               pw.SizedBox(height: 4),
-              Text('রশিদ নং: ${saleId.substring(0, 8).toUpperCase()}', style: regularStyle, banglaStyle: regularStyle),
+              pw.Row(
+                children: [
+                  Text('রশিদ নং: ', style: regularStyle, banglaStyle: regularStyle),
+                  pw.Text(saleId.substring(0, 8).toUpperCase(), style: pw.TextStyle(font: pw.Font.helvetica(), fontSize: 7)),
+                ],
+              ),
               Text('তারিখ ও সময়: $dateStr', style: regularStyle, banglaStyle: regularStyle),
               Text('পেমেন্ট পদ্ধতি: $paymentMethod', style: regularStyle, banglaStyle: regularStyle),
               Text('ক্রেতার নাম: $customerName', style: regularStyle, banglaStyle: regularStyle),
@@ -551,7 +556,7 @@ class PdfGenerator {
                       children: [
                         pw.Padding(
                           padding: const pw.EdgeInsets.all(6),
-                          child: Text(sale['id'].toString().substring(0, 8).toUpperCase(), style: regularStyle, banglaStyle: regularStyle),
+                          child: pw.Text(sale['id'].toString().substring(0, 8).toUpperCase(), style: pw.TextStyle(font: pw.Font.helvetica(), fontSize: 10)),
                         ),
                         pw.Padding(
                           padding: const pw.EdgeInsets.all(6),
