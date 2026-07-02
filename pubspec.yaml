@@ -60,6 +60,9 @@ dependencies:
   printing: ^5.14.3
   bangla_pdf: ^1.0.6
   permission_handler: ^12.0.3
+  firebase_core: ^4.11.0
+  cloud_firestore: ^6.6.0
+  firebase_storage: ^13.4.3
 
 dev_dependencies:
   flutter_test:
