@@ -1,8 +1,11 @@
+import 'package:flutter/foundation.dart' hide Category;
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:drift/drift.dart';
 import 'package:uuid/uuid.dart';
 import '../../core/database/database.dart';
 import '../../core/database/database_providers.dart';
+import '../../core/database/firebase_sync_service.dart';
+import '../settings/settings_controller.dart';
 
 class ProductWithDetails {
   final Product product;
@@ -158,6 +161,14 @@ class ProductsRepository {
 
   ProductsRepository(this._db, this._ref);
 
+  void _triggerSync() {
+    _ref.read(settingsControllerProvider).whenData((settings) {
+      _ref.read(firebaseSyncServiceProvider).syncAllData(settings).catchError((e) {
+        debugPrint('Auto sync failed: $e');
+      });
+    });
+  }
+
   Future<void> addProduct(ProductsCompanion product) async {
     await _db.into(_db.products).insert(product);
     
@@ -172,12 +183,14 @@ class ProductsRepository {
     
     _ref.invalidate(allActiveProductsProvider);
     _ref.invalidate(productsListProvider);
+    _triggerSync();
   }
 
   Future<void> updateProduct(String id, ProductsCompanion product) async {
     await (_db.update(_db.products)..where((t) => t.id.equals(id))).write(product);
     _ref.invalidate(allActiveProductsProvider);
     _ref.invalidate(productsListProvider);
+    _triggerSync();
   }
 
   Future<void> deleteProduct(String id) async {
@@ -185,6 +198,7 @@ class ProductsRepository {
     await (_db.delete(_db.products)..where((t) => t.id.equals(id))).go();
     _ref.invalidate(allActiveProductsProvider);
     _ref.invalidate(productsListProvider);
+    _triggerSync();
   }
 
   Future<void> duplicateProduct(String productId) async {
@@ -219,6 +233,7 @@ class ProductsRepository {
     }
     _ref.invalidate(allActiveProductsProvider);
     _ref.invalidate(productsListProvider);
+    _triggerSync();
   }
 
   Future<void> archiveProduct(String id, bool archive) async {
@@ -227,6 +242,7 @@ class ProductsRepository {
     );
     _ref.invalidate(allActiveProductsProvider);
     _ref.invalidate(productsListProvider);
+    _triggerSync();
   }
 
   Future<void> toggleFavorite(String id, bool favorite) async {
@@ -235,6 +251,7 @@ class ProductsRepository {
     );
     _ref.invalidate(allActiveProductsProvider);
     _ref.invalidate(productsListProvider);
+    _triggerSync();
   }
 
   Future<void> bulkDelete(List<String> ids) async {
@@ -246,6 +263,7 @@ class ProductsRepository {
     });
     _ref.invalidate(allActiveProductsProvider);
     _ref.invalidate(productsListProvider);
+    _triggerSync();
   }
 
   Future<void> bulkStockUpdate(List<String> ids, double adjustmentAmount, String reason) async {
@@ -266,6 +284,7 @@ class ProductsRepository {
     });
     _ref.invalidate(allActiveProductsProvider);
     _ref.invalidate(productsListProvider);
+    _triggerSync();
   }
 
   Future<void> adjustStock(String productId, double difference, String reason, {String? supplierId}) async {
@@ -283,6 +302,7 @@ class ProductsRepository {
     );
     _ref.invalidate(allActiveProductsProvider);
     _ref.invalidate(productsListProvider);
+    _triggerSync();
   }
 
   Future<void> _logStockHistory({
