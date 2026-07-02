@@ -8,13 +8,31 @@ import '../../core/utils/pdf_generator.dart';
 import '../../core/utils/formatters.dart';
 import '../../core/utils/dialog_utils.dart';
 import '../../features/settings/settings_controller.dart';
+import '../../core/database/firebase_sync_service.dart';
 
 Future<void> logoutAndGenerateClosingReport(BuildContext context, WidgetRef ref) async {
   // Show a loading dialog
   showDialog(
     context: context,
     barrierDismissible: false,
-    builder: (context) => const Center(child: CircularProgressIndicator()),
+    builder: (context) => const Center(
+      child: Card(
+        child: Padding(
+          padding: EdgeInsets.all(24.0),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              CircularProgressIndicator(),
+              SizedBox(height: 16),
+              Text(
+                'ডাটাবেস ও রিপোর্ট সার্ভারে সিঙ্ক হচ্ছে...',
+                style: TextStyle(fontWeight: FontWeight.bold),
+              ),
+            ],
+          ),
+        ),
+      ),
+    ),
   );
 
   try {
@@ -54,7 +72,36 @@ Future<void> logoutAndGenerateClosingReport(BuildContext context, WidgetRef ref)
       customSavePath: pdfSavePath,
     );
 
-    // Dismiss loading dialog before share sheet to prevent route lock
+    // 4. Sync all database data & upload report PDF to Firebase (Firestore + Storage)
+    if (settings != null) {
+      try {
+        final syncService = ref.read(firebaseSyncServiceProvider);
+        final docInfo = await syncService.getStoreDocIdAndShopID(settings.shopName);
+        final storeDocId = docInfo['storeDocId']!;
+        
+        // Sync local SQLite tables to Cloud Firestore
+        await syncService.syncAllData(settings);
+        
+        // Upload report PDF and save report metadata
+        if (reportPath != null) {
+          final pdfUrl = await syncService.uploadReportPdf(storeDocId, reportPath);
+          await syncService.saveReportMetadata(
+            storeDocId,
+            todaySales: metrics.todaySales,
+            totalExpenses: metrics.totalExpenses,
+            netProfit: metrics.netProfit,
+            totalTransactionsCount: todaySalesList.length,
+            pdfUrl: pdfUrl,
+            reportPath: reportPath,
+          );
+        }
+      } catch (syncError) {
+        debugPrint('Firebase Sync failed during logout: $syncError');
+        // Let the logout continue so the user is not locked out of the offline app
+      }
+    }
+
+    // Dismiss loading dialog before success dialog/redirect to prevent route lock
     if (context.mounted) {
       Navigator.of(context, rootNavigator: true).pop();
     }
@@ -65,7 +112,7 @@ Future<void> logoutAndGenerateClosingReport(BuildContext context, WidgetRef ref)
       }
     }
 
-    // 4. Log out
+    // 5. Log out
     if (context.mounted) {
       context.go('/login');
     }
@@ -77,7 +124,7 @@ Future<void> logoutAndGenerateClosingReport(BuildContext context, WidgetRef ref)
       } catch (_) {}
     }
     
-    print('Error generating closing report: $e');
+    debugPrint('Error generating closing report: $e');
     // If error occurs, still log out but warn user
     if (context.mounted) {
       ScaffoldMessenger.of(context).showSnackBar(
