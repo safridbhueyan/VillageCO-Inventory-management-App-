@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "793417181129",
+    "project_id": "villagecopos",
+    "storage_bucket": "villagecopos.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:793417181129:android:9d0de569a3a2c19e016a18",
+        "android_client_info": {
+          "package_name": "com.futuredesh.villageCoPos"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyCGDUm8FaoqcohsncuAnxxlFTwpBWczdgQ"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
