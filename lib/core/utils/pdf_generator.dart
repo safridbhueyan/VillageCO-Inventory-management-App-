@@ -328,7 +328,7 @@ class PdfGenerator {
       final tempFile = File('${tempDir.path}/receipt_${saleId.substring(0, 8)}.pdf');
       await tempFile.writeAsBytes(pdfBytes);
       await Share.shareXFiles([XFile(tempFile.path)], text: 'Receipt from VillageCO Store');
-      return null;
+      return tempFile.path;
     }
   }
 
@@ -615,7 +615,7 @@ class PdfGenerator {
       final tempFile = File('${tempDir.path}/daily_closing_report_${DateTime.now().year}-${DateTime.now().month}-${DateTime.now().day}_${DateTime.now().millisecondsSinceEpoch}.pdf');
       await tempFile.writeAsBytes(pdfBytes);
       await Share.shareXFiles([XFile(tempFile.path)], text: 'দৈনিক ক্লোজিং রিপোর্ট');
-      return null;
+      return tempFile.path;
     }
   }
 
