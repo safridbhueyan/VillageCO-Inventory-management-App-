@@ -23,6 +23,10 @@ import '../reports/reports_controller.dart';
 import '../suppliers/suppliers_controller.dart';
 import '../../core/database/firebase_sync_service.dart';
 
+final settingsSelectedCurrencyProvider = StateProvider.autoDispose<String>((ref) => 'BDT');
+final settingsIsSyncingProvider = StateProvider.autoDispose<bool>((ref) => false);
+final settingsLastSyncTimeProvider = StateProvider.autoDispose<DateTime?>((ref) => null);
+
 class SettingsScreen extends ConsumerStatefulWidget {
   const SettingsScreen({super.key});
 
@@ -34,9 +38,6 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
   final _shopNameController = TextEditingController();
   final _taxRateController = TextEditingController();
   final _pinController = TextEditingController();
-  String _selectedCurrency = 'BDT';
-  bool _isSyncing = false;
-  DateTime? _lastSyncTime;
 
   @override
   Widget build(BuildContext context) {
@@ -46,7 +47,8 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
         _taxRateController.text = settings.taxRate.toString();
         
         const allowedCurrencies = ['BDT', 'USD', 'EUR'];
-        _selectedCurrency = allowedCurrencies.contains(settings.currency) ? settings.currency : 'USD';
+        ref.read(settingsSelectedCurrencyProvider.notifier).state =
+            allowedCurrencies.contains(settings.currency) ? settings.currency : 'USD';
       });
     });
 
@@ -66,7 +68,10 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
             _taxRateController.text = settings.taxRate.toString();
             
             const allowedCurrencies = ['BDT', 'USD', 'EUR'];
-            _selectedCurrency = allowedCurrencies.contains(settings.currency) ? settings.currency : 'USD';
+            final initialCurrency = allowedCurrencies.contains(settings.currency) ? settings.currency : 'USD';
+            Future.microtask(() {
+              ref.read(settingsSelectedCurrencyProvider.notifier).state = initialCurrency;
+            });
           }
 
           return SingleChildScrollView(
@@ -119,7 +124,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                           children: [
                             Expanded(
                               child: DropdownButtonFormField<String>(
-                                value: _selectedCurrency,
+                                value: ref.watch(settingsSelectedCurrencyProvider),
                                 decoration: const InputDecoration(labelText: 'মুদ্রার প্রতীক', border: OutlineInputBorder()),
                                 items: const [
                                   DropdownMenuItem(value: 'BDT', child: Text('BDT (৳)')),
@@ -127,7 +132,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                                   DropdownMenuItem(value: 'EUR', child: Text('EUR (€)')),
                                 ],
                                 onChanged: (val) {
-                                  if (val != null) setState(() => _selectedCurrency = val);
+                                  if (val != null) ref.read(settingsSelectedCurrencyProvider.notifier).state = val;
                                 },
                               ),
                             ),
@@ -156,7 +161,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                                 await ref.read(settingsControllerProvider.notifier).updateShopDetails(
                                       name,
                                       tax,
-                                      _selectedCurrency,
+                                      ref.read(settingsSelectedCurrencyProvider),
                                     );
                                 if (context.mounted) {
                                   ScaffoldMessenger.of(context).showSnackBar(
@@ -575,8 +580,8 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                             const SizedBox(width: 8),
                             Expanded(
                               child: Text(
-                                _lastSyncTime != null
-                                    ? Formatters.dateTime(_lastSyncTime!)
+                                ref.watch(settingsLastSyncTimeProvider) != null
+                                    ? Formatters.dateTime(ref.watch(settingsLastSyncTimeProvider)!)
                                     : 'এখনো সিঙ্ক করা হয়নি',
                                 style: const TextStyle(fontSize: 13, color: Colors.grey),
                                 textAlign: TextAlign.end,
@@ -589,7 +594,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                         SizedBox(
                           width: double.infinity,
                           child: FilledButton.icon(
-                            icon: _isSyncing
+                            icon: ref.watch(settingsIsSyncingProvider)
                                 ? const SizedBox(
                                     width: 16,
                                     height: 16,
@@ -599,19 +604,15 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                                     ),
                                   )
                                 : const Icon(Icons.sync_rounded),
-                            label: Text(_isSyncing ? 'সিঙ্ক হচ্ছে...' : 'এখনই সিঙ্ক করুন'),
-                            onPressed: _isSyncing
+                            label: Text(ref.watch(settingsIsSyncingProvider) ? 'সিঙ্ক হচ্ছে...' : 'এখনই সিঙ্ক করুন'),
+                            onPressed: ref.watch(settingsIsSyncingProvider)
                                 ? null
                                 : () async {
-                                    setState(() {
-                                      _isSyncing = true;
-                                    });
+                                    ref.read(settingsIsSyncingProvider.notifier).state = true;
                                     try {
                                       final syncService = ref.read(firebaseSyncServiceProvider);
                                       await syncService.syncAllData(settings);
-                                      setState(() {
-                                        _lastSyncTime = DateTime.now();
-                                      });
+                                      ref.read(settingsLastSyncTimeProvider.notifier).state = DateTime.now();
                                       if (mounted) {
                                         ScaffoldMessenger.of(context).showSnackBar(
                                           const SnackBar(
@@ -630,9 +631,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                                         );
                                       }
                                     } finally {
-                                      setState(() {
-                                        _isSyncing = false;
-                                      });
+                                      ref.read(settingsIsSyncingProvider.notifier).state = false;
                                     }
                                   },
                           ),
