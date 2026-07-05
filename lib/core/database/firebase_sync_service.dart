@@ -8,6 +8,7 @@ import 'package:path_provider/path_provider.dart';
 import 'package:path/path.dart' as p;
 import 'package:uuid/uuid.dart';
 import '../../features/sales/pos_controller.dart';
+import '../../features/settings/settings_controller.dart';
 import '../utils/formatters.dart';
 import '../utils/pdf_generator.dart';
 import 'database.dart';
@@ -438,3 +439,11 @@ final firebaseSyncServiceProvider = Provider<FirebaseSyncService>((ref) {
   final db = ref.watch(databaseProvider);
   return FirebaseSyncService(db);
 });
+
+void triggerAutoSync(dynamic ref) {
+  ref.read(settingsControllerProvider).whenData((settings) {
+    ref.read(firebaseSyncServiceProvider).syncAllData(settings).catchError((e) {
+      debugPrint('Auto sync failed: $e');
+    });
+  });
+}
