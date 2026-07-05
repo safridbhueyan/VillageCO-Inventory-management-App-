@@ -5,7 +5,7 @@ import '../../core/database/database.dart';
 import '../../core/database/database_providers.dart';
 
 class CategoriesController extends AsyncNotifier<List<Category>> {
-  late final AppDatabase _db;
+  late AppDatabase _db;
 
   @override
   Future<List<Category>> build() async {
