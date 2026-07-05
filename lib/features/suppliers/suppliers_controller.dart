@@ -3,6 +3,7 @@ import 'package:drift/drift.dart';
 import 'package:uuid/uuid.dart';
 import '../../core/database/database.dart';
 import '../../core/database/database_providers.dart';
+import '../../core/database/firebase_sync_service.dart';
 
 class SuppliersController extends AsyncNotifier<List<Supplier>> {
   late AppDatabase _db;
@@ -28,6 +29,7 @@ class SuppliersController extends AsyncNotifier<List<Supplier>> {
         address: Value(address),
       );
       await _db.into(_db.suppliers).insert(companion);
+      triggerAutoSync(ref);
       return _fetchSuppliers();
     });
   }
@@ -43,6 +45,7 @@ class SuppliersController extends AsyncNotifier<List<Supplier>> {
           address: Value(address),
         ),
       );
+      triggerAutoSync(ref);
       return _fetchSuppliers();
     });
   }
@@ -55,8 +58,8 @@ class SuppliersController extends AsyncNotifier<List<Supplier>> {
         const ProductsCompanion(supplierId: Value(null)),
       );
       
-      // Delete supplier
       await (_db.delete(_db.suppliers)..where((t) => t.id.equals(id))).go();
+      triggerAutoSync(ref);
       return _fetchSuppliers();
     });
   }
@@ -86,6 +89,7 @@ class SuppliersController extends AsyncNotifier<List<Supplier>> {
       );
       await _db.into(_db.supplierOrders).insert(companion);
       ref.invalidate(supplierOrdersProvider(supplierId));
+      triggerAutoSync(ref);
       return _fetchSuppliers();
     });
   }
@@ -111,6 +115,7 @@ class SuppliersController extends AsyncNotifier<List<Supplier>> {
         ),
       );
       ref.invalidate(supplierOrdersProvider(supplierId));
+      triggerAutoSync(ref);
       return _fetchSuppliers();
     });
   }
@@ -135,6 +140,7 @@ class SuppliersController extends AsyncNotifier<List<Supplier>> {
       );
       await _db.into(_db.damagedItems).insert(companion);
       ref.invalidate(supplierDamagesProvider(supplierId));
+      triggerAutoSync(ref);
       return _fetchSuppliers();
     });
   }
@@ -156,6 +162,7 @@ class SuppliersController extends AsyncNotifier<List<Supplier>> {
         ),
       );
       ref.invalidate(supplierDamagesProvider(supplierId));
+      triggerAutoSync(ref);
       return _fetchSuppliers();
     });
   }
