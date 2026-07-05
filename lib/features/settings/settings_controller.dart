@@ -8,7 +8,7 @@ import '../../core/database/database.dart';
 import '../../core/database/database_providers.dart';
 
 class SettingsController extends AsyncNotifier<AppSettingsTableData> {
-  late final AppDatabase _db;
+  late AppDatabase _db;
 
   @override
   Future<AppSettingsTableData> build() async {
