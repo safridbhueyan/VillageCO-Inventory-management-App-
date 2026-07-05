@@ -92,6 +92,19 @@ final dashboardMetricsProvider = FutureProvider<DashboardMetrics>((ref) async {
   
   final sales = await db.select(db.sales).get();
   final saleItems = await db.select(db.saleItems).get();
+  final returnsList = await db.select(db.salesReturns).get();
+  final returnItems = await db.select(db.salesReturnItems).get();
+
+  double todayReturns = 0;
+  double monthlyReturns = 0;
+  for (final ret in returnsList) {
+    if (ret.date.isAfter(todayStart)) {
+      todayReturns += ret.refundAmount;
+    }
+    if (ret.date.isAfter(monthStart)) {
+      monthlyReturns += ret.refundAmount;
+    }
+  }
   
   double todaySales = 0;
   double monthlySales = 0;
@@ -103,6 +116,9 @@ final dashboardMetricsProvider = FutureProvider<DashboardMetrics>((ref) async {
       monthlySales += sale.total;
     }
   }
+
+  todaySales = todaySales - todayReturns;
+  monthlySales = monthlySales - monthlyReturns;
 
   // Inventory value: Sum of (stock * buyingPrice)
   double invValue = 0;
@@ -120,6 +136,16 @@ final dashboardMetricsProvider = FutureProvider<DashboardMetrics>((ref) async {
   double grossProfit = 0;
   for (final item in saleItems) {
     grossProfit += (item.price - item.cost) * item.quantity;
+  }
+
+  // Deduct returned profit/cost from gross profit
+  for (final ret in returnItems) {
+    if (ret.isRestocked) {
+      grossProfit -= (ret.price - ret.cost) * ret.quantity;
+    } else {
+      // Wasted/damaged return item: we lost both the profit and the item's cost
+      grossProfit -= ret.price * ret.quantity;
+    }
   }
 
   // Net Profit = Gross Profit - Expenses
@@ -215,7 +241,7 @@ final salesHistoryProvider = FutureProvider<List<SaleWithDetails>>((ref) async {
 
 // Expenses Notifier
 class ExpensesController extends AsyncNotifier<List<Expense>> {
-  late final AppDatabase _db;
+  late AppDatabase _db;
 
   @override
   Future<List<Expense>> build() async {
@@ -282,6 +308,7 @@ final topSellingProductsProvider = FutureProvider<List<ProductSaleAggregation>>(
   final db = ref.watch(databaseProvider);
   final items = await db.select(db.saleItems).get();
   final products = await db.select(db.products).get();
+  final returnItems = await db.select(db.salesReturnItems).get();
 
   final Map<String, double> quantityMap = {};
   final Map<String, double> revenueMap = {};
@@ -289,6 +316,11 @@ final topSellingProductsProvider = FutureProvider<List<ProductSaleAggregation>>(
   for (final item in items) {
     quantityMap[item.productId] = (quantityMap[item.productId] ?? 0) + item.quantity;
     revenueMap[item.productId] = (revenueMap[item.productId] ?? 0) + (item.price * item.quantity);
+  }
+
+  for (final ret in returnItems) {
+    quantityMap[ret.productId] = (quantityMap[ret.productId] ?? 0) - ret.quantity;
+    revenueMap[ret.productId] = (revenueMap[ret.productId] ?? 0) - (ret.price * ret.quantity);
   }
 
   final List<ProductSaleAggregation> list = [];
@@ -306,4 +338,50 @@ final topSellingProductsProvider = FutureProvider<List<ProductSaleAggregation>>(
   // Sort by quantity descending
   list.sort((a, b) => b.quantitySold.compareTo(a.quantitySold));
   return list;
+});
+
+class SalesReturnItemWithProduct {
+  final SalesReturnItem item;
+  final Product product;
+
+  SalesReturnItemWithProduct({required this.item, required this.product});
+}
+
+class SalesReturnWithDetails {
+  final SalesReturn salesReturn;
+  final String originalSaleId;
+  final List<SalesReturnItemWithProduct> items;
+
+  SalesReturnWithDetails({
+    required this.salesReturn,
+    required this.originalSaleId,
+    required this.items,
+  });
+}
+
+final returnsHistoryProvider = FutureProvider<List<SalesReturnWithDetails>>((ref) async {
+  final db = ref.watch(databaseProvider);
+
+  final returnsList = await db.select(db.salesReturns).get();
+  final returnItems = await db.select(db.salesReturnItems).get();
+  final products = await db.select(db.products).get();
+
+  // Sort returns by date descending (most recent first)
+  returnsList.sort((a, b) => b.date.compareTo(a.date));
+
+  List<SalesReturnWithDetails> results = [];
+  for (final ret in returnsList) {
+    final itemsMapped = returnItems.where((item) => item.returnId == ret.id).map((item) {
+      final product = products.firstWhere((p) => p.id == item.productId);
+      return SalesReturnItemWithProduct(item: item, product: product);
+    }).toList();
+
+    results.add(SalesReturnWithDetails(
+      salesReturn: ret,
+      originalSaleId: ret.saleId,
+      items: itemsMapped,
+    ));
+  }
+
+  return results;
 });
