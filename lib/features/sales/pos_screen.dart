@@ -21,7 +21,9 @@ final posCustomersListProvider = FutureProvider<List<Customer>>((ref) async {
   return db.select(db.customers).get();
 });
 
-final posCategoryFilterProvider = StateProvider<String?>((ref) => null);
+final posCategoryFilterProvider = StateProvider.autoDispose<String?>((ref) => null);
+final posProductSearchQueryProvider = StateProvider.autoDispose<String>((ref) => '');
+final posPaidAmountProvider = StateProvider.autoDispose<double>((ref) => 0.0);
 
 class PosScreen extends ConsumerStatefulWidget {
   const PosScreen({super.key});
@@ -35,7 +37,6 @@ class _PosScreenState extends ConsumerState<PosScreen>
   late TabController _tabController;
   final TextEditingController _searchController = TextEditingController();
   final TextEditingController _paidAmountController = TextEditingController();
-  String _productSearchQuery = '';
 
   @override
   void initState() {
@@ -62,6 +63,8 @@ class _PosScreenState extends ConsumerState<PosScreen>
     final categoriesAsync = ref.watch(categoriesControllerProvider);
     final customersAsync = ref.watch(posCustomersListProvider);
     final posCategoryId = ref.watch(posCategoryFilterProvider);
+    final productSearchQuery = ref.watch(posProductSearchQueryProvider);
+    final paidAmount = ref.watch(posPaidAmountProvider);
 
     final filteredProducts = productsAsync.maybeWhen(
       data: (list) {
@@ -71,8 +74,8 @@ class _PosScreenState extends ConsumerState<PosScreen>
           result = result.where((item) => item.product.categoryId == posCategoryId).toList();
         }
         // Filter by search query
-        if (_productSearchQuery.isNotEmpty) {
-          final q = _productSearchQuery.toLowerCase();
+        if (productSearchQuery.isNotEmpty) {
+          final q = productSearchQuery.toLowerCase();
           result = result.where((item) {
             final p = item.product;
             return p.name.toLowerCase().contains(q) ||
@@ -165,6 +168,7 @@ class _PosScreenState extends ConsumerState<PosScreen>
   ) {
     final theme = Theme.of(context);
     final posCategoryId = ref.watch(posCategoryFilterProvider);
+    final productSearchQuery = ref.watch(posProductSearchQueryProvider);
 
     return Container(
       color: theme.colorScheme.background,
@@ -177,12 +181,12 @@ class _PosScreenState extends ConsumerState<PosScreen>
               decoration: InputDecoration(
                 hintText: 'নাম বা বারকোড দিয়ে পণ্য খুঁজুন...',
                 prefixIcon: const Icon(Icons.search),
-                suffixIcon: _productSearchQuery.isNotEmpty
+                suffixIcon: productSearchQuery.isNotEmpty
                     ? IconButton(
                         icon: const Icon(Icons.clear),
                         onPressed: () {
                           _searchController.clear();
-                          setState(() => _productSearchQuery = '');
+                          ref.read(posProductSearchQueryProvider.notifier).state = '';
                         },
                       )
                     : const Icon(Icons.qr_code),
@@ -191,7 +195,7 @@ class _PosScreenState extends ConsumerState<PosScreen>
                 ),
               ),
               onChanged: (val) {
-                setState(() => _productSearchQuery = val);
+                ref.read(posProductSearchQueryProvider.notifier).state = val;
               },
             ),
           ),
@@ -377,6 +381,7 @@ class _PosScreenState extends ConsumerState<PosScreen>
     AsyncValue<List<Customer>> customersAsync,
   ) {
     final theme = Theme.of(context);
+    final paidAmount = ref.watch(posPaidAmountProvider);
 
     return Container(
       color: theme.colorScheme.surface,
@@ -586,7 +591,7 @@ class _PosScreenState extends ConsumerState<PosScreen>
                 decimal: true,
               ),
               onChanged: (val) {
-                setState(() {});
+                ref.read(posPaidAmountProvider.notifier).state = double.tryParse(val) ?? 0.0;
               },
             ),
             const SizedBox(height: 12),
@@ -611,26 +616,26 @@ class _PosScreenState extends ConsumerState<PosScreen>
                   fontSize: 18,
                   color: theme.colorScheme.primary,
                 ),
-                if (_paidAmountController.text.isNotEmpty) ...[
+                if (paidAmount > 0) ...[
                   const SizedBox(height: 4),
                   _buildCheckoutSummaryRow(
                     'পরিশোধিত টাকা',
                     Formatters.currency(
-                      double.tryParse(_paidAmountController.text) ?? 0.0,
+                      paidAmount,
                     ),
                   ),
                   _buildCheckoutSummaryRow(
-                    (double.tryParse(_paidAmountController.text) ?? 0.0) >=
+                    paidAmount >=
                             cart.total
                         ? 'ফেরতযোগ্য টাকা'
                         : 'বাকি বিল',
                     Formatters.currency(
-                      ((double.tryParse(_paidAmountController.text) ?? 0.0) -
+                      (paidAmount -
                               cart.total)
                           .abs(),
                     ),
                     color:
-                        (double.tryParse(_paidAmountController.text) ?? 0.0) >=
+                        paidAmount >=
                             cart.total
                         ? Colors.green
                         : Colors.orange,
@@ -659,12 +664,12 @@ class _PosScreenState extends ConsumerState<PosScreen>
                           final cartItems = List<CartItem>.from(cart.items);
                           final customer = cart.selectedCustomer;
                           final paidVal =
-                              double.tryParse(_paidAmountController.text) ??
-                              0.0;
+                              ref.read(posPaidAmountProvider);
                           final completedSale = await ref
                               .read(posCartProvider.notifier)
                               .completeSale();
                           _paidAmountController.clear();
+                          ref.read(posPaidAmountProvider.notifier).state = 0.0;
                           ref.invalidate(salesHistoryProvider);
                           ref.invalidate(dashboardMetricsProvider);
 
@@ -1219,6 +1224,7 @@ class _PosScreenState extends ConsumerState<PosScreen>
 
                 // Refresh list
                 ref.invalidate(posCustomersListProvider);
+                triggerAutoSync(ref);
 
                 // Select the new customer
                 ref.read(posCartProvider.notifier).setCustomer(customer);
