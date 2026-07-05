@@ -730,6 +730,7 @@ class _ProductsScreenState extends ConsumerState<ProductsScreen> {
 
     String selectedUnit = product?.unit ?? 'pcs';
     String? selectedCategoryId = product?.categoryId;
+    String? selectedSupplierId = product?.supplierId;
     String? imagePath = product?.imagePath;
 
     String? nameError;
@@ -1035,6 +1036,20 @@ class _ProductsScreenState extends ConsumerState<ProductsScreen> {
                                 orElse: () => const SizedBox.shrink(),
                               ),
                               const SizedBox(height: 12),
+                              ref.watch(suppliersControllerProvider).maybeWhen(
+                                data: (suppliers) => DropdownButtonFormField<String>(
+                                  value: selectedSupplierId,
+                                  isExpanded: true,
+                                  decoration: const InputDecoration(labelText: 'সরবরাহকারী (Supplier) সিলেক্ট করুন', border: OutlineInputBorder()),
+                                  items: [
+                                    const DropdownMenuItem(value: null, child: Text('সরবরাহকারী ছাড়া')),
+                                    ...suppliers.map((s) => DropdownMenuItem(value: s.id, child: Text(s.name))),
+                                  ],
+                                  onChanged: (val) => setDialogState(() => selectedSupplierId = val),
+                                ),
+                                orElse: () => const SizedBox.shrink(),
+                              ),
+                              const SizedBox(height: 12),
                               Row(
                                 children: [
                                   Expanded(
@@ -1121,6 +1136,7 @@ class _ProductsScreenState extends ConsumerState<ProductsScreen> {
                                   barcode: drift.Value(barcodeController.text.trim().isEmpty ? null : barcodeController.text.trim()),
                                   brand: drift.Value(brandController.text.trim().isEmpty ? null : brandController.text.trim()),
                                   categoryId: drift.Value(selectedCategoryId),
+                                  supplierId: drift.Value(selectedSupplierId),
                                   unit: drift.Value(selectedUnit),
                                   buyingPrice: drift.Value(buyVal),
                                   sellingPrice: drift.Value(sellVal),
