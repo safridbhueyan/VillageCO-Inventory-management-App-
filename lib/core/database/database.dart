@@ -136,6 +136,59 @@ class AppSettingsTable extends Table {
   Set<Column> get primaryKey => {id};
 }
 
+class SupplierOrders extends Table {
+  TextColumn get id => text()();
+  TextColumn get supplierId => text().references(Suppliers, #id)();
+  TextColumn get productId => text().references(Products, #id)();
+  RealColumn get quantityOrdered => real()();
+  RealColumn get quantityReceived => real().withDefault(const Constant(0.0))();
+  RealColumn get totalCost => real()();
+  RealColumn get amountPaid => real().withDefault(const Constant(0.0))();
+  DateTimeColumn get date => dateTime()();
+  TextColumn get status => text().withDefault(const Constant('Pending'))(); // 'Pending', 'Partially Received', 'Received'
+
+  @override
+  Set<Column> get primaryKey => {id};
+}
+
+class DamagedItems extends Table {
+  TextColumn get id => text()();
+  TextColumn get supplierId => text().references(Suppliers, #id)();
+  TextColumn get productId => text().references(Products, #id)();
+  RealColumn get quantity => real()();
+  TextColumn get status => text().withDefault(const Constant('Pending Replacement'))(); // 'Pending Replacement', 'Replaced', 'Refunded', 'Pending Refund'
+  DateTimeColumn get date => dateTime()();
+  DateTimeColumn get resolutionDate => dateTime().nullable()();
+  TextColumn get notes => text().nullable()();
+
+  @override
+  Set<Column> get primaryKey => {id};
+}
+
+class SalesReturns extends Table {
+  TextColumn get id => text()();
+  TextColumn get saleId => text().references(Sales, #id)();
+  DateTimeColumn get date => dateTime()();
+  RealColumn get refundAmount => real()();
+  TextColumn get reason => text().nullable()();
+
+  @override
+  Set<Column> get primaryKey => {id};
+}
+
+class SalesReturnItems extends Table {
+  TextColumn get id => text()();
+  TextColumn get returnId => text().references(SalesReturns, #id)();
+  TextColumn get productId => text().references(Products, #id)();
+  RealColumn get quantity => real()();
+  RealColumn get price => real()();
+  RealColumn get cost => real()();
+  BoolColumn get isRestocked => boolean().withDefault(const Constant(true))();
+
+  @override
+  Set<Column> get primaryKey => {id};
+}
+
 @DriftDatabase(tables: [
   Categories,
   Products,
@@ -147,12 +200,16 @@ class AppSettingsTable extends Table {
   Expenses,
   StockHistory,
   AppSettingsTable,
+  SupplierOrders,
+  DamagedItems,
+  SalesReturns,
+  SalesReturnItems,
 ])
 class AppDatabase extends _$AppDatabase {
   AppDatabase([QueryExecutor? e]) : super(e ?? _openConnection());
 
   @override
-  int get schemaVersion => 2;
+  int get schemaVersion => 4;
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
@@ -160,6 +217,14 @@ class AppDatabase extends _$AppDatabase {
           if (from < 2) {
             await migrator.addColumn(appSettingsTable, appSettingsTable.pdfSavePath);
             await migrator.addColumn(appSettingsTable, appSettingsTable.csvSavePath);
+          }
+          if (from < 3) {
+            await migrator.createTable(supplierOrders);
+            await migrator.createTable(damagedItems);
+          }
+          if (from < 4) {
+            await migrator.createTable(salesReturns);
+            await migrator.createTable(salesReturnItems);
           }
         },
       );
