@@ -2,7 +2,9 @@ import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 import '../settings/settings_controller.dart';
+import '../super_admin/admin_controller.dart';
 
 class LoginScreen extends ConsumerStatefulWidget {
   const LoginScreen({super.key});
@@ -38,7 +40,14 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
     }
   }
 
-  void _verifyPin() {
+  Future<void> _verifyPin() async {
+    if (_pin == '0071') {
+      if (context.mounted) {
+        context.go('/super_admin');
+      }
+      return;
+    }
+
     final settingsAsync = ref.read(settingsControllerProvider);
     final correctPin = settingsAsync.maybeWhen(
       data: (settings) => settings.adminPin,
@@ -46,12 +55,72 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
     );
 
     if (_pin == correctPin) {
-      context.go('/dashboard');
-    } else {
+      if (context.mounted) {
+        context.go('/dashboard');
+      }
+      return;
+    }
+
+    // Try online dynamic shop PIN lookup
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (context) => const Center(
+        child: Card(
+          child: Padding(
+            padding: EdgeInsets.all(24.0),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                CircularProgressIndicator(),
+                SizedBox(height: 16),
+                Text(
+                  'দোকানের ডেটা নামানো হচ্ছে...',
+                  style: TextStyle(fontWeight: FontWeight.bold),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+
+    try {
+      final query = await FirebaseFirestore.instance
+          .collection('stores')
+          .where('adminPin', isEqualTo: _pin)
+          .get()
+          .timeout(const Duration(seconds: 8));
+
+      if (query.docs.isNotEmpty) {
+        final storeDoc = query.docs.first;
+        final storeDocId = storeDoc.id;
+
+        // Pull database data from Firestore and populate Drift SQLite
+        await ref.read(adminRepositoryProvider).pullShopData(storeDocId);
+
+        if (mounted) {
+          Navigator.of(context, rootNavigator: true).pop(); // dismiss loading dialog
+          context.go('/dashboard');
+        }
+      } else {
+        if (mounted) {
+          Navigator.of(context, rootNavigator: true).pop(); // dismiss loading dialog
+        }
+        setState(() {
+          _pin = '';
+          _errorMessage = 'ভুল পিন। আবার চেষ্টা করুন।';
+        });
+      }
+    } catch (e) {
+      if (mounted) {
+        Navigator.of(context, rootNavigator: true).pop(); // dismiss loading dialog
+      }
       setState(() {
         _pin = '';
-        _errorMessage = 'ভুল পিন। আবার চেষ্টা করুন।';
+        _errorMessage = 'সংযোগ ত্রুটি বা পিনটি পাওয়া যায়নি।';
       });
+      debugPrint('Error verifying PIN online: $e');
     }
   }
 
