@@ -643,4 +643,236 @@ class PdfGenerator {
       name: 'profit_loss_report',
     );
   }
+
+  static Future<pw.Document> _buildSuppliersReportPdfDocument({
+    required List<Supplier> suppliers,
+    required Map<String, List<Product>> productsMap,
+    required Map<String, List<SupplierOrder>> ordersMap,
+    required Map<String, List<DamagedItem>> damagesMap,
+  }) async {
+    final pdf = pw.Document();
+    final defaultFont = BanglaFontManager().defaultFont;
+    final regularStyle = pw.TextStyle(font: defaultFont, fontSize: 8, fontWeight: pw.FontWeight.normal);
+    final boldStyle = pw.TextStyle(font: defaultFont, fontSize: 8, fontWeight: pw.FontWeight.bold);
+    final titleStyle = pw.TextStyle(font: defaultFont, fontSize: 16, fontWeight: pw.FontWeight.bold);
+    final subTitleStyle = pw.TextStyle(font: defaultFont, fontSize: 11, fontWeight: pw.FontWeight.bold);
+    final headerStyle = pw.TextStyle(font: defaultFont, fontSize: 8, fontWeight: pw.FontWeight.bold);
+
+    pdf.addPage(
+      pw.MultiPage(
+        pageFormat: PdfPageFormat.a4,
+        margin: const pw.EdgeInsets.all(24),
+        build: (pw.Context context) {
+          final List<pw.Widget> children = [];
+
+          // Header Title
+          children.add(
+            pw.Center(
+              child: pw.Column(
+                children: [
+                  Text('ভিলেজকো স্টোর', style: titleStyle, banglaStyle: titleStyle),
+                  pw.SizedBox(height: 4),
+                  Text('সরবরাহকারী স্টক ও লেনদেন রিপোর্ট ', style: subTitleStyle, banglaStyle: subTitleStyle),
+                  pw.SizedBox(height: 4),
+                  Text('তারিখ: ${Formatters.date(DateTime.now())} • সময়: ${Formatters.dateTime(DateTime.now()).split(" ").last}', style: regularStyle, banglaStyle: regularStyle),
+                  pw.SizedBox(height: 8),
+                  pw.Divider(thickness: 1, color: PdfColors.black),
+                ],
+              ),
+            ),
+          );
+          children.add(pw.SizedBox(height: 12));
+
+          for (final sup in suppliers) {
+            final products = productsMap[sup.id] ?? [];
+            final orders = ordersMap[sup.id] ?? [];
+            final damages = damagesMap[sup.id] ?? [];
+
+            double totalCost = 0;
+            double totalPaid = 0;
+            double quantityOrdered = 0;
+            double quantityReceived = 0;
+            for (final o in orders) {
+              totalCost += o.totalCost;
+              totalPaid += o.amountPaid;
+              quantityOrdered += o.quantityOrdered;
+              quantityReceived += o.quantityReceived;
+            }
+            final totalDue = totalCost - totalPaid;
+            final quantityPending = quantityOrdered - quantityReceived;
+            final totalDamages = damages.fold<double>(0, (sum, d) => sum + d.quantity);
+
+            // Supplier Profile Summary block
+            children.add(
+              pw.Container(
+                margin: const pw.EdgeInsets.only(top: 8, bottom: 8),
+                padding: const pw.EdgeInsets.all(8),
+                decoration: pw.BoxDecoration(
+                  color: PdfColors.grey100,
+                  border: pw.Border.all(color: PdfColors.grey300, width: 0.5),
+                  borderRadius: const pw.BorderRadius.all(pw.Radius.circular(6)),
+                ),
+                child: pw.Column(
+                  crossAxisAlignment: pw.CrossAxisAlignment.start,
+                  children: [
+                    Text('সরবরাহকারী: ${sup.name}', style: subTitleStyle, banglaStyle: subTitleStyle),
+                    Text('মোবাইল: ${sup.phone}${sup.email != null ? " | ইমেইল: " + sup.email! : ""}', style: regularStyle, banglaStyle: regularStyle),
+                    if (sup.address != null) Text('ঠিকানা: ${sup.address}', style: regularStyle, banglaStyle: regularStyle),
+                  ],
+                ),
+              ),
+            );
+
+            // 1. Transaction stats summary sub-table
+            children.add(
+              pw.Table(
+                border: pw.TableBorder.all(color: PdfColors.grey300, width: 0.5),
+                children: [
+                  pw.TableRow(
+                    decoration: const pw.BoxDecoration(color: PdfColors.grey200),
+                    children: [
+                      pw.Padding(padding: const pw.EdgeInsets.all(6), child: Text('মোট বিল', style: boldStyle, banglaStyle: boldStyle, textAlign: pw.TextAlign.center)),
+                      pw.Padding(padding: const pw.EdgeInsets.all(6), child: Text('মোট পরিশোধ', style: boldStyle, banglaStyle: boldStyle, textAlign: pw.TextAlign.center)),
+                      pw.Padding(padding: const pw.EdgeInsets.all(6), child: Text('বকেয়া পাওনা', style: boldStyle, banglaStyle: boldStyle, textAlign: pw.TextAlign.center)),
+                      pw.Padding(padding: const pw.EdgeInsets.all(6), child: Text('অর্ডার পণ্য', style: boldStyle, banglaStyle: boldStyle, textAlign: pw.TextAlign.center)),
+                      pw.Padding(padding: const pw.EdgeInsets.all(6), child: Text('রিসিভড পণ্য', style: boldStyle, banglaStyle: boldStyle, textAlign: pw.TextAlign.center)),
+                      pw.Padding(padding: const pw.EdgeInsets.all(6), child: Text('বাকি পণ্য', style: boldStyle, banglaStyle: boldStyle, textAlign: pw.TextAlign.center)),
+                      pw.Padding(padding: const pw.EdgeInsets.all(6), child: Text('ক্ষতিগ্রস্ত পণ্য', style: boldStyle, banglaStyle: boldStyle, textAlign: pw.TextAlign.center)),
+                    ],
+                  ),
+                  pw.TableRow(
+                    children: [
+                      pw.Padding(padding: const pw.EdgeInsets.all(6), child: Text(Formatters.currency(totalCost), style: regularStyle, banglaStyle: regularStyle, textAlign: pw.TextAlign.center)),
+                      pw.Padding(padding: const pw.EdgeInsets.all(6), child: Text(Formatters.currency(totalPaid), style: regularStyle, banglaStyle: regularStyle, textAlign: pw.TextAlign.center)),
+                      pw.Padding(padding: const pw.EdgeInsets.all(6), child: Text(Formatters.currency(totalDue), style: boldStyle, banglaStyle: boldStyle, textAlign: pw.TextAlign.center)),
+                      pw.Padding(padding: const pw.EdgeInsets.all(6), child: Text(Formatters.number(quantityOrdered), style: regularStyle, banglaStyle: regularStyle, textAlign: pw.TextAlign.center)),
+                      pw.Padding(padding: const pw.EdgeInsets.all(6), child: Text(Formatters.number(quantityReceived), style: regularStyle, banglaStyle: regularStyle, textAlign: pw.TextAlign.center)),
+                      pw.Padding(padding: const pw.EdgeInsets.all(6), child: Text(Formatters.number(quantityPending > 0 ? quantityPending : 0), style: regularStyle, banglaStyle: regularStyle, textAlign: pw.TextAlign.center)),
+                      pw.Padding(padding: const pw.EdgeInsets.all(6), child: Text(Formatters.number(totalDamages), style: regularStyle, banglaStyle: regularStyle, textAlign: pw.TextAlign.center)),
+                    ],
+                  ),
+                ],
+              ),
+            );
+            children.add(pw.SizedBox(height: 8));
+
+            // 2. Supplied Products Table
+            children.add(Text('সরবরাহকৃত পণ্য ও বর্তমান স্টক', style: boldStyle, banglaStyle: boldStyle));
+            children.add(pw.SizedBox(height: 4));
+
+            if (products.isEmpty) {
+              children.add(pw.Padding(padding: const pw.EdgeInsets.only(left: 12, bottom: 8), child: Text('কোনো পণ্য অ্যাসাইন করা নেই।', style: regularStyle, banglaStyle: regularStyle)));
+            } else {
+              children.add(
+                pw.Table(
+                  border: pw.TableBorder.all(color: PdfColors.grey300, width: 0.5),
+                  children: [
+                    pw.TableRow(
+                      decoration: const pw.BoxDecoration(color: PdfColors.grey100),
+                      children: [
+                        pw.Padding(padding: const pw.EdgeInsets.all(5), child: Text('পণ্যের নাম', style: boldStyle, banglaStyle: boldStyle)),
+                        pw.Padding(padding: const pw.EdgeInsets.all(5), child: Text('বর্তমান স্টক', style: boldStyle, banglaStyle: boldStyle, textAlign: pw.TextAlign.right)),
+                        pw.Padding(padding: const pw.EdgeInsets.all(5), child: Text('ক্রয় মূল্য', style: boldStyle, banglaStyle: boldStyle, textAlign: pw.TextAlign.right)),
+                      ],
+                    ),
+                    ...products.map((p) {
+                      final isLow = p.currentStock <= p.minimumStock;
+                      return pw.TableRow(
+                        children: [
+                          pw.Padding(padding: const pw.EdgeInsets.all(5), child: Text(p.name, style: regularStyle, banglaStyle: regularStyle)),
+                          pw.Padding(
+                            padding: const pw.EdgeInsets.all(5),
+                            child: Text(
+                              '${Formatters.number(p.currentStock)} ${isLow ? "(নিম্ন স্টক)" : ""}',
+                              style: isLow ? pw.TextStyle(font: defaultFont, fontSize: 8, color: PdfColors.red, fontWeight: pw.FontWeight.bold) : regularStyle,
+                              banglaStyle: isLow ? pw.TextStyle(font: defaultFont, fontSize: 8, color: PdfColors.red, fontWeight: pw.FontWeight.bold) : regularStyle,
+                              textAlign: pw.TextAlign.right,
+                            ),
+                          ),
+                          pw.Padding(padding: const pw.EdgeInsets.all(5), child: Text(Formatters.currency(p.buyingPrice), style: regularStyle, banglaStyle: regularStyle, textAlign: pw.TextAlign.right)),
+                        ],
+                      );
+                    }),
+                  ],
+                ),
+              );
+            }
+            children.add(pw.SizedBox(height: 12));
+            children.add(pw.Divider(thickness: 0.5, color: PdfColors.grey300));
+            children.add(pw.SizedBox(height: 8));
+          }
+
+          return children;
+        },
+      ),
+    );
+
+    return pdf;
+  }
+
+  static Future<void> printSuppliersReport({
+    required List<Supplier> suppliers,
+    required Map<String, List<Product>> productsMap,
+    required Map<String, List<SupplierOrder>> ordersMap,
+    required Map<String, List<DamagedItem>> damagesMap,
+  }) async {
+    final pdf = await _buildSuppliersReportPdfDocument(
+      suppliers: suppliers,
+      productsMap: productsMap,
+      ordersMap: ordersMap,
+      damagesMap: damagesMap,
+    );
+
+    final pdfBytes = await pdf.save();
+    await Printing.layoutPdf(
+      onLayout: (PdfPageFormat format) async => pdfBytes,
+      name: 'suppliers_stock_report',
+    );
+  }
+
+  static Future<String?> generateAndSaveSuppliersReport({
+    required List<Supplier> suppliers,
+    required Map<String, List<Product>> productsMap,
+    required Map<String, List<SupplierOrder>> ordersMap,
+    required Map<String, List<DamagedItem>> damagesMap,
+    String? customSavePath,
+  }) async {
+    final pdf = await _buildSuppliersReportPdfDocument(
+      suppliers: suppliers,
+      productsMap: productsMap,
+      ordersMap: ordersMap,
+      damagesMap: damagesMap,
+    );
+
+    final pdfBytes = await pdf.save();
+    
+    final downloadsDir = await _getSaveDirectory(customSavePath, defaultSubfolder: 'VillageCO/PDFs');
+    final file = File('${downloadsDir.path}/suppliers_stock_report_${DateTime.now().millisecondsSinceEpoch}.pdf');
+    
+    try {
+      await file.writeAsBytes(pdfBytes);
+      return file.path;
+    } catch (e) {
+      final tempDir = await getTemporaryDirectory();
+      final tempFile = File('${tempDir.path}/suppliers_stock_report_${DateTime.now().millisecondsSinceEpoch}.pdf');
+      await tempFile.writeAsBytes(pdfBytes);
+      await Share.shareXFiles([XFile(tempFile.path)], text: 'Suppliers Stock & Transactions Report');
+      return null;
+    }
+  }
+
+  @visibleForTesting
+  static Future<pw.Document> buildSuppliersReportPdfDocumentForTesting({
+    required List<Supplier> suppliers,
+    required Map<String, List<Product>> productsMap,
+    required Map<String, List<SupplierOrder>> ordersMap,
+    required Map<String, List<DamagedItem>> damagesMap,
+  }) {
+    return _buildSuppliersReportPdfDocument(
+      suppliers: suppliers,
+      productsMap: productsMap,
+      ordersMap: ordersMap,
+      damagesMap: damagesMap,
+    );
+  }
 }
