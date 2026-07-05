@@ -15,6 +15,9 @@ import 'products_controller.dart';
 import '../categories/categories_controller.dart';
 import '../suppliers/suppliers_controller.dart';
 
+final productsMultiSelectModeProvider = StateProvider.autoDispose<bool>((ref) => false);
+final productsSelectedIdsProvider = StateProvider.autoDispose<Set<String>>((ref) => {});
+
 class ProductsScreen extends ConsumerStatefulWidget {
   const ProductsScreen({super.key});
 
@@ -23,28 +26,24 @@ class ProductsScreen extends ConsumerStatefulWidget {
 }
 
 class _ProductsScreenState extends ConsumerState<ProductsScreen> {
-  bool _isMultiSelectMode = false;
-  final Set<String> _selectedIds = {};
-
   void _toggleSelection(String id) {
-    setState(() {
-      if (_selectedIds.contains(id)) {
-        _selectedIds.remove(id);
-        if (_selectedIds.isEmpty) {
-          _isMultiSelectMode = false;
-        }
-      } else {
-        _selectedIds.add(id);
-        _isMultiSelectMode = true;
+    final selected = ref.read(productsSelectedIdsProvider);
+    final copy = Set<String>.from(selected);
+    if (copy.contains(id)) {
+      copy.remove(id);
+      if (copy.isEmpty) {
+        ref.read(productsMultiSelectModeProvider.notifier).state = false;
       }
-    });
+    } else {
+      copy.add(id);
+      ref.read(productsMultiSelectModeProvider.notifier).state = true;
+    }
+    ref.read(productsSelectedIdsProvider.notifier).state = copy;
   }
 
   void _clearSelection() {
-    setState(() {
-      _selectedIds.clear();
-      _isMultiSelectMode = false;
-    });
+    ref.read(productsSelectedIdsProvider.notifier).state = {};
+    ref.read(productsMultiSelectModeProvider.notifier).state = false;
   }
 
   @override
@@ -52,15 +51,17 @@ class _ProductsScreenState extends ConsumerState<ProductsScreen> {
     final theme = Theme.of(context);
     final productsAsync = ref.watch(productsListProvider);
     final filter = ref.watch(productsFilterProvider);
+    final isMultiSelectMode = ref.watch(productsMultiSelectModeProvider);
+    final selectedIds = ref.watch(productsSelectedIdsProvider);
 
     return Scaffold(
       appBar: AppBar(
         title: Text(
-          _isMultiSelectMode ? '${_selectedIds.length}টি পণ্য সিলেক্ট করা হয়েছে' : 'পণ্য তালিকা',
+          isMultiSelectMode ? '${selectedIds.length}টি পণ্য সিলেক্ট করা হয়েছে' : 'পণ্য তালিকা',
           style: const TextStyle(fontWeight: FontWeight.bold),
         ),
         actions: [
-          if (_isMultiSelectMode) ...[
+          if (isMultiSelectMode) ...[
             IconButton(
               icon: const Icon(Icons.edit_note_rounded),
               tooltip: 'স্টক পরিবর্তন করুন',
@@ -113,7 +114,7 @@ class _ProductsScreenState extends ConsumerState<ProductsScreen> {
                     itemCount: products.length,
                     itemBuilder: (context, index) {
                       final item = products[index];
-                      final isSelected = _selectedIds.contains(item.product.id);
+                      final isSelected = selectedIds.contains(item.product.id);
                       return _buildProductGridCard(context, item, isSelected);
                     },
                   );
@@ -124,7 +125,7 @@ class _ProductsScreenState extends ConsumerState<ProductsScreen> {
                     separatorBuilder: (_, __) => const SizedBox(height: 10),
                     itemBuilder: (context, index) {
                       final item = products[index];
-                      final isSelected = _selectedIds.contains(item.product.id);
+                      final isSelected = selectedIds.contains(item.product.id);
                       return _buildProductSlidableTile(context, item, isSelected);
                     },
                   );
@@ -285,7 +286,7 @@ class _ProductsScreenState extends ConsumerState<ProductsScreen> {
       child: InkWell(
         onLongPress: () => _toggleSelection(product.id),
         onTap: () {
-          if (_isMultiSelectMode) {
+          if (ref.read(productsMultiSelectModeProvider)) {
             _toggleSelection(product.id);
           } else {
             _showProductDetailsSheet(context, item);
@@ -428,7 +429,7 @@ class _ProductsScreenState extends ConsumerState<ProductsScreen> {
         child: ListTile(
           onLongPress: () => _toggleSelection(product.id),
           onTap: () {
-            if (_isMultiSelectMode) {
+            if (ref.read(productsMultiSelectModeProvider)) {
               _toggleSelection(product.id);
             } else {
               _showProductDetailsSheet(context, item);
@@ -646,13 +647,13 @@ class _ProductsScreenState extends ConsumerState<ProductsScreen> {
       context: context,
       builder: (context) => AlertDialog(
         title: const Text('সিলেক্ট করা পণ্য মুছে ফেলবেন?'),
-        content: Text('আপনি কি নিশ্চিত যে সিলেক্ট করা ${_selectedIds.length}টি পণ্য মুছে ফেলতে চান?'),
+        content: Text('আপনি কি নিশ্চিত যে সিলেক্ট করা ${ref.read(productsSelectedIdsProvider).length}টি পণ্য মুছে ফেলতে চান?'),
         actions: [
           TextButton(onPressed: () => Navigator.pop(context), child: const Text('বাতিল')),
           TextButton(
             onPressed: () {
               Navigator.pop(context);
-              ref.read(productsRepositoryProvider).bulkDelete(_selectedIds.toList());
+              ref.read(productsRepositoryProvider).bulkDelete(ref.read(productsSelectedIdsProvider).toList());
               _clearSelection();
             },
             child: const Text('সব মুছুন', style: TextStyle(color: Colors.red)),
@@ -673,7 +674,7 @@ class _ProductsScreenState extends ConsumerState<ProductsScreen> {
         content: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Text('সিলেক্ট করা ${_selectedIds.length}টি পণ্যের স্টক সমন্বয় করুন। যোগ করতে পজিটিভ নম্বর এবং কমাতে মাইনাস (-) নম্বর লিখুন।'),
+            Text('সিলেক্ট করা ${ref.read(productsSelectedIdsProvider).length}টি পণ্যের স্টক সমন্বয় করুন। যোগ করতে পজিটিভ নম্বর এবং কমাতে মাইনাস (-) নম্বর লিখুন।'),
             const SizedBox(height: 16),
             TextField(
               controller: qtyController,
@@ -705,7 +706,7 @@ class _ProductsScreenState extends ConsumerState<ProductsScreen> {
             onPressed: () {
               final amt = double.tryParse(qtyController.text);
               if (amt != null) {
-                ref.read(productsRepositoryProvider).bulkStockUpdate(_selectedIds.toList(), amt, reason);
+                ref.read(productsRepositoryProvider).bulkStockUpdate(ref.read(productsSelectedIdsProvider).toList(), amt, reason);
                 Navigator.pop(context);
                 _clearSelection();
               }
