@@ -261,6 +261,37 @@ class FirebaseSyncService {
         'date': Timestamp.fromDate(hist.date),
       });
     }
+
+    // 9. Sync SupplierOrders
+    final supplierOrders = await _db.select(_db.supplierOrders).get();
+    for (final order in supplierOrders) {
+      await storeRef.collection('supplierOrders').doc(order.id).set({
+        'id': order.id,
+        'supplierId': order.supplierId,
+        'productId': order.productId,
+        'quantityOrdered': order.quantityOrdered,
+        'quantityReceived': order.quantityReceived,
+        'totalCost': order.totalCost,
+        'amountPaid': order.amountPaid,
+        'date': Timestamp.fromDate(order.date),
+        'status': order.status,
+      });
+    }
+
+    // 10. Sync DamagedItems
+    final damagedItems = await _db.select(_db.damagedItems).get();
+    for (final dmg in damagedItems) {
+      await storeRef.collection('damagedItems').doc(dmg.id).set({
+        'id': dmg.id,
+        'supplierId': dmg.supplierId,
+        'productId': dmg.productId,
+        'quantity': dmg.quantity,
+        'status': dmg.status,
+        'date': Timestamp.fromDate(dmg.date),
+        'resolutionDate': dmg.resolutionDate != null ? Timestamp.fromDate(dmg.resolutionDate!) : null,
+        'notes': dmg.notes,
+      });
+    }
   }
 
   /// Automatically syncs a single sale, generates and uploads its receipt PDF in the background.
