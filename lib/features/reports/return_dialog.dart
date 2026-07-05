@@ -7,6 +7,14 @@ import '../../core/database/database_providers.dart';
 import '../../core/utils/formatters.dart';
 import 'reports_controller.dart';
 import '../products/products_controller.dart';
+import '../../core/database/firebase_sync_service.dart';
+
+// Riverpod state providers for returns dialog
+final returnFetchingProvider = StateProvider.autoDispose.family<bool, String>((ref, saleId) => true);
+final returnSubmittingProvider = StateProvider.autoDispose.family<bool, String>((ref, saleId) => false);
+final alreadyReturnedQtyProvider = StateProvider.autoDispose.family<Map<String, double>, String>((ref, saleId) => {});
+final returnQuantitiesProvider = StateProvider.autoDispose.family<Map<String, double>, String>((ref, saleId) => {});
+final returnRestockFlagsProvider = StateProvider.autoDispose.family<Map<String, bool>, String>((ref, saleId) => {});
 
 class ProductReturnDialog extends ConsumerStatefulWidget {
   final SaleWithDetails saleWithDetails;
@@ -20,23 +28,13 @@ class ProductReturnDialog extends ConsumerStatefulWidget {
 class _ProductReturnDialogState extends ConsumerState<ProductReturnDialog> {
   final _reasonController = TextEditingController();
   final _formKey = GlobalKey<FormState>();
-  
-  bool _fetchingReturnedData = true;
-  bool _submitting = false;
-  
-  // Maps productId -> already returned quantity
-  final Map<String, double> _alreadyReturnedQty = {};
-  
-  // Maps productId -> current quantity input to return
-  final Map<String, double> _returnQuantities = {};
-  
-  // Maps productId -> isRestocked checkbox flag
-  final Map<String, bool> _restockFlags = {};
 
   @override
   void initState() {
     super.initState();
-    _loadAlreadyReturnedData();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _loadAlreadyReturnedData();
+    });
   }
 
   @override
@@ -46,9 +44,9 @@ class _ProductReturnDialogState extends ConsumerState<ProductReturnDialog> {
   }
 
   Future<void> _loadAlreadyReturnedData() async {
+    final saleId = widget.saleWithDetails.sale.id;
     try {
       final db = ref.read(databaseProvider);
-      final saleId = widget.saleWithDetails.sale.id;
 
       final returns = await (db.select(db.salesReturns)
         ..where((t) => t.saleId.equals(saleId)))
@@ -60,28 +58,27 @@ class _ProductReturnDialogState extends ConsumerState<ProductReturnDialog> {
           ..where((t) => t.returnId.isIn(returnIds)))
           .get();
         
+        final Map<String, double> temp = {};
         for (final item in returnedItems) {
-          _alreadyReturnedQty[item.productId] = 
-              (_alreadyReturnedQty[item.productId] ?? 0.0) + item.quantity;
+          temp[item.productId] = (temp[item.productId] ?? 0.0) + item.quantity;
         }
+        ref.read(alreadyReturnedQtyProvider(saleId).notifier).state = temp;
       }
     } catch (e) {
       debugPrint('Error loading already returned data: $e');
     } finally {
-      if (mounted) {
-        setState(() {
-          _fetchingReturnedData = false;
-        });
-      }
+      ref.read(returnFetchingProvider(saleId).notifier).state = false;
     }
   }
 
   double _calculateRefundAmount() {
+    final saleId = widget.saleWithDetails.sale.id;
+    final returnQuantities = ref.read(returnQuantitiesProvider(saleId));
     double refundSubtotal = 0.0;
     
     for (final itemWithProduct in widget.saleWithDetails.items) {
       final productId = itemWithProduct.product.id;
-      final returnQty = _returnQuantities[productId] ?? 0.0;
+      final returnQty = returnQuantities[productId] ?? 0.0;
       if (returnQty > 0) {
         refundSubtotal += returnQty * itemWithProduct.item.price;
       }
@@ -101,6 +98,7 @@ class _ProductReturnDialogState extends ConsumerState<ProductReturnDialog> {
   Future<void> _submitReturn() async {
     if (!_formKey.currentState!.validate()) return;
     
+    final saleId = widget.saleWithDetails.sale.id;
     final refundAmount = _calculateRefundAmount();
     if (refundAmount <= 0) {
       ScaffoldMessenger.of(context).showSnackBar(
@@ -109,21 +107,21 @@ class _ProductReturnDialogState extends ConsumerState<ProductReturnDialog> {
       return;
     }
 
-    setState(() {
-      _submitting = true;
-    });
+    ref.read(returnSubmittingProvider(saleId).notifier).state = true;
 
     try {
       final db = ref.read(databaseProvider);
       final now = DateTime.now();
       final returnId = const Uuid().v4();
+      final returnQuantities = ref.read(returnQuantitiesProvider(saleId));
+      final restockFlags = ref.read(returnRestockFlagsProvider(saleId));
 
       await db.transaction(() async {
         // 1. Insert SalesReturns record
         await db.into(db.salesReturns).insert(
           SalesReturnsCompanion(
             id: drift.Value(returnId),
-            saleId: drift.Value(widget.saleWithDetails.sale.id),
+            saleId: drift.Value(saleId),
             date: drift.Value(now),
             refundAmount: drift.Value(refundAmount),
             reason: drift.Value(_reasonController.text.trim().isEmpty ? null : _reasonController.text.trim()),
@@ -133,10 +131,10 @@ class _ProductReturnDialogState extends ConsumerState<ProductReturnDialog> {
         // 2. Insert return items and adjust stock
         for (final itemWithProduct in widget.saleWithDetails.items) {
           final productId = itemWithProduct.product.id;
-          final returnQty = _returnQuantities[productId] ?? 0.0;
+          final returnQty = returnQuantities[productId] ?? 0.0;
           
           if (returnQty > 0) {
-            final isRestocked = _restockFlags[productId] ?? true;
+            final isRestocked = restockFlags[productId] ?? true;
             final returnItemId = const Uuid().v4();
 
             await db.into(db.salesReturnItems).insert(
@@ -164,7 +162,7 @@ class _ProductReturnDialogState extends ConsumerState<ProductReturnDialog> {
                   id: drift.Value(const Uuid().v4()),
                   productId: drift.Value(productId),
                   changeAmount: drift.Value(returnQty),
-                  reason: drift.Value('Customer Return (Receipt: ${widget.saleWithDetails.sale.id.substring(0, 8).toUpperCase()})'),
+                  reason: drift.Value('Customer Return (Receipt: ${saleId.substring(0, 8).toUpperCase()})'),
                   date: drift.Value(now),
                 ),
               );
@@ -175,7 +173,7 @@ class _ProductReturnDialogState extends ConsumerState<ProductReturnDialog> {
                   id: drift.Value(const Uuid().v4()),
                   productId: drift.Value(productId),
                   changeAmount: drift.Value(0.0),
-                  reason: drift.Value('Return Wasted (Receipt: ${widget.saleWithDetails.sale.id.substring(0, 8).toUpperCase()})'),
+                  reason: drift.Value('Return Wasted (Receipt: ${saleId.substring(0, 8).toUpperCase()})'),
                   date: drift.Value(now),
                 ),
               );
@@ -191,6 +189,9 @@ class _ProductReturnDialogState extends ConsumerState<ProductReturnDialog> {
       ref.invalidate(topSellingProductsProvider);
       ref.invalidate(returnsHistoryProvider);
 
+      // Trigger automatic background database sync to Firebase
+      triggerAutoSync(ref);
+
       if (mounted) {
         Navigator.of(context).pop(); // Close dialog
         ScaffoldMessenger.of(context).showSnackBar(
@@ -204,11 +205,7 @@ class _ProductReturnDialogState extends ConsumerState<ProductReturnDialog> {
         );
       }
     } finally {
-      if (mounted) {
-        setState(() {
-          _submitting = false;
-        });
-      }
+      ref.read(returnSubmittingProvider(saleId).notifier).state = false;
     }
   }
 
@@ -216,8 +213,15 @@ class _ProductReturnDialogState extends ConsumerState<ProductReturnDialog> {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final sale = widget.saleWithDetails.sale;
+    final saleId = sale.id;
 
-    if (_fetchingReturnedData) {
+    final fetching = ref.watch(returnFetchingProvider(saleId));
+    final submitting = ref.watch(returnSubmittingProvider(saleId));
+    final alreadyReturnedQty = ref.watch(alreadyReturnedQtyProvider(saleId));
+    final returnQuantities = ref.watch(returnQuantitiesProvider(saleId));
+    final restockFlags = ref.watch(returnRestockFlagsProvider(saleId));
+
+    if (fetching) {
       return const AlertDialog(
         backgroundColor: Colors.white,
         content: SizedBox(
@@ -271,7 +275,7 @@ class _ProductReturnDialogState extends ConsumerState<ProductReturnDialog> {
                     final itemWithProduct = widget.saleWithDetails.items[index];
                     final productId = itemWithProduct.product.id;
                     final originalQty = itemWithProduct.item.quantity;
-                    final alreadyReturned = _alreadyReturnedQty[productId] ?? 0.0;
+                    final alreadyReturned = alreadyReturnedQty[productId] ?? 0.0;
                     final maxReturnable = originalQty - alreadyReturned;
 
                     if (maxReturnable <= 0) {
@@ -282,7 +286,8 @@ class _ProductReturnDialogState extends ConsumerState<ProductReturnDialog> {
                       );
                     }
 
-                    _restockFlags.putIfAbsent(productId, () => true);
+                    final isRestocked = restockFlags[productId] ?? true;
+                    final currentQty = returnQuantities[productId] ?? 0.0;
 
                     return Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
@@ -315,7 +320,7 @@ class _ProductReturnDialogState extends ConsumerState<ProductReturnDialog> {
                             SizedBox(
                               width: 80,
                               child: TextFormField(
-                                initialValue: '0',
+                                initialValue: currentQty > 0 ? Formatters.number(currentQty) : '0',
                                 keyboardType: const TextInputType.numberWithOptions(decimal: true),
                                 decoration: const InputDecoration(
                                   contentPadding: EdgeInsets.symmetric(horizontal: 8, vertical: 8),
@@ -332,15 +337,18 @@ class _ProductReturnDialogState extends ConsumerState<ProductReturnDialog> {
                                   return null;
                                 },
                                 onChanged: (val) {
-                                  setState(() {
-                                    _returnQuantities[productId] = double.tryParse(val) ?? 0.0;
+                                  final valDouble = double.tryParse(val) ?? 0.0;
+                                  ref.read(returnQuantitiesProvider(saleId).notifier).update((state) {
+                                    final copy = Map<String, double>.from(state);
+                                    copy[productId] = valDouble;
+                                    return copy;
                                   });
                                 },
                               ),
                             ),
                           ],
                         ),
-                        if ((_returnQuantities[productId] ?? 0.0) > 0)
+                        if (currentQty > 0)
                           Padding(
                             padding: const EdgeInsets.only(top: 8.0),
                             child: Row(
@@ -349,10 +357,13 @@ class _ProductReturnDialogState extends ConsumerState<ProductReturnDialog> {
                                   height: 24,
                                   width: 24,
                                   child: Checkbox(
-                                    value: _restockFlags[productId],
+                                    value: isRestocked,
                                     onChanged: (val) {
-                                      setState(() {
-                                        _restockFlags[productId] = val ?? true;
+                                      final restockVal = val ?? true;
+                                      ref.read(returnRestockFlagsProvider(saleId).notifier).update((state) {
+                                        final copy = Map<String, bool>.from(state);
+                                        copy[productId] = restockVal;
+                                        return copy;
                                       });
                                     },
                                   ),
@@ -413,16 +424,16 @@ class _ProductReturnDialogState extends ConsumerState<ProductReturnDialog> {
       ),
       actions: [
         TextButton(
-          onPressed: _submitting ? null : () => Navigator.pop(context),
+          onPressed: submitting ? null : () => Navigator.pop(context),
           child: const Text('বাতিল'),
         ),
         ElevatedButton(
-          onPressed: _submitting ? null : _submitReturn,
+          onPressed: submitting ? null : _submitReturn,
           style: ElevatedButton.styleFrom(
             backgroundColor: theme.colorScheme.primary,
             foregroundColor: Colors.white,
           ),
-          child: _submitting
+          child: submitting
               ? const SizedBox(
                   width: 16,
                   height: 16,
