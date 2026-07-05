@@ -3,6 +3,7 @@ import 'package:drift/drift.dart';
 import 'package:uuid/uuid.dart';
 import '../../core/database/database.dart';
 import '../../core/database/database_providers.dart';
+import '../../core/database/firebase_sync_service.dart';
 
 class DashboardMetrics {
   final int totalProducts;
@@ -271,6 +272,7 @@ class ExpensesController extends AsyncNotifier<List<Expense>> {
       // Invalidate dashboard metrics as well
       ref.invalidate(dashboardMetricsProvider);
       
+      triggerAutoSync(ref);
       return _fetchExpenses();
     });
   }
@@ -282,6 +284,7 @@ class ExpensesController extends AsyncNotifier<List<Expense>> {
       
       ref.invalidate(dashboardMetricsProvider);
       
+      triggerAutoSync(ref);
       return _fetchExpenses();
     });
   }
