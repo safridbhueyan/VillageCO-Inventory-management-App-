@@ -6,6 +6,11 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import '../settings/settings_controller.dart';
 import '../super_admin/admin_controller.dart';
 
+// Riverpod state providers for login screen
+final loginPinProvider = StateProvider.autoDispose<String>((ref) => '');
+final loginRememberLoginProvider = StateProvider.autoDispose<bool>((ref) => false);
+final loginErrorMessageProvider = StateProvider.autoDispose<String?>((ref) => null);
+
 class LoginScreen extends ConsumerStatefulWidget {
   const LoginScreen({super.key});
 
@@ -14,34 +19,32 @@ class LoginScreen extends ConsumerStatefulWidget {
 }
 
 class _LoginScreenState extends ConsumerState<LoginScreen> {
-  String _pin = '';
-  bool _rememberLogin = false;
-  String? _errorMessage;
-
   void _handleKeyPress(String value) {
-    if (_pin.length < 4) {
-      setState(() {
-        _pin += value;
-        _errorMessage = null;
-      });
+    final currentPin = ref.read(loginPinProvider);
+    if (currentPin.length < 4) {
+      ref.read(loginPinProvider.notifier).state = currentPin + value;
+      ref.read(loginErrorMessageProvider.notifier).state = null;
     }
 
-    if (_pin.length == 4) {
-      _verifyPin();
-    }
+    Future.microtask(() {
+      final nextPin = ref.read(loginPinProvider);
+      if (nextPin.length == 4) {
+        _verifyPin();
+      }
+    });
   }
 
   void _handleBackspace() {
-    if (_pin.isNotEmpty) {
-      setState(() {
-        _pin = _pin.substring(0, _pin.length - 1);
-        _errorMessage = null;
-      });
+    final currentPin = ref.read(loginPinProvider);
+    if (currentPin.isNotEmpty) {
+      ref.read(loginPinProvider.notifier).state = currentPin.substring(0, currentPin.length - 1);
+      ref.read(loginErrorMessageProvider.notifier).state = null;
     }
   }
 
   Future<void> _verifyPin() async {
-    if (_pin == '0071') {
+    final pinVal = ref.read(loginPinProvider);
+    if (pinVal == '0071') {
       if (context.mounted) {
         context.go('/super_admin');
       }
@@ -54,7 +57,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
       orElse: () => '1234',
     );
 
-    if (_pin == correctPin) {
+    if (pinVal == correctPin) {
       if (context.mounted) {
         context.go('/dashboard');
       }
@@ -88,7 +91,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
     try {
       final query = await FirebaseFirestore.instance
           .collection('stores')
-          .where('adminPin', isEqualTo: _pin)
+          .where('adminPin', isEqualTo: pinVal)
           .get()
           .timeout(const Duration(seconds: 8));
 
@@ -107,19 +110,15 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
         if (mounted) {
           Navigator.of(context, rootNavigator: true).pop(); // dismiss loading dialog
         }
-        setState(() {
-          _pin = '';
-          _errorMessage = 'ভুল পিন। আবার চেষ্টা করুন।';
-        });
+        ref.read(loginPinProvider.notifier).state = '';
+        ref.read(loginErrorMessageProvider.notifier).state = 'ভুল পিন। আবার চেষ্টা করুন।';
       }
     } catch (e) {
       if (mounted) {
         Navigator.of(context, rootNavigator: true).pop(); // dismiss loading dialog
       }
-      setState(() {
-        _pin = '';
-        _errorMessage = 'সংযোগ ত্রুটি বা পিনটি পাওয়া যায়নি।';
-      });
+      ref.read(loginPinProvider.notifier).state = '';
+      ref.read(loginErrorMessageProvider.notifier).state = 'সংযোগ ত্রুটি বা পিনটি পাওয়া যায়নি।';
       debugPrint('Error verifying PIN online: $e');
     }
   }
@@ -129,6 +128,10 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
     final theme = Theme.of(context);
     // Watch settings provider so it starts loading on launch and stays updated.
     ref.watch(settingsControllerProvider);
+
+    final pinVal = ref.watch(loginPinProvider);
+    final rememberLogin = ref.watch(loginRememberLoginProvider);
+    final errorMessage = ref.watch(loginErrorMessageProvider);
 
     return Scaffold(
       body: Container(
@@ -198,7 +201,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                       Row(
                         mainAxisAlignment: MainAxisAlignment.center,
                         children: List.generate(4, (index) {
-                          final isActive = index < _pin.length;
+                          final isActive = index < pinVal.length;
                           return Container(
                             margin: const EdgeInsets.symmetric(horizontal: 8),
                             width: 14,
@@ -221,9 +224,9 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                       ),
                       const SizedBox(height: 24),
 
-                      if (_errorMessage != null)
+                      if (errorMessage != null)
                         Text(
-                          _errorMessage!,
+                          errorMessage,
                           style: TextStyle(
                             color: theme.colorScheme.error,
                             fontWeight: FontWeight.bold,
@@ -265,13 +268,11 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                             height: 24,
                             width: 24,
                             child: Checkbox(
-                              value: _rememberLogin,
+                              value: rememberLogin,
                               activeColor: theme.colorScheme.primary,
                               shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(4)),
                               onChanged: (val) {
-                                setState(() {
-                                    _rememberLogin = val ?? false;
-                                });
+                                ref.read(loginRememberLoginProvider.notifier).state = val ?? false;
                               },
                             ),
                           ),
