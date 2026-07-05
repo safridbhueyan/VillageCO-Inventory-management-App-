@@ -12,6 +12,8 @@ import '../products/products_controller.dart';
 import '../settings/settings_controller.dart';
 import 'suppliers_controller.dart';
 
+final _searchQueryProvider = StateProvider.autoDispose<String>((ref) => '');
+
 class SuppliersScreen extends ConsumerStatefulWidget {
   const SuppliersScreen({super.key});
 
@@ -20,18 +22,17 @@ class SuppliersScreen extends ConsumerStatefulWidget {
 }
 
 class _SuppliersScreenState extends ConsumerState<SuppliersScreen> {
-  String _searchQuery = '';
-
   @override
   Widget build(BuildContext context) {
     final suppliersAsync = ref.watch(suppliersControllerProvider);
     final theme = Theme.of(context);
+    final searchQuery = ref.watch(_searchQueryProvider);
 
     // Filter suppliers in memory
     final filteredSuppliers = suppliersAsync.maybeWhen(
       data: (list) {
-        if (_searchQuery.isEmpty) return list;
-        final q = _searchQuery.toLowerCase();
+        if (searchQuery.isEmpty) return list;
+        final q = searchQuery.toLowerCase();
         return list.where((s) => s.name.toLowerCase().contains(q) || s.phone.contains(q)).toList();
       },
       orElse: () => <Supplier>[],
@@ -62,7 +63,7 @@ class _SuppliersScreenState extends ConsumerState<SuppliersScreen> {
                 contentPadding: const EdgeInsets.symmetric(vertical: 0),
               ),
               onChanged: (val) {
-                setState(() => _searchQuery = val);
+                ref.read(_searchQueryProvider.notifier).state = val;
               },
             ),
           ),
