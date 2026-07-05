@@ -8,6 +8,9 @@ import '../../core/utils/formatters.dart';
 import '../../features/settings/settings_controller.dart';
 import 'admin_controller.dart';
 
+final superAdminSearchQueryProvider = StateProvider.autoDispose<String>((ref) => '');
+final superAdminDialogCurrencyProvider = StateProvider.autoDispose<String>((ref) => 'BDT');
+
 class SuperAdminScreen extends ConsumerStatefulWidget {
   const SuperAdminScreen({super.key});
 
@@ -17,7 +20,6 @@ class SuperAdminScreen extends ConsumerStatefulWidget {
 
 class _SuperAdminScreenState extends ConsumerState<SuperAdminScreen> {
   final _searchController = TextEditingController();
-  String _searchQuery = '';
 
   @override
   Widget build(BuildContext context) {
@@ -76,9 +78,7 @@ class _SuperAdminScreenState extends ConsumerState<SuperAdminScreen> {
                         fillColor: theme.colorScheme.surface,
                       ),
                       onChanged: (val) {
-                        setState(() {
-                          _searchQuery = val.trim().toLowerCase();
-                        });
+                        ref.read(superAdminSearchQueryProvider.notifier).state = val.trim().toLowerCase();
                       },
                     ),
                   ),
@@ -104,7 +104,7 @@ class _SuperAdminScreenState extends ConsumerState<SuperAdminScreen> {
                     final name = (doc.data()['shopName'] ?? '')
                         .toString()
                         .toLowerCase();
-                    return name.contains(_searchQuery);
+                    return name.contains(ref.watch(superAdminSearchQueryProvider));
                   }).toList();
 
                   if (filteredDocs.isEmpty) {
@@ -188,13 +188,13 @@ class _SuperAdminScreenState extends ConsumerState<SuperAdminScreen> {
     final taxController = TextEditingController(
       text: currentTax?.toString() ?? '0.0',
     );
-    String selectedCurrency = currentCurrency ?? 'BDT';
+    ref.read(superAdminDialogCurrencyProvider.notifier).state = currentCurrency ?? 'BDT';
     final formKey = GlobalKey<FormState>();
 
     showDialog(
       context: context,
-      builder: (context) => StatefulBuilder(
-        builder: (context, setState) => AlertDialog(
+      builder: (context) => Consumer(
+        builder: (context, ref, child) => AlertDialog(
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(20),
           ),
@@ -237,7 +237,7 @@ class _SuperAdminScreenState extends ConsumerState<SuperAdminScreen> {
                   ),
                   const SizedBox(height: 12),
                   DropdownButtonFormField<String>(
-                    value: selectedCurrency,
+                    value: ref.watch(superAdminDialogCurrencyProvider),
                     decoration: const InputDecoration(
                       labelText: 'কারেন্সি',
                       border: OutlineInputBorder(),
@@ -248,7 +248,7 @@ class _SuperAdminScreenState extends ConsumerState<SuperAdminScreen> {
                       DropdownMenuItem(value: 'EUR', child: Text('EUR (€)')),
                     ],
                     onChanged: (val) {
-                      if (val != null) setState(() => selectedCurrency = val);
+                      if (val != null) ref.read(superAdminDialogCurrencyProvider.notifier).state = val;
                     },
                   ),
                   const SizedBox(height: 12),
@@ -292,7 +292,7 @@ class _SuperAdminScreenState extends ConsumerState<SuperAdminScreen> {
                       await adminRepo.createShop(
                         name: name,
                         pin: pin,
-                        currency: selectedCurrency,
+                        currency: ref.read(superAdminDialogCurrencyProvider),
                         taxRate: tax,
                       );
                     } else {
@@ -300,7 +300,7 @@ class _SuperAdminScreenState extends ConsumerState<SuperAdminScreen> {
                         storeDocId: storeDocId,
                         newName: name,
                         newPin: pin,
-                        currency: selectedCurrency,
+                        currency: ref.read(superAdminDialogCurrencyProvider),
                         taxRate: tax,
                       );
                     }
