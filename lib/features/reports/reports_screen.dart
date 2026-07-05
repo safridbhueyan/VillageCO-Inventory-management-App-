@@ -17,7 +17,7 @@ import 'reports_controller.dart';
 import '../products/products_controller.dart';
 import '../sales/pos_controller.dart';
 import '../settings/settings_controller.dart';
-import '../settings/settings_controller.dart';
+import 'return_dialog.dart';
 
 class ReportsScreen extends ConsumerStatefulWidget {
   const ReportsScreen({super.key});
@@ -35,7 +35,7 @@ class _ReportsScreenState extends ConsumerState<ReportsScreen>
   @override
   void initState() {
     super.initState();
-    _tabController = TabController(length: 4, vsync: this);
+    _tabController = TabController(length: 5, vsync: this);
   }
 
   @override
@@ -72,18 +72,20 @@ class _ReportsScreenState extends ConsumerState<ReportsScreen>
               icon: Icon(Icons.auto_graph_rounded),
               text: 'বিক্রিত পণ্য বিশ্লেষণ',
             ),
+            Tab(icon: Icon(Icons.keyboard_return_rounded), text: 'পণ্য ফেরত/রিটার্ন'),
           ],
         ),
       ),
       body: TabBarView(
-        controller: _tabController,
-        children: [
-          _buildFinancialsTab(context, metricsAsync),
-          _buildSalesLogTab(context, salesHistoryAsync),
-          _buildExpensesTab(context, expensesAsync),
-          _buildProductInsightsTab(context, topSellingAsync),
-        ],
-      ),
+          controller: _tabController,
+          children: [
+            _buildFinancialsTab(context, metricsAsync),
+            _buildSalesLogTab(context, salesHistoryAsync),
+            _buildExpensesTab(context, expensesAsync),
+            _buildProductInsightsTab(context, topSellingAsync),
+            _buildReturnsLogTab(context, ref.watch(returnsHistoryProvider)),
+          ],
+        ),
     );
   }
 
@@ -876,6 +878,23 @@ class _ReportsScreenState extends ConsumerState<ReportsScreen>
             onPressed: () => Navigator.pop(context),
             child: const Text('বন্ধ করুন'),
           ),
+          FilledButton.icon(
+            icon: const Icon(Icons.keyboard_return_rounded),
+            label: const Text('পণ্য ফেরত/রিটার্ন'),
+            style: FilledButton.styleFrom(
+              backgroundColor: Theme.of(context).colorScheme.primary,
+              foregroundColor: Colors.white,
+            ),
+            onPressed: () {
+              Navigator.pop(context); // Close receipt copy dialog
+              showDialog(
+                context: context,
+                builder: (context) => ProductReturnDialog(
+                  saleWithDetails: saleWithDetails,
+                ),
+              );
+            },
+          ),
           OutlinedButton.icon(
             icon: const Icon(Icons.print),
             label: const Text('প্রিন্ট'),
@@ -1167,5 +1186,81 @@ class _ReportsScreenState extends ConsumerState<ReportsScreen>
         ).showSnackBar(SnackBar(content: Text('প্রিন্ট ব্যর্থ হয়েছে: $e')));
       }
     }
+  }
+
+  Widget _buildReturnsLogTab(
+    BuildContext context,
+    AsyncValue<List<SalesReturnWithDetails>> returnsAsync,
+  ) {
+    return Column(
+      children: [
+        Expanded(
+          child: returnsAsync.when(
+            loading: () => const Center(child: CircularProgressIndicator()),
+            error: (err, st) =>
+                Center(child: Text('রিটার্ন খাতা লোড ব্যর্থ: $err')),
+            data: (returns) {
+              if (returns.isEmpty) {
+                return const Center(
+                  child: Text('কোনো রিফান্ড বা রিটার্নের রেকর্ড পাওয়া যায়নি।'),
+                );
+              }
+
+              return ListView.separated(
+                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                itemCount: returns.length,
+                separatorBuilder: (_, __) => const Divider(),
+                itemBuilder: (context, index) {
+                  final returnWithDetails = returns[index];
+                  final ret = returnWithDetails.salesReturn;
+                  
+                  // Generate list of items as a subtitle string
+                  final itemsSummary = returnWithDetails.items
+                      .map((i) => '${i.product.name} (${Formatters.number(i.item.quantity)} ${i.product.unit})')
+                      .join(', ');
+
+                  return ListTile(
+                    contentPadding: EdgeInsets.zero,
+                    title: Text(
+                      'রশিদ নং: ${returnWithDetails.originalSaleId.substring(0, 8).toUpperCase()}',
+                      style: const TextStyle(fontWeight: FontWeight.bold),
+                    ),
+                    subtitle: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        const SizedBox(height: 2),
+                        Text(
+                          'তারিখ ও সময়: ${Formatters.dateTime(ret.date)}',
+                          style: const TextStyle(fontSize: 12),
+                        ),
+                        if (ret.reason != null && ret.reason!.isNotEmpty)
+                          Text(
+                            'কারণ: ${ret.reason}',
+                            style: const TextStyle(fontSize: 12, color: Colors.blueGrey),
+                          ),
+                        Text(
+                          'ফেরতকৃত পণ্য: $itemsSummary',
+                          style: const TextStyle(fontSize: 11, color: Colors.grey),
+                          maxLines: 2,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                      ],
+                    ),
+                    trailing: Text(
+                      '- ${Formatters.currency(ret.refundAmount)}',
+                      style: const TextStyle(
+                        fontWeight: FontWeight.bold,
+                        fontSize: 16,
+                        color: Colors.red,
+                      ),
+                    ),
+                  );
+                },
+              );
+            },
+          ),
+        ),
+      ],
+    );
   }
 }
