@@ -10,24 +10,24 @@ import '../../features/sales/pos_screen.dart';
 import '../../features/reports/reports_screen.dart';
 import '../../features/settings/settings_screen.dart';
 import '../../widgets/shared/main_layout.dart';
+import '../../features/super_admin/super_admin_screen.dart';
+import '../../features/suppliers/suppliers_screen.dart';
 
 final routerProvider = Provider<GoRouter>((ref) {
   return GoRouter(
     initialLocation: '/login',
     routes: [
+      GoRoute(path: '/login', builder: (context, state) => const LoginScreen()),
       GoRoute(
-        path: '/login',
-        builder: (context, state) => const LoginScreen(),
+        path: '/super_admin',
+        builder: (context, state) => const SuperAdminScreen(),
       ),
       ShellRoute(
         builder: (context, state, child) {
           return MainLayout(child: child);
         },
         routes: [
-          GoRoute(
-            path: '/',
-            redirect: (_, __) => '/dashboard',
-          ),
+          GoRoute(path: '/', redirect: (_, __) => '/dashboard'),
           GoRoute(
             path: '/dashboard',
             builder: (context, state) => const DashboardScreen(),
@@ -40,10 +40,7 @@ final routerProvider = Provider<GoRouter>((ref) {
             path: '/inventory',
             builder: (context, state) => const InventoryScreen(),
           ),
-          GoRoute(
-            path: '/pos',
-            builder: (context, state) => const PosScreen(),
-          ),
+          GoRoute(path: '/pos', builder: (context, state) => const PosScreen()),
           GoRoute(
             path: '/reports',
             builder: (context, state) => const ReportsScreen(),
@@ -51,6 +48,10 @@ final routerProvider = Provider<GoRouter>((ref) {
           GoRoute(
             path: '/settings',
             builder: (context, state) => const SettingsScreen(),
+          ),
+          GoRoute(
+            path: '/suppliers',
+            builder: (context, state) => const SuppliersScreen(),
           ),
         ],
       ),
