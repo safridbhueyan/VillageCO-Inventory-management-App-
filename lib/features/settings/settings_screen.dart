@@ -44,7 +44,9 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
       next.whenData((settings) {
         _shopNameController.text = settings.shopName;
         _taxRateController.text = settings.taxRate.toString();
-        _selectedCurrency = settings.currency;
+        
+        const allowedCurrencies = ['BDT', 'USD', 'EUR'];
+        _selectedCurrency = allowedCurrencies.contains(settings.currency) ? settings.currency : 'USD';
       });
     });
 
@@ -62,7 +64,9 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
           if (_shopNameController.text.isEmpty) {
             _shopNameController.text = settings.shopName;
             _taxRateController.text = settings.taxRate.toString();
-            _selectedCurrency = settings.currency;
+            
+            const allowedCurrencies = ['BDT', 'USD', 'EUR'];
+            _selectedCurrency = allowedCurrencies.contains(settings.currency) ? settings.currency : 'USD';
           }
 
           return SingleChildScrollView(
