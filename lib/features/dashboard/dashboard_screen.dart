@@ -230,6 +230,13 @@ class DashboardScreen extends ConsumerWidget {
                             color: Colors.purple,
                             onTap: () => context.go('/reports'),
                           ),
+                          const SizedBox(width: 14),
+                          _QuickActionCard(
+                            label: 'সাপ্লায়ার রেজিস্ট্রি',
+                            icon: Icons.local_shipping_rounded,
+                            color: Colors.orange,
+                            onTap: () => context.go('/suppliers'),
+                          ),
                         ],
                       ),
                     ),
