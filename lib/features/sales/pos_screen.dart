@@ -15,6 +15,7 @@ import '../reports/reports_controller.dart';
 import '../settings/settings_controller.dart';
 import 'pos_controller.dart';
 import '../../core/database/firebase_sync_service.dart';
+import '../../core/widgets/product_image_widget.dart';
 
 final posCustomersListProvider = FutureProvider<List<Customer>>((ref) async {
   final db = ref.watch(databaseProvider);
@@ -308,26 +309,13 @@ class _PosScreenState extends ConsumerState<PosScreen>
                                             .withOpacity(0.3),
                                         borderRadius: BorderRadius.circular(8),
                                       ),
-                                      child:
-                                          p.imagePath != null &&
-                                              File(p.imagePath!).existsSync()
-                                          ? ClipRRect(
-                                              borderRadius:
-                                                  BorderRadius.circular(8),
-                                              child: Image.file(
-                                                File(p.imagePath!),
-                                                fit: BoxFit.cover,
-                                                width: double.infinity,
-                                                height: double.infinity,
-                                              ),
-                                            )
-                                          : Icon(
-                                              Icons.shopping_bag_outlined,
-                                              color: theme
-                                                  .colorScheme
-                                                  .onSurfaceVariant
-                                                  .withOpacity(0.4),
-                                            ),
+                                      child: ProductImageWidget(
+                                        imagePath: p.imagePath,
+                                        width: double.infinity,
+                                        height: double.infinity,
+                                        fit: BoxFit.cover,
+                                        borderRadius: 8,
+                                      ),
                                     ),
                                   ),
                                   const SizedBox(height: 6),
