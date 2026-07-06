@@ -200,7 +200,18 @@ final salesHistoryProvider = FutureProvider<List<SaleWithDetails>>((ref) async {
     final customer = customers.where((c) => c.id == sale.customerId).firstOrNull;
     
     final saleItems = items.where((i) => i.saleId == sale.id).map((i) {
-      final product = products.firstWhere((p) => p.id == i.productId);
+      final product = products.where((p) => p.id == i.productId).firstOrNull ??
+          Product(
+            id: i.productId,
+            name: 'অজানা পণ্য (Unknown Product)',
+            buyingPrice: i.cost,
+            sellingPrice: i.price,
+            currentStock: 0,
+            minimumStock: 0,
+            unit: 'pcs',
+            isArchived: true,
+            isFavorite: false,
+          );
       return SaleItemWithProduct(item: i, product: product);
     }).toList();
 
@@ -328,7 +339,7 @@ final topSellingProductsProvider = FutureProvider<List<ProductSaleAggregation>>(
 
   final List<ProductSaleAggregation> list = [];
   for (final entry in quantityMap.entries) {
-    final product = products.firstWhere((p) => p.id == entry.key, orElse: () => null as dynamic);
+    final product = products.where((p) => p.id == entry.key).firstOrNull;
     if (product != null) {
       list.add(ProductSaleAggregation(
         product: product,
@@ -375,7 +386,18 @@ final returnsHistoryProvider = FutureProvider<List<SalesReturnWithDetails>>((ref
   List<SalesReturnWithDetails> results = [];
   for (final ret in returnsList) {
     final itemsMapped = returnItems.where((item) => item.returnId == ret.id).map((item) {
-      final product = products.firstWhere((p) => p.id == item.productId);
+      final product = products.where((p) => p.id == item.productId).firstOrNull ??
+          Product(
+            id: item.productId,
+            name: 'অজানা পণ্য (Unknown Product)',
+            buyingPrice: item.cost,
+            sellingPrice: item.price,
+            currentStock: 0,
+            minimumStock: 0,
+            unit: 'pcs',
+            isArchived: true,
+            isFavorite: false,
+          );
       return SalesReturnItemWithProduct(item: item, product: product);
     }).toList();
 
