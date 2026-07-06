@@ -58,7 +58,12 @@ class PdfGenerator {
                   pw.Text(saleId.substring(0, 8).toUpperCase(), style: pw.TextStyle(font: pw.Font.helvetica(), fontSize: 7)),
                 ],
               ),
-              Text('তারিখ ও সময়: $dateStr', style: regularStyle, banglaStyle: regularStyle),
+              pw.Row(
+                children: [
+                  Text('তারিখ ও সময়: ', style: regularStyle, banglaStyle: regularStyle),
+                  pw.Text(dateStr, style: pw.TextStyle(font: pw.Font.helvetica(), fontSize: 7)),
+                ],
+              ),
               Text('পেমেন্ট পদ্ধতি: $paymentMethod', style: regularStyle, banglaStyle: regularStyle),
               Text('ক্রেতার নাম: $customerName', style: regularStyle, banglaStyle: regularStyle),
               pw.SizedBox(height: 4),
@@ -83,8 +88,29 @@ class PdfGenerator {
                     mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
                     children: [
                       pw.Expanded(flex: 5, child: Text(item['name'] as String, style: regularStyle, banglaStyle: regularStyle)),
-                      pw.Expanded(flex: 2, child: Text(item['qty'] as String, style: regularStyle, banglaStyle: regularStyle, textAlign: pw.TextAlign.center)),
-                      pw.Expanded(flex: 2, child: Text(item['total'] as String, style: regularStyle, banglaStyle: regularStyle, textAlign: pw.TextAlign.right)),
+                      pw.Expanded(
+                        flex: 2,
+                        child: pw.Align(
+                          alignment: pw.Alignment.center,
+                          child: RegExp(r'[\u0980-\u09FF]').hasMatch(item['qty'] as String)
+                              ? Text(
+                                  item['qty'] as String,
+                                  style: regularStyle,
+                                  banglaStyle: regularStyle,
+                                )
+                              : pw.Text(
+                                  item['qty'] as String,
+                                  style: pw.TextStyle(font: pw.Font.helvetica(), fontSize: 7),
+                                ),
+                        ),
+                      ),
+                      pw.Expanded(
+                        flex: 2,
+                        child: pw.Align(
+                          alignment: pw.Alignment.centerRight,
+                          child: _buildItemTotalWidget(item['total'] as String, regularStyle),
+                        ),
+                      ),
                     ],
                   ),
                 );
@@ -96,7 +122,7 @@ class PdfGenerator {
                 mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
                 children: [
                   Text('উপ-মোট বিল:', style: regularStyle, banglaStyle: regularStyle),
-                  Text('TK ${subtotal.toStringAsFixed(2)}', style: regularStyle, banglaStyle: regularStyle),
+                  _currencyText(subtotal, style: regularStyle),
                 ],
               ),
               if (discount > 0) ...[
@@ -105,7 +131,7 @@ class PdfGenerator {
                   mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
                   children: [
                     Text('ডিসকাউন্ট ছাড়:', style: regularStyle, banglaStyle: regularStyle),
-                    Text('-TK ${discount.toStringAsFixed(2)}', style: regularStyle, banglaStyle: regularStyle),
+                    _currencyText(-discount, style: regularStyle),
                   ],
                 ),
               ],
@@ -114,7 +140,7 @@ class PdfGenerator {
                 mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
                 children: [
                   Text('পরিশোধযোগ্য মোট বিল:', style: totalStyle, banglaStyle: totalStyle),
-                  Text('TK ${total.toStringAsFixed(2)}', style: totalStyle, banglaStyle: totalStyle),
+                  _currencyText(total, style: totalStyle, isBold: true),
                 ],
               ),
               if (paidAmount > 0) ...[
@@ -123,14 +149,14 @@ class PdfGenerator {
                   mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
                   children: [
                     Text('পরিশোধিত টাকা:', style: regularStyle, banglaStyle: regularStyle),
-                    Text('TK ${paidAmount.toStringAsFixed(2)}', style: regularStyle, banglaStyle: regularStyle),
+                    _currencyText(paidAmount, style: regularStyle),
                   ],
                 ),
                 pw.Row(
                   mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
                   children: [
                     Text('ফেরতযোগ্য টাকা:', style: regularStyle, banglaStyle: regularStyle),
-                    Text('TK ${(paidAmount - total < 0 ? 0.0 : paidAmount - total).toStringAsFixed(2)}', style: regularStyle, banglaStyle: regularStyle),
+                    _currencyText(paidAmount - total < 0 ? 0.0 : paidAmount - total, style: regularStyle),
                   ],
                 ),
               ],
@@ -144,6 +170,82 @@ class PdfGenerator {
       ),
     );
     return pdf;
+  }
+
+  static pw.Widget _currencyText(double amount, {required pw.TextStyle style, bool isBold = false, pw.TextAlign textAlign = pw.TextAlign.left}) {
+    final banglaFont = BanglaFontManager().defaultFont;
+    final englishFont = pw.Font.helvetica();
+    final isNegative = amount < 0;
+    final absAmount = amount.abs();
+    final valueStr = Formatters.currency(absAmount, symbol: '').trim();
+    
+    return pw.RichText(
+      textAlign: textAlign,
+      text: pw.TextSpan(
+        children: [
+          if (isNegative)
+            pw.TextSpan(
+              text: '-',
+              style: pw.TextStyle(
+                font: englishFont,
+                fontSize: style.fontSize,
+                fontWeight: isBold ? pw.FontWeight.bold : pw.FontWeight.normal,
+                color: style.color,
+              ),
+            ),
+          pw.TextSpan(
+            text: '\$ ', // Kalpurush maps '$' to Taka symbol '৳'
+            style: pw.TextStyle(
+              font: banglaFont,
+              fontSize: style.fontSize,
+              fontWeight: isBold ? pw.FontWeight.bold : pw.FontWeight.normal,
+              color: style.color,
+            ),
+          ),
+          pw.TextSpan(
+            text: valueStr,
+            style: pw.TextStyle(
+              font: englishFont,
+              fontSize: style.fontSize,
+              fontWeight: isBold ? pw.FontWeight.bold : pw.FontWeight.normal,
+              color: style.color,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  static pw.Widget _buildItemTotalWidget(String totalStr, pw.TextStyle style) {
+    final cleanStr = totalStr.replaceAll('৳', '').trim();
+    final banglaFont = BanglaFontManager().defaultFont;
+    final englishFont = pw.Font.helvetica();
+    
+    return pw.RichText(
+      textAlign: pw.TextAlign.right,
+      text: pw.TextSpan(
+        children: [
+          pw.TextSpan(
+            text: '\$ ', // Kalpurush maps '$' to Taka symbol '৳'
+            style: pw.TextStyle(
+              font: banglaFont,
+              fontSize: style.fontSize,
+              fontWeight: style.fontWeight,
+              color: style.color,
+            ),
+          ),
+          pw.TextSpan(
+            text: cleanStr,
+            style: pw.TextStyle(
+              font: englishFont,
+              fontSize: style.fontSize,
+              fontWeight: style.fontWeight,
+              color: style.color,
+            ),
+          ),
+        ],
+      ),
+    );
   }
 
   static Future<pw.Document> _buildProfitLossPdfDocument({
