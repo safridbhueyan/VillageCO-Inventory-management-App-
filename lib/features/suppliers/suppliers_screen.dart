@@ -10,6 +10,7 @@ import '../../core/utils/permission_utils.dart';
 import '../../core/utils/dialog_utils.dart';
 import '../products/products_controller.dart';
 import '../settings/settings_controller.dart';
+import '../../core/widgets/product_image_widget.dart';
 import 'suppliers_controller.dart';
 
 final _searchQueryProvider = StateProvider.autoDispose<String>((ref) => '');
@@ -547,17 +548,13 @@ class _SuppliersScreenState extends ConsumerState<SuppliersScreen> {
                         
                         return ListTile(
                           contentPadding: EdgeInsets.zero,
-                          leading: p.imagePath != null && File(p.imagePath!).existsSync()
-                              ? ClipRRect(
-                                  borderRadius: BorderRadius.circular(8),
-                                  child: Image.file(File(p.imagePath!), width: 44, height: 44, fit: BoxFit.cover),
-                                )
-                              : Container(
-                                  width: 44,
-                                  height: 44,
-                                  decoration: BoxDecoration(color: Colors.grey.shade100, borderRadius: BorderRadius.circular(8)),
-                                  child: const Icon(Icons.image_not_supported_outlined, color: Colors.grey),
-                                ),
+                          leading: ProductImageWidget(
+                            imagePath: p.imagePath,
+                            width: 44,
+                            height: 44,
+                            fit: BoxFit.cover,
+                            borderRadius: 8,
+                          ),
                           title: Text(p.name, style: const TextStyle(fontWeight: FontWeight.bold)),
                           subtitle: Text('${p.brand ?? 'No Brand'} • Unit: ${p.unit}'),
                           trailing: Column(
@@ -1151,31 +1148,33 @@ class _SuppliersScreenState extends ConsumerState<SuppliersScreen> {
       context: context,
       builder: (context) => AlertDialog(
         title: Text(isEdit ? 'Update Supplier Details' : 'Register Supplier Contact'),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            TextField(
-              controller: nameController,
-              decoration: const InputDecoration(labelText: 'Supplier Name *', border: OutlineInputBorder()),
-            ),
-            const SizedBox(height: 12),
-            TextField(
-              controller: phoneController,
-              decoration: const InputDecoration(labelText: 'Phone Number *', border: OutlineInputBorder()),
-              keyboardType: TextInputType.phone,
-            ),
-            const SizedBox(height: 12),
-            TextField(
-              controller: emailController,
-              decoration: const InputDecoration(labelText: 'Email Address', border: OutlineInputBorder()),
-              keyboardType: TextInputType.emailAddress,
-            ),
-            const SizedBox(height: 12),
-            TextField(
-              controller: addressController,
-              decoration: const InputDecoration(labelText: 'Office Address', border: OutlineInputBorder()),
-            ),
-          ],
+        content: SingleChildScrollView(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              TextField(
+                controller: nameController,
+                decoration: const InputDecoration(labelText: 'Supplier Name *', border: OutlineInputBorder()),
+              ),
+              const SizedBox(height: 12),
+              TextField(
+                controller: phoneController,
+                decoration: const InputDecoration(labelText: 'Phone Number *', border: OutlineInputBorder()),
+                keyboardType: TextInputType.phone,
+              ),
+              const SizedBox(height: 12),
+              TextField(
+                controller: emailController,
+                decoration: const InputDecoration(labelText: 'Email Address', border: OutlineInputBorder()),
+                keyboardType: TextInputType.emailAddress,
+              ),
+              const SizedBox(height: 12),
+              TextField(
+                controller: addressController,
+                decoration: const InputDecoration(labelText: 'Office Address', border: OutlineInputBorder()),
+              ),
+            ],
+          ),
         ),
         actions: [
           TextButton(onPressed: () => Navigator.pop(context), child: const Text('Cancel')),
