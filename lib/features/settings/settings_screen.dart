@@ -117,7 +117,12 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                       children: [
                         TextField(
                           controller: _shopNameController,
-                          decoration: const InputDecoration(labelText: 'দোকানের নাম', border: OutlineInputBorder()),
+                          enabled: false,
+                          decoration: const InputDecoration(
+                            labelText: 'দোকানের নাম', 
+                            border: OutlineInputBorder(),
+                            helperText: 'দোকানের নাম শুধুমাত্র সুপার অ্যাডমিন পরিবর্তন করতে পারবেন।',
+                          ),
                         ),
                         const SizedBox(height: 12),
                         Row(
