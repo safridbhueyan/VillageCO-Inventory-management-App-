@@ -11,6 +11,7 @@ import '../../features/products/products_controller.dart';
 import '../../features/reports/reports_controller.dart';
 import '../../features/categories/categories_controller.dart';
 import '../../features/suppliers/suppliers_controller.dart';
+import '../../core/database/firebase_sync_service.dart';
 
 class AdminImpersonationState {
   final bool isImpersonating;
@@ -138,12 +139,66 @@ class AdminRepository {
     required String currency,
     required double taxRate,
   }) async {
-    await _firestore.collection('stores').doc(storeDocId).update({
-      'shopName': newName,
-      'adminPin': newPin,
-      'currency': currency,
-      'taxRate': taxRate,
-    });
+    final docRef = _firestore.collection('stores').doc(storeDocId);
+    final docSnap = await docRef.get();
+    if (!docSnap.exists) return;
+
+    final oldName = docSnap.data()?['shopName'] ?? '';
+    final oldClean = oldName.trim().toLowerCase().replaceAll(RegExp(r'[^a-z0-9]'), '');
+    final newClean = newName.trim().toLowerCase().replaceAll(RegExp(r'[^a-z0-9]'), '');
+
+    if (oldClean != newClean) {
+      final shopID = docSnap.data()?['shopID'] ?? 'vc001';
+      final baseName = newClean.isEmpty ? 'defaultinventory' : newClean;
+      final newStoreDocId = '${baseName}_$shopID';
+
+      String targetStoreDocId = newStoreDocId;
+      String targetShopID = shopID;
+
+      // Check collision
+      final checkSnap = await _firestore.collection('stores').doc(newStoreDocId).get();
+      if (checkSnap.exists) {
+        final querySnapshot = await _firestore.collection('stores').get();
+        int maxNum = 0;
+        for (final doc in querySnapshot.docs) {
+          final id = doc.id;
+          final match = RegExp(r'_vc(\d+)$').firstMatch(id);
+          if (match != null) {
+            final numStr = match.group(1);
+            if (numStr != null) {
+              final num = int.tryParse(numStr);
+              if (num != null && num > maxNum) {
+                maxNum = num;
+              }
+            }
+          }
+        }
+        final nextNum = maxNum + 1;
+        targetShopID = 'vc${nextNum.toString().padLeft(3, '0')}';
+        targetStoreDocId = '${baseName}_$targetShopID';
+      }
+
+      // Copy and delete old document/subcollections
+      final syncService = _ref.read(firebaseSyncServiceProvider);
+      await syncService.moveFirestoreStore(storeDocId, targetStoreDocId);
+
+      // Update the new document fields to make sure the edited name/settings are applied
+      await _firestore.collection('stores').doc(targetStoreDocId).update({
+        'shopName': newName,
+        'adminPin': newPin,
+        'currency': currency,
+        'taxRate': taxRate,
+        'shopID': targetShopID,
+      });
+    } else {
+      // Just update existing document
+      await docRef.update({
+        'shopName': newName,
+        'adminPin': newPin,
+        'currency': currency,
+        'taxRate': taxRate,
+      });
+    }
   }
 
   /// Delete shop from Firestore (including all subcollections)
@@ -215,6 +270,11 @@ class AdminRepository {
     if (!storeDoc.exists) return;
     
     final storeData = storeDoc.data()!;
+    final shopID = storeData['shopID'] ?? 'vc001';
+
+    // Update the local sync configuration file and memory cache
+    final syncService = _ref.read(firebaseSyncServiceProvider);
+    await syncService.updateStoreConfig(storeDocId: storeDocId, shopID: shopID);
 
     final categoriesSnap = await docRef.collection('categories').get();
     final suppliersSnap = await docRef.collection('suppliers').get();
@@ -472,6 +532,11 @@ class AdminRepository {
       await _db.delete(_db.damagedItems).go();
       await _db.delete(_db.appSettingsTable).go();
     });
+
+    // Delete the local config file and clear memory cache
+    final syncService = _ref.read(firebaseSyncServiceProvider);
+    await syncService.deleteStoreConfig();
+
     _invalidateAllProviders();
   }
 
