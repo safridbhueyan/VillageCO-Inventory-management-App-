@@ -2,6 +2,7 @@ import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:image_cropper/image_cropper.dart';
+import '../widgets/in_app_camera_screen.dart';
 
 class ImageUtils {
   /// Shows a styled bottom sheet asking the user to pick Camera or Gallery.
@@ -11,18 +12,31 @@ class ImageUtils {
     final ImageSource? source = await _showSourcePicker(context);
     if (source == null) return null;
 
-    final XFile? picked = await ImagePicker().pickImage(
-      source: source,
-      imageQuality: 90,
-      maxWidth: 1200,
-      maxHeight: 1200,
-    );
-    if (picked == null) return null;
+    String? imagePath;
+    if (source == ImageSource.camera) {
+      final File? capturedFile = await Navigator.of(context, rootNavigator: true).push<File?>(
+        MaterialPageRoute(
+          builder: (context) => const InAppCameraScreen(),
+          fullscreenDialog: true,
+        ),
+      );
+      if (capturedFile == null) return null;
+      imagePath = capturedFile.path;
+    } else {
+      final XFile? picked = await ImagePicker().pickImage(
+        source: ImageSource.gallery,
+        imageQuality: 90,
+        maxWidth: 1200,
+        maxHeight: 1200,
+      );
+      if (picked == null) return null;
+      imagePath = picked.path;
+    }
 
     // Note: we intentionally do NOT gate on context.mounted here because
     // the context comes from inside a showDialog/StatefulBuilder which
     // can report mounted=false even while the dialog is still on screen.
-    final CroppedFile? cropped = await _cropImage(context, picked.path);
+    final CroppedFile? cropped = await _cropImage(context, imagePath);
     if (cropped == null) return null;
 
     return File(cropped.path);
