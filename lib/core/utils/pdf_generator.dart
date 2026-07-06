@@ -269,7 +269,13 @@ class PdfGenerator {
                   children: [
                     Text('ভিলেজকো স্টোর', style: pw.TextStyle(fontWeight: pw.FontWeight.bold, fontSize: 20)),
                     Text('লাভ-ক্ষতি বিবরণী (Profit & Loss Statement)', style: const pw.TextStyle(fontSize: 12, color: PdfColors.grey700)),
-                    Text('তারিখ ও সময়: ${Formatters.dateTime(DateTime.now())}', style: const pw.TextStyle(fontSize: 9, color: PdfColors.grey500)),
+                    pw.Row(
+                      mainAxisAlignment: pw.MainAxisAlignment.center,
+                      children: [
+                        Text('তারিখ ও সময়: ', style: const pw.TextStyle(fontSize: 9, color: PdfColors.grey500)),
+                        pw.Text(Formatters.dateTime(DateTime.now()), style: pw.TextStyle(font: pw.Font.helvetica(), fontSize: 9, color: PdfColors.grey500)),
+                      ],
+                    ),
                     pw.SizedBox(height: 12),
                     pw.Divider(thickness: 1, color: PdfColors.black),
                   ],
@@ -305,7 +311,10 @@ class PdfGenerator {
                       ),
                       pw.Padding(
                         padding: const pw.EdgeInsets.all(10),
-                        child: Text('TK ${todaySales.toStringAsFixed(2)}', style: const pw.TextStyle(fontSize: 10), textAlign: pw.TextAlign.right),
+                        child: pw.Align(
+                          alignment: pw.Alignment.centerRight,
+                          child: _currencyText(todaySales, style: const pw.TextStyle(fontSize: 10), textAlign: pw.TextAlign.right),
+                        ),
                       ),
                     ],
                   ),
@@ -317,7 +326,10 @@ class PdfGenerator {
                       ),
                       pw.Padding(
                         padding: const pw.EdgeInsets.all(10),
-                        child: Text('TK ${inventoryValue.toStringAsFixed(2)}', style: const pw.TextStyle(fontSize: 10), textAlign: pw.TextAlign.right),
+                        child: pw.Align(
+                          alignment: pw.Alignment.centerRight,
+                          child: _currencyText(inventoryValue, style: const pw.TextStyle(fontSize: 10), textAlign: pw.TextAlign.right),
+                        ),
                       ),
                     ],
                   ),
@@ -329,7 +341,10 @@ class PdfGenerator {
                       ),
                       pw.Padding(
                         padding: const pw.EdgeInsets.all(10),
-                        child: Text('-TK ${totalExpenses.toStringAsFixed(2)}', style: const pw.TextStyle(fontSize: 10), textAlign: pw.TextAlign.right),
+                        child: pw.Align(
+                          alignment: pw.Alignment.centerRight,
+                          child: _currencyText(-totalExpenses, style: const pw.TextStyle(fontSize: 10), textAlign: pw.TextAlign.right),
+                        ),
                       ),
                     ],
                   ),
@@ -342,7 +357,10 @@ class PdfGenerator {
                       ),
                       pw.Padding(
                         padding: const pw.EdgeInsets.all(10),
-                        child: Text('TK ${netProfit.toStringAsFixed(2)}', style: pw.TextStyle(fontWeight: pw.FontWeight.bold, fontSize: 11), textAlign: pw.TextAlign.right),
+                        child: pw.Align(
+                          alignment: pw.Alignment.centerRight,
+                          child: _currencyText(netProfit, style: pw.TextStyle(fontWeight: pw.FontWeight.bold, fontSize: 11), isBold: true, textAlign: pw.TextAlign.right),
+                        ),
                       ),
                     ],
                   ),
@@ -527,7 +545,15 @@ class PdfGenerator {
                   pw.SizedBox(height: 4),
                   Text('দৈনিক লেনদেন রিপোর্ট (Daily Transaction Report)', style: subTitleStyle, banglaStyle: subTitleStyle),
                   pw.SizedBox(height: 4),
-                  Text('তারিখ: ${Formatters.date(DateTime.now())} • সময়: ${Formatters.dateTime(DateTime.now()).split(" ").last}', style: regularStyle, banglaStyle: regularStyle),
+                  pw.Row(
+                    mainAxisAlignment: pw.MainAxisAlignment.center,
+                    children: [
+                      Text('তারিখ: ', style: regularStyle, banglaStyle: regularStyle),
+                      pw.Text(Formatters.date(DateTime.now()), style: pw.TextStyle(font: pw.Font.helvetica(), fontSize: 10)),
+                      Text(' • সময়: ', style: regularStyle, banglaStyle: regularStyle),
+                      pw.Text(Formatters.dateTime(DateTime.now()).split(" ").last, style: pw.TextStyle(font: pw.Font.helvetica(), fontSize: 10)),
+                    ],
+                  ),
                   pw.SizedBox(height: 8),
                   pw.Divider(thickness: 1, color: PdfColors.black),
                 ],
@@ -562,7 +588,10 @@ class PdfGenerator {
                     ),
                     pw.Padding(
                       padding: const pw.EdgeInsets.all(8),
-                      child: Text('TK ${todaySales.toStringAsFixed(2)}', style: regularStyle, banglaStyle: regularStyle, textAlign: pw.TextAlign.right),
+                      child: pw.Align(
+                        alignment: pw.Alignment.centerRight,
+                        child: _currencyText(todaySales, style: regularStyle, textAlign: pw.TextAlign.right),
+                      ),
                     ),
                   ],
                 ),
@@ -574,7 +603,10 @@ class PdfGenerator {
                     ),
                     pw.Padding(
                       padding: const pw.EdgeInsets.all(8),
-                      child: Text('-TK ${totalExpenses.toStringAsFixed(2)}', style: regularStyle, banglaStyle: regularStyle, textAlign: pw.TextAlign.right),
+                      child: pw.Align(
+                        alignment: pw.Alignment.centerRight,
+                        child: _currencyText(-totalExpenses, style: regularStyle, textAlign: pw.TextAlign.right),
+                      ),
                     ),
                   ],
                 ),
@@ -589,7 +621,10 @@ class PdfGenerator {
                     ),
                     pw.Padding(
                       padding: const pw.EdgeInsets.all(8),
-                      child: Text('TK ${netProfit.toStringAsFixed(2)}', style: headerStyle, banglaStyle: headerStyle, textAlign: pw.TextAlign.right),
+                      child: pw.Align(
+                        alignment: pw.Alignment.centerRight,
+                        child: _currencyText(netProfit, style: headerStyle, isBold: true, textAlign: pw.TextAlign.right),
+                      ),
                     ),
                   ],
                 ),
@@ -601,7 +636,24 @@ class PdfGenerator {
                     ),
                     pw.Padding(
                       padding: const pw.EdgeInsets.all(8),
-                      child: Text('$totalTransactionsCount টি', style: regularStyle, banglaStyle: regularStyle, textAlign: pw.TextAlign.right),
+                      child: pw.Align(
+                        alignment: pw.Alignment.centerRight,
+                        child: pw.RichText(
+                          textAlign: pw.TextAlign.right,
+                          text: pw.TextSpan(
+                            style: regularStyle,
+                            children: [
+                              pw.TextSpan(
+                                text: '$totalTransactionsCount',
+                                style: pw.TextStyle(font: pw.Font.helvetica(), fontSize: 10, color: regularStyle.color),
+                              ),
+                              pw.TextSpan(
+                                text: ' টি',
+                              ),
+                            ],
+                          ),
+                        ),
+                      ),
                     ),
                   ],
                 ),
@@ -662,7 +714,7 @@ class PdfGenerator {
                         ),
                         pw.Padding(
                           padding: const pw.EdgeInsets.all(6),
-                          child: Text(sale['time'] as String, style: regularStyle, banglaStyle: regularStyle),
+                          child: pw.Text(sale['time'] as String, style: pw.TextStyle(font: pw.Font.helvetica(), fontSize: 10)),
                         ),
                         pw.Padding(
                           padding: const pw.EdgeInsets.all(6),
@@ -674,7 +726,10 @@ class PdfGenerator {
                         ),
                         pw.Padding(
                           padding: const pw.EdgeInsets.all(6),
-                          child: Text('TK ${sale['amount']}', style: regularStyle, banglaStyle: regularStyle, textAlign: pw.TextAlign.right),
+                          child: pw.Align(
+                            alignment: pw.Alignment.centerRight,
+                            child: _buildItemTotalWidget(sale['amount'] as String, regularStyle),
+                          ),
                         ),
                       ],
                     );
@@ -718,11 +773,19 @@ class PdfGenerator {
       await file.writeAsBytes(pdfBytes);
       return file.path;
     } catch (e) {
-      final tempDir = await getTemporaryDirectory();
-      final tempFile = File('${tempDir.path}/daily_closing_report_${DateTime.now().year}-${DateTime.now().month}-${DateTime.now().day}_${DateTime.now().millisecondsSinceEpoch}.pdf');
-      await tempFile.writeAsBytes(pdfBytes);
-      await Share.shareXFiles([XFile(tempFile.path)], text: 'দৈনিক ক্লোজিং রিপোর্ট');
-      return tempFile.path;
+      debugPrint('Saving PDF to downloads folder failed: $e. Trying fallback directory.');
+      try {
+        final fallbackDir = await getApplicationDocumentsDirectory();
+        final fallbackFile = File('${fallbackDir.path}/daily_closing_report_${DateTime.now().year}-${DateTime.now().month}-${DateTime.now().day}_${DateTime.now().millisecondsSinceEpoch}.pdf');
+        await fallbackFile.writeAsBytes(pdfBytes);
+        return fallbackFile.path;
+      } catch (fallbackError) {
+        debugPrint('Saving PDF to fallback folder failed: $fallbackError');
+        final tempDir = await getTemporaryDirectory();
+        final tempFile = File('${tempDir.path}/daily_closing_report_${DateTime.now().year}-${DateTime.now().month}-${DateTime.now().day}_${DateTime.now().millisecondsSinceEpoch}.pdf');
+        await tempFile.writeAsBytes(pdfBytes);
+        return tempFile.path;
+      }
     }
   }
 
@@ -776,7 +839,15 @@ class PdfGenerator {
                   pw.SizedBox(height: 4),
                   Text('সরবরাহকারী স্টক ও লেনদেন রিপোর্ট ', style: subTitleStyle, banglaStyle: subTitleStyle),
                   pw.SizedBox(height: 4),
-                  Text('তারিখ: ${Formatters.date(DateTime.now())} • সময়: ${Formatters.dateTime(DateTime.now()).split(" ").last}', style: regularStyle, banglaStyle: regularStyle),
+                  pw.Row(
+                    mainAxisAlignment: pw.MainAxisAlignment.center,
+                    children: [
+                      Text('তারিখ: ', style: regularStyle, banglaStyle: regularStyle),
+                      pw.Text(Formatters.date(DateTime.now()), style: pw.TextStyle(font: pw.Font.helvetica(), fontSize: 8)),
+                      Text(' • সময়: ', style: regularStyle, banglaStyle: regularStyle),
+                      pw.Text(Formatters.dateTime(DateTime.now()).split(" ").last, style: pw.TextStyle(font: pw.Font.helvetica(), fontSize: 8)),
+                    ],
+                  ),
                   pw.SizedBox(height: 8),
                   pw.Divider(thickness: 1, color: PdfColors.black),
                 ],
@@ -818,7 +889,25 @@ class PdfGenerator {
                   crossAxisAlignment: pw.CrossAxisAlignment.start,
                   children: [
                     Text('সরবরাহকারী: ${sup.name}', style: subTitleStyle, banglaStyle: subTitleStyle),
-                    Text('মোবাইল: ${sup.phone}${sup.email != null ? " | ইমেইল: " + sup.email! : ""}', style: regularStyle, banglaStyle: regularStyle),
+                    pw.RichText(
+                      text: pw.TextSpan(
+                        style: regularStyle,
+                        children: [
+                          pw.TextSpan(text: 'মোবাইল: '),
+                          pw.TextSpan(
+                            text: sup.phone,
+                            style: pw.TextStyle(font: pw.Font.helvetica(), fontSize: 8, color: regularStyle.color),
+                          ),
+                          if (sup.email != null) ...[
+                            pw.TextSpan(text: ' | ইমেইল: '),
+                            pw.TextSpan(
+                              text: sup.email!,
+                              style: pw.TextStyle(font: pw.Font.helvetica(), fontSize: 8, color: regularStyle.color),
+                            ),
+                          ],
+                        ],
+                      ),
+                    ),
                     if (sup.address != null) Text('ঠিকানা: ${sup.address}', style: regularStyle, banglaStyle: regularStyle),
                   ],
                 ),
@@ -844,13 +933,67 @@ class PdfGenerator {
                   ),
                   pw.TableRow(
                     children: [
-                      pw.Padding(padding: const pw.EdgeInsets.all(6), child: Text(Formatters.currency(totalCost), style: regularStyle, banglaStyle: regularStyle, textAlign: pw.TextAlign.center)),
-                      pw.Padding(padding: const pw.EdgeInsets.all(6), child: Text(Formatters.currency(totalPaid), style: regularStyle, banglaStyle: regularStyle, textAlign: pw.TextAlign.center)),
-                      pw.Padding(padding: const pw.EdgeInsets.all(6), child: Text(Formatters.currency(totalDue), style: boldStyle, banglaStyle: boldStyle, textAlign: pw.TextAlign.center)),
-                      pw.Padding(padding: const pw.EdgeInsets.all(6), child: Text(Formatters.number(quantityOrdered), style: regularStyle, banglaStyle: regularStyle, textAlign: pw.TextAlign.center)),
-                      pw.Padding(padding: const pw.EdgeInsets.all(6), child: Text(Formatters.number(quantityReceived), style: regularStyle, banglaStyle: regularStyle, textAlign: pw.TextAlign.center)),
-                      pw.Padding(padding: const pw.EdgeInsets.all(6), child: Text(Formatters.number(quantityPending > 0 ? quantityPending : 0), style: regularStyle, banglaStyle: regularStyle, textAlign: pw.TextAlign.center)),
-                      pw.Padding(padding: const pw.EdgeInsets.all(6), child: Text(Formatters.number(totalDamages), style: regularStyle, banglaStyle: regularStyle, textAlign: pw.TextAlign.center)),
+                      pw.Padding(
+                        padding: const pw.EdgeInsets.all(6),
+                        child: pw.Align(
+                          alignment: pw.Alignment.center,
+                          child: _buildItemTotalWidget(Formatters.currency(totalCost), regularStyle),
+                        ),
+                      ),
+                      pw.Padding(
+                        padding: const pw.EdgeInsets.all(6),
+                        child: pw.Align(
+                          alignment: pw.Alignment.center,
+                          child: _buildItemTotalWidget(Formatters.currency(totalPaid), regularStyle),
+                        ),
+                      ),
+                      pw.Padding(
+                        padding: const pw.EdgeInsets.all(6),
+                        child: pw.Align(
+                          alignment: pw.Alignment.center,
+                          child: _buildItemTotalWidget(Formatters.currency(totalDue), boldStyle),
+                        ),
+                      ),
+                      pw.Padding(
+                        padding: const pw.EdgeInsets.all(6),
+                        child: pw.Align(
+                          alignment: pw.Alignment.center,
+                          child: pw.Text(
+                            Formatters.number(quantityOrdered),
+                            style: pw.TextStyle(font: pw.Font.helvetica(), fontSize: 8),
+                          ),
+                        ),
+                      ),
+                      pw.Padding(
+                        padding: const pw.EdgeInsets.all(6),
+                        child: pw.Align(
+                          alignment: pw.Alignment.center,
+                          child: pw.Text(
+                            Formatters.number(quantityReceived),
+                            style: pw.TextStyle(font: pw.Font.helvetica(), fontSize: 8),
+                          ),
+                        ),
+                      ),
+                      pw.Padding(
+                        padding: const pw.EdgeInsets.all(6),
+                        child: pw.Align(
+                          alignment: pw.Alignment.center,
+                          child: pw.Text(
+                            Formatters.number(quantityPending > 0 ? quantityPending : 0),
+                            style: pw.TextStyle(font: pw.Font.helvetica(), fontSize: 8),
+                          ),
+                        ),
+                      ),
+                      pw.Padding(
+                        padding: const pw.EdgeInsets.all(6),
+                        child: pw.Align(
+                          alignment: pw.Alignment.center,
+                          child: pw.Text(
+                            Formatters.number(totalDamages),
+                            style: pw.TextStyle(font: pw.Font.helvetica(), fontSize: 8),
+                          ),
+                        ),
+                      ),
                     ],
                   ),
                 ],
@@ -884,14 +1027,44 @@ class PdfGenerator {
                           pw.Padding(padding: const pw.EdgeInsets.all(5), child: Text(p.name, style: regularStyle, banglaStyle: regularStyle)),
                           pw.Padding(
                             padding: const pw.EdgeInsets.all(5),
-                            child: Text(
-                              '${Formatters.number(p.currentStock)} ${isLow ? "(নিম্ন স্টক)" : ""}',
-                              style: isLow ? pw.TextStyle(font: defaultFont, fontSize: 8, color: PdfColors.red, fontWeight: pw.FontWeight.bold) : regularStyle,
-                              banglaStyle: isLow ? pw.TextStyle(font: defaultFont, fontSize: 8, color: PdfColors.red, fontWeight: pw.FontWeight.bold) : regularStyle,
-                              textAlign: pw.TextAlign.right,
+                            child: pw.Align(
+                              alignment: pw.Alignment.centerRight,
+                              child: pw.RichText(
+                                textAlign: pw.TextAlign.right,
+                                text: pw.TextSpan(
+                                  style: regularStyle,
+                                  children: [
+                                    pw.TextSpan(
+                                      text: Formatters.number(p.currentStock),
+                                      style: pw.TextStyle(
+                                        font: pw.Font.helvetica(),
+                                        fontSize: 8,
+                                        fontWeight: isLow ? pw.FontWeight.bold : pw.FontWeight.normal,
+                                        color: isLow ? PdfColors.red : regularStyle.color,
+                                      ),
+                                    ),
+                                    if (isLow)
+                                      pw.TextSpan(
+                                        text: ' (নিম্ন স্টক)',
+                                        style: pw.TextStyle(
+                                          font: defaultFont,
+                                          fontSize: 8,
+                                          fontWeight: pw.FontWeight.bold,
+                                          color: PdfColors.red,
+                                        ),
+                                      ),
+                                  ],
+                                ),
+                              ),
                             ),
                           ),
-                          pw.Padding(padding: const pw.EdgeInsets.all(5), child: Text(Formatters.currency(p.buyingPrice), style: regularStyle, banglaStyle: regularStyle, textAlign: pw.TextAlign.right)),
+                          pw.Padding(
+                            padding: const pw.EdgeInsets.all(5),
+                            child: pw.Align(
+                              alignment: pw.Alignment.centerRight,
+                              child: _buildItemTotalWidget(Formatters.currency(p.buyingPrice), regularStyle),
+                            ),
+                          ),
                         ],
                       );
                     }),
