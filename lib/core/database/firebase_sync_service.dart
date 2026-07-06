@@ -29,7 +29,7 @@ class FirebaseSyncService {
     final cleanName = shopName.trim().toLowerCase().replaceAll(RegExp(r'[^a-z0-9]'), '');
     final baseName = cleanName.isEmpty ? 'defaultinventory' : cleanName;
 
-    if (_cachedStoreDocId.isNotEmpty && _cachedStoreDocId.startsWith(baseName)) {
+    if (_cachedStoreDocId.isNotEmpty) {
       return {
         'storeDocId': _cachedStoreDocId,
         'shopID': _cachedShopID,
@@ -37,11 +37,35 @@ class FirebaseSyncService {
     }
 
     final directory = await getApplicationDocumentsDirectory();
-    final configFile = File(p.join(directory.path, 'shop_config_${baseName}.json'));
+    final configFile = File(p.join(directory.path, 'shop_config.json'));
+    final legacyConfigFile = File(p.join(directory.path, 'shop_config_${baseName}.json'));
+    File? activeConfigFile;
 
     if (await configFile.exists()) {
+      activeConfigFile = configFile;
+    } else if (await legacyConfigFile.exists()) {
+      activeConfigFile = legacyConfigFile;
       try {
-        final data = jsonDecode(await configFile.readAsString());
+        await legacyConfigFile.copy(configFile.path);
+        await legacyConfigFile.delete();
+      } catch (_) {}
+    } else {
+      try {
+        final list = directory.listSync();
+        for (final entity in list) {
+          if (entity is File && p.basename(entity.path).startsWith('shop_config_') && entity.path.endsWith('.json')) {
+            activeConfigFile = entity;
+            await entity.copy(configFile.path);
+            await entity.delete();
+            break;
+          }
+        }
+      } catch (_) {}
+    }
+
+    if (activeConfigFile != null && await activeConfigFile.exists()) {
+      try {
+        final data = jsonDecode(await activeConfigFile.readAsString());
         _cachedStoreDocId = data['storeDocId'] ?? '';
         _cachedShopID = data['shopID'] ?? '';
         if (_cachedStoreDocId.isNotEmpty) {
@@ -66,20 +90,21 @@ class FirebaseSyncService {
       int maxNum = 0;
       for (final doc in querySnapshot.docs) {
         final id = doc.id;
-        if (id.startsWith('${baseName}_vc')) {
-          final suffix = id.substring('${baseName}_vc'.length);
-          final num = int.tryParse(suffix);
-          if (num != null && num > maxNum) {
-            maxNum = num;
+        final match = RegExp(r'_vc(\d+)$').firstMatch(id);
+        if (match != null) {
+          final numStr = match.group(1);
+          if (numStr != null) {
+            final num = int.tryParse(numStr);
+            if (num != null && num > maxNum) {
+              maxNum = num;
+            }
           }
         }
       }
       
-      if (maxNum > 0) {
-        final nextNum = maxNum + 1;
-        finalShopID = 'vc${nextNum.toString().padLeft(3, '0')}';
-        finalStoreDocId = '${baseName}_$finalShopID';
-      }
+      final nextNum = maxNum + 1;
+      finalShopID = 'vc${nextNum.toString().padLeft(3, '0')}';
+      finalStoreDocId = '${baseName}_$finalShopID';
     } catch (e) {
       debugPrint('Error querying Firestore for unique shop ID suffix (using default): $e');
     }
@@ -106,11 +131,159 @@ class FirebaseSyncService {
     _cachedShopID = '';
   }
 
+  /// Manually update and write the store config
+  Future<void> updateStoreConfig({required String storeDocId, required String shopID}) async {
+    _cachedStoreDocId = storeDocId;
+    _cachedShopID = shopID;
+    try {
+      final directory = await getApplicationDocumentsDirectory();
+      final configFile = File(p.join(directory.path, 'shop_config.json'));
+      await configFile.writeAsString(jsonEncode({
+        'storeDocId': storeDocId,
+        'shopID': shopID,
+      }));
+    } catch (e) {
+      debugPrint('Error writing store config manually: $e');
+    }
+  }
+
+  /// Manually delete the store config file and clear memory cache
+  Future<void> deleteStoreConfig() async {
+    _cachedStoreDocId = '';
+    _cachedShopID = '';
+    try {
+      final directory = await getApplicationDocumentsDirectory();
+      final configFile = File(p.join(directory.path, 'shop_config.json'));
+      if (await configFile.exists()) {
+        await configFile.delete();
+      }
+    } catch (e) {
+      debugPrint('Error deleting store config: $e');
+    }
+  }
+
+  /// Moves/renames a Firestore store document and all its subcollections.
+  Future<void> moveFirestoreStore(String oldDocId, String newDocId) async {
+    final oldDocRef = _firestore.collection('stores').doc(oldDocId);
+    final newDocRef = _firestore.collection('stores').doc(newDocId);
+
+    final docSnap = await oldDocRef.get();
+    if (!docSnap.exists) return;
+
+    // 1. Copy the main document fields
+    await newDocRef.set(docSnap.data()!);
+
+    // 2. Copy and delete subcollections in parallel
+    final subcollections = [
+      'categories',
+      'suppliers',
+      'customers',
+      'products',
+      'sales',
+      'expenses',
+      'stockHistory',
+      'supplierOrders',
+      'damagedItems',
+      'inventoryDetails',
+      'reports'
+    ];
+
+    final List<Future> subTasks = [];
+    for (final sub in subcollections) {
+      subTasks.add(() async {
+        final snap = await oldDocRef.collection(sub).get();
+        final List<Future> docTasks = [];
+        for (final doc in snap.docs) {
+          docTasks.add(newDocRef.collection(sub).doc(doc.id).set(doc.data()));
+          docTasks.add(doc.reference.delete());
+        }
+        await Future.wait(docTasks);
+      }());
+    }
+    await Future.wait(subTasks);
+
+    // 3. Finally delete the old main document
+    await oldDocRef.delete();
+  }
+
   /// Syncs all database data, including the new unified inventoryDetails field
   Future<void> syncAllData(AppSettingsTableData settings) async {
     final docInfo = await getStoreDocIdAndShopID(settings.shopName);
-    final storeDocId = docInfo['storeDocId']!;
-    final shopID = docInfo['shopID']!;
+    var storeDocId = docInfo['storeDocId']!;
+    var shopID = docInfo['shopID']!;
+
+    // Check if the shop name has changed compared to the name prefix in the document ID
+    final cleanNewName = settings.shopName.trim().toLowerCase().replaceAll(RegExp(r'[^a-z0-9]'), '');
+    final newBaseName = cleanNewName.isEmpty ? 'defaultinventory' : cleanNewName;
+
+    String oldBaseName = '';
+    String oldShopID = 'vc001';
+    final parts = storeDocId.split('_');
+    if (parts.length >= 2) {
+      oldShopID = parts.last;
+      oldBaseName = parts.sublist(0, parts.length - 1).join('_');
+    }
+
+    if (oldBaseName.isNotEmpty && oldBaseName != newBaseName) {
+      final newStoreDocId = '${newBaseName}_$oldShopID';
+      
+      String targetStoreDocId = newStoreDocId;
+      String targetShopID = oldShopID;
+
+      // Check collision with timeout to prevent hanging when offline
+      bool exists = false;
+      try {
+        final checkSnap = await _firestore
+            .collection('stores')
+            .doc(newStoreDocId)
+            .get()
+            .timeout(const Duration(seconds: 3));
+        exists = checkSnap.exists;
+      } catch (_) {
+        // Safe fallback if offline/error
+      }
+
+      if (exists) {
+        try {
+          final querySnapshot = await _firestore
+              .collection('stores')
+              .get()
+              .timeout(const Duration(seconds: 3));
+          int maxNum = 0;
+          for (final doc in querySnapshot.docs) {
+            final id = doc.id;
+            final match = RegExp(r'_vc(\d+)$').firstMatch(id);
+            if (match != null) {
+              final numStr = match.group(1);
+              if (numStr != null) {
+                final num = int.tryParse(numStr);
+                if (num != null && num > maxNum) {
+                  maxNum = num;
+                }
+              }
+            }
+          }
+          final nextNum = maxNum + 1;
+          targetShopID = 'vc${nextNum.toString().padLeft(3, '0')}';
+          targetStoreDocId = '${newBaseName}_$targetShopID';
+        } catch (_) {
+          // Safe fallback
+        }
+      }
+
+      // Rename in Firestore (with timeout to prevent hanging)
+      try {
+        await moveFirestoreStore(storeDocId, targetStoreDocId).timeout(const Duration(seconds: 8));
+        
+        // Update local configuration file and cached fields
+        await updateStoreConfig(storeDocId: targetStoreDocId, shopID: targetShopID);
+        
+        storeDocId = targetStoreDocId;
+        shopID = targetShopID;
+      } catch (e) {
+        debugPrint('Firestore store rename failed or timed out: $e. Syncing to old document to prevent block.');
+      }
+    }
     
     final storeRef = _firestore.collection('stores').doc(storeDocId);
 
