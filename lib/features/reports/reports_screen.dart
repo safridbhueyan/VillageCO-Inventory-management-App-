@@ -1,21 +1,17 @@
+// ignore_for_file: unused_field, unused_element
+
 import 'dart:io';
-import 'dart:ui' as ui;
 import 'package:flutter/material.dart';
 import 'package:flutter/rendering.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:share_plus/share_plus.dart';
 import '../../core/utils/pdf_generator.dart';
 import '../../core/utils/dialog_utils.dart';
 import '../../core/utils/permission_utils.dart';
-import 'package:path_provider/path_provider.dart';
 import 'package:path/path.dart' as p;
-import 'package:fl_chart/fl_chart.dart';
 
 import '../../core/database/database.dart';
 import '../../core/utils/formatters.dart';
 import 'reports_controller.dart';
-import '../products/products_controller.dart';
-import '../sales/pos_controller.dart';
 import '../settings/settings_controller.dart';
 import 'return_dialog.dart';
 
@@ -72,20 +68,23 @@ class _ReportsScreenState extends ConsumerState<ReportsScreen>
               icon: Icon(Icons.auto_graph_rounded),
               text: 'বিক্রিত পণ্য বিশ্লেষণ',
             ),
-            Tab(icon: Icon(Icons.keyboard_return_rounded), text: 'পণ্য ফেরত/রিটার্ন'),
+            Tab(
+              icon: Icon(Icons.keyboard_return_rounded),
+              text: 'পণ্য ফেরত/রিটার্ন',
+            ),
           ],
         ),
       ),
       body: TabBarView(
-          controller: _tabController,
-          children: [
-            _buildFinancialsTab(context, metricsAsync),
-            _buildSalesLogTab(context, salesHistoryAsync),
-            _buildExpensesTab(context, expensesAsync),
-            _buildProductInsightsTab(context, topSellingAsync),
-            _buildReturnsLogTab(context, ref.watch(returnsHistoryProvider)),
-          ],
-        ),
+        controller: _tabController,
+        children: [
+          _buildFinancialsTab(context, metricsAsync),
+          _buildSalesLogTab(context, salesHistoryAsync),
+          _buildExpensesTab(context, expensesAsync),
+          _buildProductInsightsTab(context, topSellingAsync),
+          _buildReturnsLogTab(context, ref.watch(returnsHistoryProvider)),
+        ],
+      ),
     );
   }
 
@@ -704,175 +703,175 @@ class _ReportsScreenState extends ConsumerState<ReportsScreen>
               maxHeight: MediaQuery.of(context).size.height * 0.55,
             ),
             child: SingleChildScrollView(
-            child: RepaintBoundary(
-              key: _historyReceiptKey,
-              child: Container(
-                color: Colors.white,
-                padding: const EdgeInsets.all(24.0),
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    const Text(
-                      'ভিলেজকো স্টোর',
-                      style: TextStyle(
-                        fontWeight: FontWeight.bold,
-                        fontSize: 18,
-                        color: Colors.black,
+              child: RepaintBoundary(
+                key: _historyReceiptKey,
+                child: Container(
+                  color: Colors.white,
+                  padding: const EdgeInsets.all(24.0),
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      const Text(
+                        'ভিলেজকো স্টোর',
+                        style: TextStyle(
+                          fontWeight: FontWeight.bold,
+                          fontSize: 18,
+                          color: Colors.black,
+                        ),
                       ),
-                    ),
-                    const Text(
-                      'বিক্রির রশিদের কপি',
-                      style: TextStyle(fontSize: 11, color: Colors.grey),
-                    ),
-                    const SizedBox(height: 12),
-                    const Divider(color: Colors.black38, thickness: 1),
-                    _buildReceiptMetaRow(
-                      'রশিদ নং',
-                      sale.id.substring(0, 8).toUpperCase(),
-                    ),
-                    _buildReceiptMetaRow(
-                      'তারিখ ও সময়',
-                      Formatters.dateTime(sale.date),
-                    ),
-                    _buildReceiptMetaRow(
-                      'পেমেন্ট পদ্ধতি',
-                      sale.paymentMethod == 'Cash'
-                          ? 'ক্যাশ'
-                          : (sale.paymentMethod == 'Card'
-                                ? 'কার্ড'
-                                : 'মোবাইল ব্যাংকিং'),
-                    ),
-                    _buildReceiptMetaRow(
-                      'ক্রেতা',
-                      customer?.name ?? 'সাধারণ কাস্টমার',
-                    ),
-                    const Divider(color: Colors.black38, thickness: 1),
-                    const Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                      children: [
-                        Expanded(
-                          flex: 3,
-                          child: Text(
-                            'পণ্যের বিবরণ',
+                      const Text(
+                        'বিক্রির রশিদের কপি',
+                        style: TextStyle(fontSize: 11, color: Colors.grey),
+                      ),
+                      const SizedBox(height: 12),
+                      const Divider(color: Colors.black38, thickness: 1),
+                      _buildReceiptMetaRow(
+                        'রশিদ নং',
+                        sale.id.substring(0, 8).toUpperCase(),
+                      ),
+                      _buildReceiptMetaRow(
+                        'তারিখ ও সময়',
+                        Formatters.dateTime(sale.date),
+                      ),
+                      _buildReceiptMetaRow(
+                        'পেমেন্ট পদ্ধতি',
+                        sale.paymentMethod == 'Cash'
+                            ? 'ক্যাশ'
+                            : (sale.paymentMethod == 'Card'
+                                  ? 'কার্ড'
+                                  : 'মোবাইল ব্যাংকিং'),
+                      ),
+                      _buildReceiptMetaRow(
+                        'ক্রেতা',
+                        customer?.name ?? 'সাধারণ কাস্টমার',
+                      ),
+                      const Divider(color: Colors.black38, thickness: 1),
+                      const Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          Expanded(
+                            flex: 3,
+                            child: Text(
+                              'পণ্যের বিবরণ',
+                              style: TextStyle(
+                                fontWeight: FontWeight.bold,
+                                fontSize: 11,
+                                color: Colors.black,
+                              ),
+                            ),
+                          ),
+                          Expanded(
+                            flex: 1,
+                            child: Text(
+                              'পরিমাণ',
+                              style: TextStyle(
+                                fontWeight: FontWeight.bold,
+                                fontSize: 11,
+                                color: Colors.black,
+                              ),
+                              textAlign: TextAlign.center,
+                            ),
+                          ),
+                          Expanded(
+                            flex: 2,
+                            child: Text(
+                              'মোট টাকা',
+                              style: TextStyle(
+                                fontWeight: FontWeight.bold,
+                                fontSize: 11,
+                                color: Colors.black,
+                              ),
+                              textAlign: TextAlign.right,
+                            ),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 6),
+                      Column(
+                        children: itemsList.map((item) {
+                          final subtotal = item.item.price * item.item.quantity;
+                          return Padding(
+                            padding: const EdgeInsets.symmetric(vertical: 3.0),
+                            child: Row(
+                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                              children: [
+                                Expanded(
+                                  flex: 3,
+                                  child: Text(
+                                    item.product.name,
+                                    style: const TextStyle(
+                                      fontSize: 11,
+                                      color: Colors.black,
+                                    ),
+                                    maxLines: 1,
+                                    overflow: TextOverflow.ellipsis,
+                                  ),
+                                ),
+                                Expanded(
+                                  flex: 1,
+                                  child: Text(
+                                    '${Formatters.number(item.item.quantity)} ${item.product.unit}',
+                                    style: const TextStyle(
+                                      fontSize: 11,
+                                      color: Colors.black,
+                                    ),
+                                    textAlign: TextAlign.center,
+                                  ),
+                                ),
+                                Expanded(
+                                  flex: 2,
+                                  child: Text(
+                                    Formatters.currency(subtotal),
+                                    style: const TextStyle(
+                                      fontSize: 11,
+                                      color: Colors.black,
+                                    ),
+                                    textAlign: TextAlign.right,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          );
+                        }).toList(),
+                      ),
+                      const Divider(color: Colors.black38, thickness: 1),
+                      _buildReceiptFinancialRow(
+                        'উপ-মোট বিল',
+                        Formatters.currency(sale.subtotal),
+                      ),
+                      _buildReceiptFinancialRow(
+                        'ডিসকাউন্ট ছাড়',
+                        '- ${Formatters.currency(sale.discount)}',
+                      ),
+                      const SizedBox(height: 4),
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          const Text(
+                            'পরিশোধযোগ্য মোট বিল',
                             style: TextStyle(
                               fontWeight: FontWeight.bold,
-                              fontSize: 11,
+                              fontSize: 12,
                               color: Colors.black,
                             ),
                           ),
-                        ),
-                        Expanded(
-                          flex: 1,
-                          child: Text(
-                            'পরিমাণ',
-                            style: TextStyle(
+                          Text(
+                            Formatters.currency(sale.total),
+                            style: const TextStyle(
                               fontWeight: FontWeight.bold,
-                              fontSize: 11,
+                              fontSize: 13,
                               color: Colors.black,
                             ),
-                            textAlign: TextAlign.center,
                           ),
-                        ),
-                        Expanded(
-                          flex: 2,
-                          child: Text(
-                            'মোট টাকা',
-                            style: TextStyle(
-                              fontWeight: FontWeight.bold,
-                              fontSize: 11,
-                              color: Colors.black,
-                            ),
-                            textAlign: TextAlign.right,
-                          ),
-                        ),
-                      ],
-                    ),
-                    const SizedBox(height: 6),
-                    Column(
-                      children: itemsList.map((item) {
-                        final subtotal = item.item.price * item.item.quantity;
-                        return Padding(
-                          padding: const EdgeInsets.symmetric(vertical: 3.0),
-                          child: Row(
-                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                            children: [
-                              Expanded(
-                                flex: 3,
-                                child: Text(
-                                  item.product.name,
-                                  style: const TextStyle(
-                                    fontSize: 11,
-                                    color: Colors.black,
-                                  ),
-                                  maxLines: 1,
-                                  overflow: TextOverflow.ellipsis,
-                                ),
-                              ),
-                              Expanded(
-                                flex: 1,
-                                child: Text(
-                                  '${Formatters.number(item.item.quantity)} ${item.product.unit}',
-                                  style: const TextStyle(
-                                    fontSize: 11,
-                                    color: Colors.black,
-                                  ),
-                                  textAlign: TextAlign.center,
-                                ),
-                              ),
-                              Expanded(
-                                flex: 2,
-                                child: Text(
-                                  Formatters.currency(subtotal),
-                                  style: const TextStyle(
-                                    fontSize: 11,
-                                    color: Colors.black,
-                                  ),
-                                  textAlign: TextAlign.right,
-                                ),
-                              ),
-                            ],
-                          ),
-                        );
-                      }).toList(),
-                    ),
-                    const Divider(color: Colors.black38, thickness: 1),
-                    _buildReceiptFinancialRow(
-                      'উপ-মোট বিল',
-                      Formatters.currency(sale.subtotal),
-                    ),
-                    _buildReceiptFinancialRow(
-                      'ডিসকাউন্ট ছাড়',
-                      '- ${Formatters.currency(sale.discount)}',
-                    ),
-                    const SizedBox(height: 4),
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                      children: [
-                        const Text(
-                          'পরিশোধযোগ্য মোট বিল',
-                          style: TextStyle(
-                            fontWeight: FontWeight.bold,
-                            fontSize: 12,
-                            color: Colors.black,
-                          ),
-                        ),
-                        Text(
-                          Formatters.currency(sale.total),
-                          style: const TextStyle(
-                            fontWeight: FontWeight.bold,
-                            fontSize: 13,
-                            color: Colors.black,
-                          ),
-                        ),
-                      ],
-                    ),
-                  ],
+                        ],
+                      ),
+                    ],
+                  ),
                 ),
               ),
             ),
           ),
         ),
-      ),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context),
@@ -889,9 +888,8 @@ class _ReportsScreenState extends ConsumerState<ReportsScreen>
               Navigator.pop(context); // Close receipt copy dialog
               showDialog(
                 context: context,
-                builder: (context) => ProductReturnDialog(
-                  saleWithDetails: saleWithDetails,
-                ),
+                builder: (context) =>
+                    ProductReturnDialog(saleWithDetails: saleWithDetails),
               );
             },
           ),
@@ -1048,7 +1046,9 @@ class _ReportsScreenState extends ConsumerState<ReportsScreen>
     }
 
     try {
-      final hasPermission = await PermissionUtils.requestStoragePermission(context);
+      final hasPermission = await PermissionUtils.requestStoragePermission(
+        context,
+      );
       if (!hasPermission) {
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
@@ -1096,7 +1096,9 @@ class _ReportsScreenState extends ConsumerState<ReportsScreen>
 
   Future<void> _exportProfitLossCsv(DashboardMetrics metrics) async {
     try {
-      final hasPermission = await PermissionUtils.requestStoragePermission(context);
+      final hasPermission = await PermissionUtils.requestStoragePermission(
+        context,
+      );
       if (!hasPermission) {
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
@@ -1136,7 +1138,9 @@ class _ReportsScreenState extends ConsumerState<ReportsScreen>
 
   Future<void> _exportProfitLossPdf(DashboardMetrics metrics) async {
     try {
-      final hasPermission = await PermissionUtils.requestStoragePermission(context);
+      final hasPermission = await PermissionUtils.requestStoragePermission(
+        context,
+      );
       if (!hasPermission) {
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
@@ -1207,16 +1211,22 @@ class _ReportsScreenState extends ConsumerState<ReportsScreen>
               }
 
               return ListView.separated(
-                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 16,
+                  vertical: 8,
+                ),
                 itemCount: returns.length,
                 separatorBuilder: (_, __) => const Divider(),
                 itemBuilder: (context, index) {
                   final returnWithDetails = returns[index];
                   final ret = returnWithDetails.salesReturn;
-                  
+
                   // Generate list of items as a subtitle string
                   final itemsSummary = returnWithDetails.items
-                      .map((i) => '${i.product.name} (${Formatters.number(i.item.quantity)} ${i.product.unit})')
+                      .map(
+                        (i) =>
+                            '${i.product.name} (${Formatters.number(i.item.quantity)} ${i.product.unit})',
+                      )
                       .join(', ');
 
                   return ListTile(
@@ -1236,11 +1246,17 @@ class _ReportsScreenState extends ConsumerState<ReportsScreen>
                         if (ret.reason != null && ret.reason!.isNotEmpty)
                           Text(
                             'কারণ: ${ret.reason}',
-                            style: const TextStyle(fontSize: 12, color: Colors.blueGrey),
+                            style: const TextStyle(
+                              fontSize: 12,
+                              color: Colors.blueGrey,
+                            ),
                           ),
                         Text(
                           'ফেরতকৃত পণ্য: $itemsSummary',
-                          style: const TextStyle(fontSize: 11, color: Colors.grey),
+                          style: const TextStyle(
+                            fontSize: 11,
+                            color: Colors.grey,
+                          ),
                           maxLines: 2,
                           overflow: TextOverflow.ellipsis,
                         ),
