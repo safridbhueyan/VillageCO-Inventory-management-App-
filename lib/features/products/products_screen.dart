@@ -14,6 +14,7 @@ import '../../core/utils/image_utils.dart';
 import 'products_controller.dart';
 import '../categories/categories_controller.dart';
 import '../suppliers/suppliers_controller.dart';
+import '../../core/widgets/product_image_widget.dart';
 
 final productsMultiSelectModeProvider = StateProvider.autoDispose<bool>((ref) => false);
 final productsSelectedIdsProvider = StateProvider.autoDispose<Set<String>>((ref) => {});
@@ -307,23 +308,20 @@ class _ProductsScreenState extends ConsumerState<ProductsScreen> {
                         color: theme.colorScheme.surfaceVariant.withOpacity(0.4),
                         borderRadius: BorderRadius.circular(14),
                       ),
-                      child: product.imagePath != null && File(product.imagePath!).existsSync()
-                          ? ClipRRect(
-                              borderRadius: BorderRadius.circular(14),
-                              child: Image.file(
-                                File(product.imagePath!),
-                                fit: BoxFit.cover,
-                                width: double.infinity,
-                                height: double.infinity,
-                              ),
-                            )
-                          : Center(
-                              child: Icon(
-                                Icons.shopping_bag_outlined,
-                                size: 40,
-                                color: theme.colorScheme.onSurfaceVariant.withOpacity(0.5),
-                              ),
-                            ),
+                      child: ProductImageWidget(
+                        imagePath: product.imagePath,
+                        width: double.infinity,
+                        height: double.infinity,
+                        fit: BoxFit.cover,
+                        borderRadius: 14,
+                        placeholder: Center(
+                          child: Icon(
+                            Icons.shopping_bag_outlined,
+                            size: 40,
+                            color: theme.colorScheme.onSurfaceVariant.withOpacity(0.5),
+                          ),
+                        ),
+                      ),
                     ),
                     Positioned(
                       top: 4,
@@ -442,17 +440,14 @@ class _ProductsScreenState extends ConsumerState<ProductsScreen> {
               color: theme.colorScheme.surfaceVariant.withOpacity(0.4),
               borderRadius: BorderRadius.circular(10),
             ),
-            child: product.imagePath != null && File(product.imagePath!).existsSync()
-                ? ClipRRect(
-                    borderRadius: BorderRadius.circular(10),
-                    child: Image.file(
-                      File(product.imagePath!),
-                      fit: BoxFit.cover,
-                      width: 48,
-                      height: 48,
-                    ),
-                  )
-                : Icon(Icons.shopping_bag_outlined, color: theme.colorScheme.onSurfaceVariant),
+            child: ProductImageWidget(
+              imagePath: product.imagePath,
+              width: 48,
+              height: 48,
+              fit: BoxFit.cover,
+              borderRadius: 10,
+              placeholder: Icon(Icons.shopping_bag_outlined, color: theme.colorScheme.onSurfaceVariant),
+            ),
           ),
           title: Text(product.name, style: const TextStyle(fontWeight: FontWeight.bold)),
           subtitle: Text('${product.brand ?? "ব্র্যান্ড ছাড়া"} • ${Formatters.currency(product.sellingPrice)}'),
@@ -522,15 +517,13 @@ class _ProductsScreenState extends ConsumerState<ProductsScreen> {
                   ),
                   const SizedBox(height: 20),
                   
-                  if (p.imagePath != null && File(p.imagePath!).existsSync()) ...[
-                    ClipRRect(
-                      borderRadius: BorderRadius.circular(16),
-                      child: Image.file(
-                        File(p.imagePath!),
-                        width: double.infinity,
-                        height: 200,
-                        fit: BoxFit.cover,
-                      ),
+                  if (p.imagePath != null && p.imagePath!.isNotEmpty && (p.imagePath!.startsWith('http') || File(p.imagePath!).existsSync())) ...[
+                    ProductImageWidget(
+                      imagePath: p.imagePath,
+                      width: double.infinity,
+                      height: 200,
+                      fit: BoxFit.cover,
+                      borderRadius: 16,
                     ),
                     const SizedBox(height: 16),
                   ],
@@ -840,18 +833,15 @@ class _ProductsScreenState extends ConsumerState<ProductsScreen> {
                                       ),
                                     ),
                                     child: imagePath != null &&
-                                            File(imagePath!).existsSync()
+                                            (imagePath!.startsWith('http') || File(imagePath!).existsSync())
                                         ? Stack(
                                             children: [
-                                              ClipRRect(
-                                                borderRadius:
-                                                    BorderRadius.circular(12),
-                                                child: Image.file(
-                                                  File(imagePath!),
-                                                  width: double.infinity,
-                                                  height: 120,
-                                                  fit: BoxFit.cover,
-                                                ),
+                                              ProductImageWidget(
+                                                imagePath: imagePath,
+                                                width: double.infinity,
+                                                height: 120,
+                                                fit: BoxFit.cover,
+                                                borderRadius: 12,
                                               ),
                                               Positioned(
                                                 right: 8,
