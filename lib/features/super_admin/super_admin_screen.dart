@@ -10,6 +10,10 @@ import 'admin_controller.dart';
 
 final superAdminSearchQueryProvider = StateProvider.autoDispose<String>((ref) => '');
 final superAdminDialogCurrencyProvider = StateProvider.autoDispose<String>((ref) => 'BDT');
+final superAdminShopsStreamProvider = StreamProvider.autoDispose<QuerySnapshot<Map<String, dynamic>>>((ref) {
+  final adminRepo = ref.watch(adminRepositoryProvider);
+  return adminRepo.getShopsStream();
+});
 
 class SuperAdminScreen extends ConsumerStatefulWidget {
   const SuperAdminScreen({super.key});
@@ -22,9 +26,16 @@ class _SuperAdminScreenState extends ConsumerState<SuperAdminScreen> {
   final _searchController = TextEditingController();
 
   @override
+  void dispose() {
+    _searchController.dispose();
+    super.dispose();
+  }
+
+  @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    final adminRepo = ref.watch(adminRepositoryProvider);
+    final shopsAsync = ref.watch(superAdminShopsStreamProvider);
+    final searchQuery = ref.watch(superAdminSearchQueryProvider);
 
     return Scaffold(
       appBar: AppBar(
@@ -71,6 +82,15 @@ class _SuperAdminScreenState extends ConsumerState<SuperAdminScreen> {
                       decoration: InputDecoration(
                         hintText: 'দোকান খুঁজুন...',
                         prefixIcon: const Icon(Icons.search),
+                        suffixIcon: searchQuery.isNotEmpty
+                            ? IconButton(
+                                icon: const Icon(Icons.clear),
+                                onPressed: () {
+                                  _searchController.clear();
+                                  ref.read(superAdminSearchQueryProvider.notifier).state = '';
+                                },
+                              )
+                            : null,
                         border: OutlineInputBorder(
                           borderRadius: BorderRadius.circular(16),
                         ),
@@ -86,25 +106,24 @@ class _SuperAdminScreenState extends ConsumerState<SuperAdminScreen> {
               ),
             ),
 
-            // Shops List Stream
+            // Shops List
             Expanded(
-              child: StreamBuilder<QuerySnapshot<Map<String, dynamic>>>(
-                stream: adminRepo.getShopsStream(),
-                builder: (context, snapshot) {
-                  if (snapshot.connectionState == ConnectionState.waiting) {
-                    return const Center(child: CircularProgressIndicator());
-                  }
-
-                  if (snapshot.hasError) {
-                    return Center(child: Text('ত্রুটি: ${snapshot.error}'));
-                  }
-
-                  final docs = snapshot.data?.docs ?? [];
+              child: shopsAsync.when(
+                loading: () => const Center(child: CircularProgressIndicator()),
+                error: (error, stack) => Center(child: Text('ত্রুটি: $error')),
+                data: (snapshot) {
+                  final docs = snapshot.docs;
                   final filteredDocs = docs.where((doc) {
                     final name = (doc.data()['shopName'] ?? '')
                         .toString()
                         .toLowerCase();
-                    return name.contains(ref.watch(superAdminSearchQueryProvider));
+                    final id = doc.id.toLowerCase();
+                    final shopID = (doc.data()['shopID'] ?? '')
+                        .toString()
+                        .toLowerCase();
+                    return name.contains(searchQuery) ||
+                        id.contains(searchQuery) ||
+                        shopID.contains(searchQuery);
                   }).toList();
 
                   if (filteredDocs.isEmpty) {
