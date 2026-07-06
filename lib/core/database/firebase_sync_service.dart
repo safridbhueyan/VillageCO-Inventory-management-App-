@@ -13,6 +13,7 @@ import '../utils/formatters.dart';
 import '../utils/pdf_generator.dart';
 import 'database.dart';
 import 'database_providers.dart';
+import 'package:drift/drift.dart' as drift;
 
 class FirebaseSyncService {
   final AppDatabase _db;
@@ -357,6 +358,23 @@ class FirebaseSyncService {
 
     // 5. Sync Products
     for (final prod in products) {
+      String? firestoreImageUrl = prod.imagePath;
+
+      // If local file path, upload to Firebase Storage first
+      if (prod.imagePath != null &&
+          prod.imagePath!.isNotEmpty &&
+          !prod.imagePath!.startsWith('http://') &&
+          !prod.imagePath!.startsWith('https://')) {
+        final networkUrl = await uploadProductImage(storeDocId, prod.id, prod.imagePath!);
+        if (networkUrl != null) {
+          firestoreImageUrl = networkUrl;
+          // Update the local database to use the network URL from now on
+          await (_db.update(_db.products)..where((p) => p.id.equals(prod.id))).write(
+            ProductsCompanion(imagePath: drift.Value(networkUrl)),
+          );
+        }
+      }
+
       await storeRef.collection('products').doc(prod.id).set({
         'id': prod.id,
         'name': prod.name,
@@ -369,7 +387,7 @@ class FirebaseSyncService {
         'minimumStock': prod.minimumStock,
         'unit': prod.unit,
         'supplierId': prod.supplierId,
-        'imagePath': prod.imagePath,
+        'imagePath': firestoreImageUrl,
         'description': prod.description,
         'isArchived': prod.isArchived,
         'isFavorite': prod.isFavorite,
@@ -579,6 +597,24 @@ class FirebaseSyncService {
     }
   }
 
+  /// Uploads a product image file to Firebase Storage.
+  Future<String?> uploadProductImage(String storeId, String productId, String localPath) async {
+    try {
+      final file = File(localPath);
+      if (!await file.exists()) {
+        debugPrint('Product image file does not exist at path: $localPath');
+        return null;
+      }
+      final ref = _storage.ref().child('stores/$storeId/products/$productId.jpg');
+      final uploadTask = await ref.putFile(file);
+      final downloadUrl = await uploadTask.ref.getDownloadURL();
+      return downloadUrl;
+    } catch (e) {
+      debugPrint('Failed to upload product image to Storage: $e');
+      return null;
+    }
+  }
+
   /// Saves the report metadata and download link inside Firestore `/stores/{storeId}/reports` subcollection.
   Future<void> saveReportMetadata(
     String storeId, {
@@ -614,9 +650,12 @@ final firebaseSyncServiceProvider = Provider<FirebaseSyncService>((ref) {
 });
 
 void triggerAutoSync(dynamic ref) {
-  ref.read(settingsControllerProvider).whenData((settings) {
+  final AsyncValue<AppSettingsTableData> settingsVal =
+      ref.read(settingsControllerProvider) as AsyncValue<AppSettingsTableData>;
+  final settings = settingsVal.valueOrNull;
+  if (settings != null) {
     ref.read(firebaseSyncServiceProvider).syncAllData(settings).catchError((e) {
       debugPrint('Auto sync failed: $e');
     });
-  });
+  }
 }
