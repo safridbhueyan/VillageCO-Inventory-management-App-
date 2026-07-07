@@ -170,6 +170,7 @@ class _PosScreenState extends ConsumerState<PosScreen>
     final theme = Theme.of(context);
     final posCategoryId = ref.watch(posCategoryFilterProvider);
     final productSearchQuery = ref.watch(posProductSearchQueryProvider);
+    final cart = ref.watch(posCartProvider);
 
     return Container(
       color: theme.colorScheme.background,
@@ -265,7 +266,9 @@ class _PosScreenState extends ConsumerState<PosScreen>
                     itemBuilder: (context, index) {
                       final item = products[index];
                       final p = item.product;
-                      final isOut = p.currentStock <= 0;
+                      final cartItemIndex = cart.items.indexWhere((ci) => ci.product.id == p.id);
+                      final double cartQuantity = cartItemIndex >= 0 ? cart.items[cartItemIndex].quantity : 0.0;
+                      final isOut = (p.currentStock - cartQuantity) <= 0;
 
                       return Card(
                         elevation: 0,
@@ -440,15 +443,20 @@ class _PosScreenState extends ConsumerState<PosScreen>
                                 ),
                               ),
                               IconButton(
-                                icon: const Icon(Icons.add_circle_outline),
-                                onPressed: () {
-                                  ref
-                                      .read(posCartProvider.notifier)
-                                      .updateQuantity(
-                                        item.product.id,
-                                        item.quantity + 1,
-                                      );
-                                },
+                                icon: Icon(
+                                  Icons.add_circle_outline,
+                                  color: item.quantity >= item.product.currentStock ? Colors.grey : null,
+                                ),
+                                onPressed: item.quantity >= item.product.currentStock
+                                    ? null
+                                    : () {
+                                        ref
+                                            .read(posCartProvider.notifier)
+                                            .updateQuantity(
+                                              item.product.id,
+                                              item.quantity + 1,
+                                            );
+                                      },
                               ),
                               const SizedBox(width: 8),
                               IconButton(
