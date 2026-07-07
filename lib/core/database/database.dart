@@ -32,6 +32,8 @@ class Products extends Table {
   TextColumn get description => text().nullable()();
   BoolColumn get isArchived => boolean().withDefault(const Constant(false))();
   BoolColumn get isFavorite => boolean().withDefault(const Constant(false))();
+  TextColumn get batchNumber => text().nullable()();
+  DateTimeColumn get expiryDate => dateTime().nullable()();
 
   @override
   Set<Column> get primaryKey => {id};
@@ -209,7 +211,7 @@ class AppDatabase extends _$AppDatabase {
   AppDatabase([QueryExecutor? e]) : super(e ?? _openConnection());
 
   @override
-  int get schemaVersion => 4;
+  int get schemaVersion => 5;
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
@@ -225,6 +227,10 @@ class AppDatabase extends _$AppDatabase {
           if (from < 4) {
             await migrator.createTable(salesReturns);
             await migrator.createTable(salesReturnItems);
+          }
+          if (from < 5) {
+            await migrator.addColumn(products, products.batchNumber);
+            await migrator.addColumn(products, products.expiryDate);
           }
         },
       );
