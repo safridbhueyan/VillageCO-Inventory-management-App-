@@ -831,6 +831,28 @@ class $ProductsTable extends Products with TableInfo<$ProductsTable, Product> {
     ),
     defaultValue: const Constant(false),
   );
+  static const VerificationMeta _batchNumberMeta = const VerificationMeta(
+    'batchNumber',
+  );
+  @override
+  late final GeneratedColumn<String> batchNumber = GeneratedColumn<String>(
+    'batch_number',
+    aliasedName,
+    true,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _expiryDateMeta = const VerificationMeta(
+    'expiryDate',
+  );
+  @override
+  late final GeneratedColumn<DateTime> expiryDate = GeneratedColumn<DateTime>(
+    'expiry_date',
+    aliasedName,
+    true,
+    type: DriftSqlType.dateTime,
+    requiredDuringInsert: false,
+  );
   @override
   List<GeneratedColumn> get $columns => [
     id,
@@ -848,6 +870,8 @@ class $ProductsTable extends Products with TableInfo<$ProductsTable, Product> {
     description,
     isArchived,
     isFavorite,
+    batchNumber,
+    expiryDate,
   ];
   @override
   String get aliasedName => _alias ?? actualTableName;
@@ -977,6 +1001,21 @@ class $ProductsTable extends Products with TableInfo<$ProductsTable, Product> {
         isFavorite.isAcceptableOrUnknown(data['is_favorite']!, _isFavoriteMeta),
       );
     }
+    if (data.containsKey('batch_number')) {
+      context.handle(
+        _batchNumberMeta,
+        batchNumber.isAcceptableOrUnknown(
+          data['batch_number']!,
+          _batchNumberMeta,
+        ),
+      );
+    }
+    if (data.containsKey('expiry_date')) {
+      context.handle(
+        _expiryDateMeta,
+        expiryDate.isAcceptableOrUnknown(data['expiry_date']!, _expiryDateMeta),
+      );
+    }
     return context;
   }
 
@@ -1046,6 +1085,14 @@ class $ProductsTable extends Products with TableInfo<$ProductsTable, Product> {
         DriftSqlType.bool,
         data['${effectivePrefix}is_favorite'],
       )!,
+      batchNumber: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}batch_number'],
+      ),
+      expiryDate: attachedDatabase.typeMapping.read(
+        DriftSqlType.dateTime,
+        data['${effectivePrefix}expiry_date'],
+      ),
     );
   }
 
@@ -1071,6 +1118,8 @@ class Product extends DataClass implements Insertable<Product> {
   final String? description;
   final bool isArchived;
   final bool isFavorite;
+  final String? batchNumber;
+  final DateTime? expiryDate;
   const Product({
     required this.id,
     required this.name,
@@ -1087,6 +1136,8 @@ class Product extends DataClass implements Insertable<Product> {
     this.description,
     required this.isArchived,
     required this.isFavorite,
+    this.batchNumber,
+    this.expiryDate,
   });
   @override
   Map<String, Expression> toColumns(bool nullToAbsent) {
@@ -1118,6 +1169,12 @@ class Product extends DataClass implements Insertable<Product> {
     }
     map['is_archived'] = Variable<bool>(isArchived);
     map['is_favorite'] = Variable<bool>(isFavorite);
+    if (!nullToAbsent || batchNumber != null) {
+      map['batch_number'] = Variable<String>(batchNumber);
+    }
+    if (!nullToAbsent || expiryDate != null) {
+      map['expiry_date'] = Variable<DateTime>(expiryDate);
+    }
     return map;
   }
 
@@ -1150,6 +1207,12 @@ class Product extends DataClass implements Insertable<Product> {
           : Value(description),
       isArchived: Value(isArchived),
       isFavorite: Value(isFavorite),
+      batchNumber: batchNumber == null && nullToAbsent
+          ? const Value.absent()
+          : Value(batchNumber),
+      expiryDate: expiryDate == null && nullToAbsent
+          ? const Value.absent()
+          : Value(expiryDate),
     );
   }
 
@@ -1174,6 +1237,8 @@ class Product extends DataClass implements Insertable<Product> {
       description: serializer.fromJson<String?>(json['description']),
       isArchived: serializer.fromJson<bool>(json['isArchived']),
       isFavorite: serializer.fromJson<bool>(json['isFavorite']),
+      batchNumber: serializer.fromJson<String?>(json['batchNumber']),
+      expiryDate: serializer.fromJson<DateTime?>(json['expiryDate']),
     );
   }
   @override
@@ -1195,6 +1260,8 @@ class Product extends DataClass implements Insertable<Product> {
       'description': serializer.toJson<String?>(description),
       'isArchived': serializer.toJson<bool>(isArchived),
       'isFavorite': serializer.toJson<bool>(isFavorite),
+      'batchNumber': serializer.toJson<String?>(batchNumber),
+      'expiryDate': serializer.toJson<DateTime?>(expiryDate),
     };
   }
 
@@ -1214,6 +1281,8 @@ class Product extends DataClass implements Insertable<Product> {
     Value<String?> description = const Value.absent(),
     bool? isArchived,
     bool? isFavorite,
+    Value<String?> batchNumber = const Value.absent(),
+    Value<DateTime?> expiryDate = const Value.absent(),
   }) => Product(
     id: id ?? this.id,
     name: name ?? this.name,
@@ -1230,6 +1299,8 @@ class Product extends DataClass implements Insertable<Product> {
     description: description.present ? description.value : this.description,
     isArchived: isArchived ?? this.isArchived,
     isFavorite: isFavorite ?? this.isFavorite,
+    batchNumber: batchNumber.present ? batchNumber.value : this.batchNumber,
+    expiryDate: expiryDate.present ? expiryDate.value : this.expiryDate,
   );
   Product copyWithCompanion(ProductsCompanion data) {
     return Product(
@@ -1266,6 +1337,12 @@ class Product extends DataClass implements Insertable<Product> {
       isFavorite: data.isFavorite.present
           ? data.isFavorite.value
           : this.isFavorite,
+      batchNumber: data.batchNumber.present
+          ? data.batchNumber.value
+          : this.batchNumber,
+      expiryDate: data.expiryDate.present
+          ? data.expiryDate.value
+          : this.expiryDate,
     );
   }
 
@@ -1286,7 +1363,9 @@ class Product extends DataClass implements Insertable<Product> {
           ..write('imagePath: $imagePath, ')
           ..write('description: $description, ')
           ..write('isArchived: $isArchived, ')
-          ..write('isFavorite: $isFavorite')
+          ..write('isFavorite: $isFavorite, ')
+          ..write('batchNumber: $batchNumber, ')
+          ..write('expiryDate: $expiryDate')
           ..write(')'))
         .toString();
   }
@@ -1308,6 +1387,8 @@ class Product extends DataClass implements Insertable<Product> {
     description,
     isArchived,
     isFavorite,
+    batchNumber,
+    expiryDate,
   );
   @override
   bool operator ==(Object other) =>
@@ -1327,7 +1408,9 @@ class Product extends DataClass implements Insertable<Product> {
           other.imagePath == this.imagePath &&
           other.description == this.description &&
           other.isArchived == this.isArchived &&
-          other.isFavorite == this.isFavorite);
+          other.isFavorite == this.isFavorite &&
+          other.batchNumber == this.batchNumber &&
+          other.expiryDate == this.expiryDate);
 }
 
 class ProductsCompanion extends UpdateCompanion<Product> {
@@ -1346,6 +1429,8 @@ class ProductsCompanion extends UpdateCompanion<Product> {
   final Value<String?> description;
   final Value<bool> isArchived;
   final Value<bool> isFavorite;
+  final Value<String?> batchNumber;
+  final Value<DateTime?> expiryDate;
   final Value<int> rowid;
   const ProductsCompanion({
     this.id = const Value.absent(),
@@ -1363,6 +1448,8 @@ class ProductsCompanion extends UpdateCompanion<Product> {
     this.description = const Value.absent(),
     this.isArchived = const Value.absent(),
     this.isFavorite = const Value.absent(),
+    this.batchNumber = const Value.absent(),
+    this.expiryDate = const Value.absent(),
     this.rowid = const Value.absent(),
   });
   ProductsCompanion.insert({
@@ -1381,6 +1468,8 @@ class ProductsCompanion extends UpdateCompanion<Product> {
     this.description = const Value.absent(),
     this.isArchived = const Value.absent(),
     this.isFavorite = const Value.absent(),
+    this.batchNumber = const Value.absent(),
+    this.expiryDate = const Value.absent(),
     this.rowid = const Value.absent(),
   }) : id = Value(id),
        name = Value(name),
@@ -1405,6 +1494,8 @@ class ProductsCompanion extends UpdateCompanion<Product> {
     Expression<String>? description,
     Expression<bool>? isArchived,
     Expression<bool>? isFavorite,
+    Expression<String>? batchNumber,
+    Expression<DateTime>? expiryDate,
     Expression<int>? rowid,
   }) {
     return RawValuesInsertable({
@@ -1423,6 +1514,8 @@ class ProductsCompanion extends UpdateCompanion<Product> {
       if (description != null) 'description': description,
       if (isArchived != null) 'is_archived': isArchived,
       if (isFavorite != null) 'is_favorite': isFavorite,
+      if (batchNumber != null) 'batch_number': batchNumber,
+      if (expiryDate != null) 'expiry_date': expiryDate,
       if (rowid != null) 'rowid': rowid,
     });
   }
@@ -1443,6 +1536,8 @@ class ProductsCompanion extends UpdateCompanion<Product> {
     Value<String?>? description,
     Value<bool>? isArchived,
     Value<bool>? isFavorite,
+    Value<String?>? batchNumber,
+    Value<DateTime?>? expiryDate,
     Value<int>? rowid,
   }) {
     return ProductsCompanion(
@@ -1461,6 +1556,8 @@ class ProductsCompanion extends UpdateCompanion<Product> {
       description: description ?? this.description,
       isArchived: isArchived ?? this.isArchived,
       isFavorite: isFavorite ?? this.isFavorite,
+      batchNumber: batchNumber ?? this.batchNumber,
+      expiryDate: expiryDate ?? this.expiryDate,
       rowid: rowid ?? this.rowid,
     );
   }
@@ -1513,6 +1610,12 @@ class ProductsCompanion extends UpdateCompanion<Product> {
     if (isFavorite.present) {
       map['is_favorite'] = Variable<bool>(isFavorite.value);
     }
+    if (batchNumber.present) {
+      map['batch_number'] = Variable<String>(batchNumber.value);
+    }
+    if (expiryDate.present) {
+      map['expiry_date'] = Variable<DateTime>(expiryDate.value);
+    }
     if (rowid.present) {
       map['rowid'] = Variable<int>(rowid.value);
     }
@@ -1537,6 +1640,8 @@ class ProductsCompanion extends UpdateCompanion<Product> {
           ..write('description: $description, ')
           ..write('isArchived: $isArchived, ')
           ..write('isFavorite: $isFavorite, ')
+          ..write('batchNumber: $batchNumber, ')
+          ..write('expiryDate: $expiryDate, ')
           ..write('rowid: $rowid')
           ..write(')'))
         .toString();
@@ -7581,6 +7686,8 @@ typedef $$ProductsTableCreateCompanionBuilder =
       Value<String?> description,
       Value<bool> isArchived,
       Value<bool> isFavorite,
+      Value<String?> batchNumber,
+      Value<DateTime?> expiryDate,
       Value<int> rowid,
     });
 typedef $$ProductsTableUpdateCompanionBuilder =
@@ -7600,6 +7707,8 @@ typedef $$ProductsTableUpdateCompanionBuilder =
       Value<String?> description,
       Value<bool> isArchived,
       Value<bool> isFavorite,
+      Value<String?> batchNumber,
+      Value<DateTime?> expiryDate,
       Value<int> rowid,
     });
 
@@ -7815,6 +7924,16 @@ class $$ProductsTableFilterComposer
 
   ColumnFilters<bool> get isFavorite => $composableBuilder(
     column: $table.isFavorite,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get batchNumber => $composableBuilder(
+    column: $table.batchNumber,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<DateTime> get expiryDate => $composableBuilder(
+    column: $table.expiryDate,
     builder: (column) => ColumnFilters(column),
   );
 
@@ -8064,6 +8183,16 @@ class $$ProductsTableOrderingComposer
     builder: (column) => ColumnOrderings(column),
   );
 
+  ColumnOrderings<String> get batchNumber => $composableBuilder(
+    column: $table.batchNumber,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<DateTime> get expiryDate => $composableBuilder(
+    column: $table.expiryDate,
+    builder: (column) => ColumnOrderings(column),
+  );
+
   $$CategoriesTableOrderingComposer get categoryId {
     final $$CategoriesTableOrderingComposer composer = $composerBuilder(
       composer: this,
@@ -8170,6 +8299,16 @@ class $$ProductsTableAnnotationComposer
 
   GeneratedColumn<bool> get isFavorite => $composableBuilder(
     column: $table.isFavorite,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<String> get batchNumber => $composableBuilder(
+    column: $table.batchNumber,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<DateTime> get expiryDate => $composableBuilder(
+    column: $table.expiryDate,
     builder: (column) => column,
   );
 
@@ -8396,6 +8535,8 @@ class $$ProductsTableTableManager
                 Value<String?> description = const Value.absent(),
                 Value<bool> isArchived = const Value.absent(),
                 Value<bool> isFavorite = const Value.absent(),
+                Value<String?> batchNumber = const Value.absent(),
+                Value<DateTime?> expiryDate = const Value.absent(),
                 Value<int> rowid = const Value.absent(),
               }) => ProductsCompanion(
                 id: id,
@@ -8413,6 +8554,8 @@ class $$ProductsTableTableManager
                 description: description,
                 isArchived: isArchived,
                 isFavorite: isFavorite,
+                batchNumber: batchNumber,
+                expiryDate: expiryDate,
                 rowid: rowid,
               ),
           createCompanionCallback:
@@ -8432,6 +8575,8 @@ class $$ProductsTableTableManager
                 Value<String?> description = const Value.absent(),
                 Value<bool> isArchived = const Value.absent(),
                 Value<bool> isFavorite = const Value.absent(),
+                Value<String?> batchNumber = const Value.absent(),
+                Value<DateTime?> expiryDate = const Value.absent(),
                 Value<int> rowid = const Value.absent(),
               }) => ProductsCompanion.insert(
                 id: id,
@@ -8449,6 +8594,8 @@ class $$ProductsTableTableManager
                 description: description,
                 isArchived: isArchived,
                 isFavorite: isFavorite,
+                batchNumber: batchNumber,
+                expiryDate: expiryDate,
                 rowid: rowid,
               ),
           withReferenceMapper: (p0) => p0
