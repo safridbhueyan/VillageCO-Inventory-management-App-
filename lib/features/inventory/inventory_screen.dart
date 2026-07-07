@@ -339,6 +339,8 @@ class _InventoryScreenState extends ConsumerState<InventoryScreen> with SingleTi
     final amountController = TextEditingController();
     final costController = TextEditingController();
     final invoiceController = TextEditingController();
+    final batchController = TextEditingController();
+    DateTime? selectedExpiryDate;
 
     String selectedType = 'Stock In'; // 'Stock In', 'Stock Out', 'Adjust Stock'
     String? selectedProductId;
@@ -477,6 +479,70 @@ class _InventoryScreenState extends ConsumerState<InventoryScreen> with SingleTi
                             ),
                           ],
                         ),
+                        const SizedBox(height: 12),
+                        Row(
+                          children: [
+                            Expanded(
+                              child: TextField(
+                                  controller: batchController,
+                                  decoration: const InputDecoration(
+                                    labelText: 'ব্যাচ নম্বর (ঐচ্ছিক)',
+                                    border: OutlineInputBorder(),
+                                  ),
+                                ),
+                            ),
+                            const SizedBox(width: 12),
+                            Expanded(
+                              child: InkWell(
+                                onTap: () async {
+                                  final picked = await showDatePicker(
+                                    context: context,
+                                    initialDate: selectedExpiryDate ?? DateTime.now().add(const Duration(days: 365)),
+                                    firstDate: DateTime(2020),
+                                    lastDate: DateTime(2040),
+                                  );
+                                  if (picked != null) {
+                                    setDialogState(() {
+                                      selectedExpiryDate = picked;
+                                    });
+                                  }
+                                },
+                                child: InputDecorator(
+                                  decoration: const InputDecoration(
+                                    labelText: 'মেয়াদোত্তীর্ণের তারিখ (ঐচ্ছিক)',
+                                    border: OutlineInputBorder(),
+                                  ),
+                                  child: Row(
+                                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                    children: [
+                                      Expanded(
+                                        child: Text(
+                                          selectedExpiryDate == null
+                                              ? 'সিলেক্ট করুন'
+                                              : Formatters.date(selectedExpiryDate!),
+                                          style: TextStyle(
+                                            color: selectedExpiryDate == null ? Colors.grey : null,
+                                            fontSize: 12,
+                                          ),
+                                          overflow: TextOverflow.ellipsis,
+                                        ),
+                                      ),
+                                      if (selectedExpiryDate != null)
+                                        GestureDetector(
+                                          onTap: () {
+                                            setDialogState(() {
+                                              selectedExpiryDate = null;
+                                            });
+                                          },
+                                          child: const Icon(Icons.clear, size: 14),
+                                        ),
+                                    ],
+                                  ),
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
                       ],
                     ],
                   ),
@@ -510,6 +576,12 @@ class _InventoryScreenState extends ConsumerState<InventoryScreen> with SingleTi
                           ),
                         );
                       }
+                      await (db.update(db.products)..where((t) => t.id.equals(selectedProductId!))).write(
+                        ProductsCompanion(
+                          batchNumber: drift.Value(batchController.text.trim().isEmpty ? null : batchController.text.trim()),
+                          expiryDate: drift.Value(selectedExpiryDate),
+                        ),
+                      );
                       await repo.adjustStock(selectedProductId!, diff, reason, supplierId: selectedSupplierId);
                     } else if (selectedType == 'Stock Out') {
                       diff = -amt;
