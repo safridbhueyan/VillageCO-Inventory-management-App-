@@ -88,22 +88,32 @@ class PosCartNotifier extends StateNotifier<PosCartState> {
   PosCartNotifier(this._db, this._ref) : super(PosCartState());
 
   void addItem(Product product, {double qty = 1.0}) {
+    if (product.currentStock <= 0) {
+      return;
+    }
+
     final existingIndex = state.items.indexWhere((item) => item.product.id == product.id);
 
     if (existingIndex >= 0) {
       final existingItem = state.items[existingIndex];
       final updatedQuantity = existingItem.quantity + qty;
+      final double finalQty = updatedQuantity > product.currentStock
+          ? product.currentStock
+          : updatedQuantity;
       
       final updatedList = List<CartItem>.from(state.items);
-      updatedList[existingIndex] = existingItem.copyWith(quantity: updatedQuantity);
+      updatedList[existingIndex] = existingItem.copyWith(quantity: finalQty);
       state = state.copyWith(items: updatedList);
     } else {
-      final newItem = CartItem(
-        product: product,
-        quantity: qty,
-        customPrice: product.sellingPrice,
-      );
-      state = state.copyWith(items: [...state.items, newItem]);
+      final double finalQty = qty > product.currentStock ? product.currentStock : qty;
+      if (finalQty > 0) {
+        final newItem = CartItem(
+          product: product,
+          quantity: finalQty,
+          customPrice: product.sellingPrice,
+        );
+        state = state.copyWith(items: [...state.items, newItem]);
+      }
     }
   }
 
@@ -115,7 +125,10 @@ class PosCartNotifier extends StateNotifier<PosCartState> {
 
     final updatedItems = state.items.map((item) {
       if (item.product.id == productId) {
-        return item.copyWith(quantity: quantity);
+        final double finalQty = quantity > item.product.currentStock
+            ? item.product.currentStock
+            : quantity;
+        return item.copyWith(quantity: finalQty);
       }
       return item;
     }).toList();
