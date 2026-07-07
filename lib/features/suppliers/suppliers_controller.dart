@@ -4,6 +4,7 @@ import 'package:uuid/uuid.dart';
 import '../../core/database/database.dart';
 import '../../core/database/database_providers.dart';
 import '../../core/database/firebase_sync_service.dart';
+import '../products/products_controller.dart';
 
 class SuppliersController extends AsyncNotifier<List<Supplier>> {
   late AppDatabase _db;
@@ -88,6 +89,27 @@ class SuppliersController extends AsyncNotifier<List<Supplier>> {
         status: Value(status),
       );
       await _db.into(_db.supplierOrders).insert(companion);
+
+      if (qtyReceived > 0) {
+        final product = await (_db.select(_db.products)..where((t) => t.id.equals(productId))).getSingle();
+        final newStock = product.currentStock + qtyReceived;
+        await (_db.update(_db.products)..where((t) => t.id.equals(productId))).write(
+          ProductsCompanion(currentStock: Value(newStock)),
+        );
+        await _db.into(_db.stockHistory).insert(
+          StockHistoryCompanion(
+            id: Value(const Uuid().v4()),
+            productId: Value(productId),
+            changeAmount: Value(qtyReceived),
+            reason: Value('Supplier Order (New)'),
+            supplierId: Value(supplierId),
+            date: Value(DateTime.now()),
+          ),
+        );
+        ref.invalidate(productsListProvider);
+        ref.invalidate(allActiveProductsProvider);
+      }
+
       ref.invalidate(supplierOrdersProvider(supplierId));
       triggerAutoSync(ref);
       return _fetchSuppliers();
@@ -114,6 +136,27 @@ class SuppliersController extends AsyncNotifier<List<Supplier>> {
           status: Value(status),
         ),
       );
+
+      if (addedReceived > 0) {
+        final product = await (_db.select(_db.products)..where((t) => t.id.equals(existing.productId))).getSingle();
+        final newStock = product.currentStock + addedReceived;
+        await (_db.update(_db.products)..where((t) => t.id.equals(existing.productId))).write(
+          ProductsCompanion(currentStock: Value(newStock)),
+        );
+        await _db.into(_db.stockHistory).insert(
+          StockHistoryCompanion(
+            id: Value(const Uuid().v4()),
+            productId: Value(existing.productId),
+            changeAmount: Value(addedReceived),
+            reason: Value('Supplier Order (Update)'),
+            supplierId: Value(supplierId),
+            date: Value(DateTime.now()),
+          ),
+        );
+        ref.invalidate(productsListProvider);
+        ref.invalidate(allActiveProductsProvider);
+      }
+
       ref.invalidate(supplierOrdersProvider(supplierId));
       triggerAutoSync(ref);
       return _fetchSuppliers();
