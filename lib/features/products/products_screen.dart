@@ -272,6 +272,12 @@ class _ProductsScreenState extends ConsumerState<ProductsScreen> {
     final isLow = product.currentStock <= product.minimumStock;
     final isOut = product.currentStock <= 0;
 
+    final bool hasExpiry = product.expiryDate != null;
+    final bool isExpired = hasExpiry && product.expiryDate!.isBefore(DateTime.now());
+    final bool isExpiringSoon = hasExpiry && 
+        !isExpired && 
+        product.expiryDate!.isBefore(DateTime.now().add(const Duration(days: 30)));
+
     return Card(
       elevation: isSelected ? 4 : 0,
       color: isSelected ? theme.colorScheme.primaryContainer.withOpacity(0.4) : theme.colorScheme.surface,
@@ -336,6 +342,38 @@ class _ProductsScreenState extends ConsumerState<ProductsScreen> {
                         },
                       ),
                     ),
+                    if (isExpired)
+                      Positioned(
+                        top: 8,
+                        left: 8,
+                        child: Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                          decoration: BoxDecoration(
+                            color: Colors.red,
+                            borderRadius: BorderRadius.circular(6),
+                          ),
+                          child: const Text(
+                            'মেয়াদোত্তীর্ণ',
+                            style: TextStyle(color: Colors.white, fontSize: 8, fontWeight: FontWeight.bold),
+                          ),
+                        ),
+                      )
+                    else if (isExpiringSoon)
+                      Positioned(
+                        top: 8,
+                        left: 8,
+                        child: Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                          decoration: BoxDecoration(
+                            color: Colors.orange,
+                            borderRadius: BorderRadius.circular(6),
+                          ),
+                          child: const Text(
+                            'মেয়াদ শেষ হচ্ছে',
+                            style: TextStyle(color: Colors.white, fontSize: 8, fontWeight: FontWeight.bold),
+                          ),
+                        ),
+                      ),
                   ],
                 ),
               ),
@@ -389,6 +427,12 @@ class _ProductsScreenState extends ConsumerState<ProductsScreen> {
     final product = item.product;
     final isLow = product.currentStock <= product.minimumStock;
     final isOut = product.currentStock <= 0;
+
+    final bool hasExpiry = product.expiryDate != null;
+    final bool isExpired = hasExpiry && product.expiryDate!.isBefore(DateTime.now());
+    final bool isExpiringSoon = hasExpiry && 
+        !isExpired && 
+        product.expiryDate!.isBefore(DateTime.now().add(const Duration(days: 30)));
 
     return Slidable(
       key: ValueKey(product.id),
@@ -450,7 +494,22 @@ class _ProductsScreenState extends ConsumerState<ProductsScreen> {
             ),
           ),
           title: Text(product.name, style: const TextStyle(fontWeight: FontWeight.bold)),
-          subtitle: Text('${product.brand ?? "ব্র্যান্ড ছাড়া"} • ${Formatters.currency(product.sellingPrice)}'),
+          subtitle: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text('${product.brand ?? "ব্র্যান্ড ছাড়া"} • ${Formatters.currency(product.sellingPrice)}'),
+              if (isExpired)
+                const Text(
+                  'মেয়াদোত্তীর্ণ!',
+                  style: TextStyle(color: Colors.red, fontSize: 11, fontWeight: FontWeight.bold),
+                )
+              else if (isExpiringSoon)
+                const Text(
+                  'মেয়াদ শেষ হচ্ছে শীঘ্রই!',
+                  style: TextStyle(color: Colors.orange, fontSize: 11, fontWeight: FontWeight.bold),
+                ),
+            ],
+          ),
           trailing: Row(
             mainAxisSize: MainAxisSize.min,
             children: [
@@ -557,6 +616,17 @@ class _ProductsScreenState extends ConsumerState<ProductsScreen> {
                   _buildDetailRow(context, 'বিক্রয়মূল্য', Formatters.currency(p.sellingPrice)),
                   _buildDetailRow(context, 'বর্তমান স্টক', '${Formatters.number(p.currentStock)} ${p.unit}'),
                   _buildDetailRow(context, 'সর্বনিম্ন স্টক', '${Formatters.number(p.minimumStock)} ${p.unit}'),
+                  _buildDetailRow(context, 'ব্যাচ নম্বর', p.batchNumber ?? 'নেই'),
+                  _buildDetailRow(
+                    context, 
+                    'মেয়াদোত্তীর্ণের তারিখ', 
+                    p.expiryDate == null 
+                        ? 'নেই' 
+                        : '${Formatters.date(p.expiryDate!)}${p.expiryDate!.isBefore(DateTime.now()) ? " (মেয়াদোত্তীর্ণ!)" : (p.expiryDate!.isBefore(DateTime.now().add(const Duration(days: 30))) ? " (মেয়াদ শেষ হচ্ছে শীঘ্রই!)" : "")}',
+                    valueColor: p.expiryDate == null 
+                        ? null 
+                        : (p.expiryDate!.isBefore(DateTime.now()) ? Colors.red : (p.expiryDate!.isBefore(DateTime.now().add(const Duration(days: 30))) ? Colors.orange : null)),
+                  ),
                   _buildDetailRow(context, 'বিবরণ', p.description ?? 'কোনো বিবরণ দেওয়া হয়নি।'),
                   const SizedBox(height: 32),
                   Row(
@@ -590,7 +660,7 @@ class _ProductsScreenState extends ConsumerState<ProductsScreen> {
     );
   }
 
-  Widget _buildDetailRow(BuildContext context, String label, String value) {
+  Widget _buildDetailRow(BuildContext context, String label, String value, {Color? valueColor}) {
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 6.0),
       child: Row(
@@ -606,7 +676,7 @@ class _ProductsScreenState extends ConsumerState<ProductsScreen> {
           Expanded(
             child: Text(
               value,
-              style: const TextStyle(fontWeight: FontWeight.w500),
+              style: TextStyle(fontWeight: FontWeight.w500, color: valueColor),
             ),
           ),
         ],
@@ -721,6 +791,8 @@ class _ProductsScreenState extends ConsumerState<ProductsScreen> {
     final stockController = TextEditingController(text: product?.currentStock.toString());
     final minStockController = TextEditingController(text: product?.minimumStock.toString());
     final descController = TextEditingController(text: product?.description);
+    final batchController = TextEditingController(text: product?.batchNumber);
+    DateTime? selectedExpiryDate = product?.expiryDate;
 
     String selectedUnit = product?.unit ?? 'pcs';
     String? selectedCategoryId = product?.categoryId;
@@ -1065,6 +1137,69 @@ class _ProductsScreenState extends ConsumerState<ProductsScreen> {
                                 children: [
                                   Expanded(
                                     child: TextField(
+                                      controller: batchController,
+                                      decoration: const InputDecoration(
+                                        labelText: 'ব্যাচ নম্বর (ঐচ্ছিক)',
+                                        border: OutlineInputBorder(),
+                                      ),
+                                    ),
+                                  ),
+                                  const SizedBox(width: 12),
+                                  Expanded(
+                                    child: InkWell(
+                                      onTap: () async {
+                                        final picked = await showDatePicker(
+                                          context: context,
+                                          initialDate: selectedExpiryDate ?? DateTime.now().add(const Duration(days: 365)),
+                                          firstDate: DateTime(2020),
+                                          lastDate: DateTime(2040),
+                                        );
+                                        if (picked != null) {
+                                          setDialogState(() {
+                                            selectedExpiryDate = picked;
+                                          });
+                                        }
+                                      },
+                                      child: InputDecorator(
+                                        decoration: const InputDecoration(
+                                          labelText: 'মেয়াদোত্তীর্ণের তারিখ (ঐচ্ছিক)',
+                                          border: OutlineInputBorder(),
+                                        ),
+                                        child: Row(
+                                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                          children: [
+                                            Expanded(
+                                              child: Text(
+                                                selectedExpiryDate == null
+                                                    ? 'সিলেক্ট করুন'
+                                                    : Formatters.date(selectedExpiryDate!),
+                                                style: TextStyle(
+                                                  color: selectedExpiryDate == null ? Colors.grey : null,
+                                                ),
+                                                overflow: TextOverflow.ellipsis,
+                                              ),
+                                            ),
+                                            if (selectedExpiryDate != null)
+                                              GestureDetector(
+                                                onTap: () {
+                                                  setDialogState(() {
+                                                    selectedExpiryDate = null;
+                                                  });
+                                                },
+                                                child: const Icon(Icons.clear, size: 16),
+                                              ),
+                                          ],
+                                        ),
+                                      ),
+                                    ),
+                                  ),
+                                ],
+                              ),
+                              const SizedBox(height: 12),
+                              Row(
+                                children: [
+                                  Expanded(
+                                    child: TextField(
                                       controller: stockController,
                                       enabled: !isEdit,
                                       decoration: InputDecoration(
@@ -1134,6 +1269,8 @@ class _ProductsScreenState extends ConsumerState<ProductsScreen> {
                                   minimumStock: drift.Value(minVal),
                                   imagePath: drift.Value(imagePath),
                                   description: drift.Value(descController.text.trim().isEmpty ? null : descController.text.trim()),
+                                  batchNumber: drift.Value(batchController.text.trim().isEmpty ? null : batchController.text.trim()),
+                                  expiryDate: drift.Value(selectedExpiryDate),
                                 );
                                 repo.updateProduct(product.id, comp);
                               } else {
@@ -1144,6 +1281,7 @@ class _ProductsScreenState extends ConsumerState<ProductsScreen> {
                                   barcode: drift.Value(barcodeController.text.trim().isEmpty ? null : barcodeController.text.trim()),
                                   brand: drift.Value(brandController.text.trim().isEmpty ? null : brandController.text.trim()),
                                   categoryId: drift.Value(selectedCategoryId),
+                                  supplierId: drift.Value(selectedSupplierId),
                                   unit: drift.Value(selectedUnit),
                                   buyingPrice: drift.Value(buyVal),
                                   sellingPrice: drift.Value(sellVal),
@@ -1151,6 +1289,8 @@ class _ProductsScreenState extends ConsumerState<ProductsScreen> {
                                   minimumStock: drift.Value(minVal),
                                   imagePath: drift.Value(imagePath),
                                   description: drift.Value(descController.text.trim().isEmpty ? null : descController.text.trim()),
+                                  batchNumber: drift.Value(batchController.text.trim().isEmpty ? null : batchController.text.trim()),
+                                  expiryDate: drift.Value(selectedExpiryDate),
                                 );
                                 repo.addProduct(comp);
                               }
