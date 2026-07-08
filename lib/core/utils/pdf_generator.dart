@@ -28,10 +28,15 @@ class PdfGenerator {
     final pdf = pw.Document();
 
     final defaultFont = BanglaFontManager().defaultFont;
-    final regularStyle = pw.TextStyle(font: defaultFont, fontSize: 7, fontWeight: pw.FontWeight.normal);
-    final titleStyle = pw.TextStyle(font: defaultFont, fontSize: 12, fontWeight: pw.FontWeight.bold);
-    final totalStyle = pw.TextStyle(font: defaultFont, fontSize: 8, fontWeight: pw.FontWeight.bold);
-    final thankYouStyle = pw.TextStyle(font: defaultFont, fontSize: 7, fontWeight: pw.FontWeight.bold);
+    final englishFont = pw.Font.helvetica();
+    final regularStyle = pw.TextStyle(font: englishFont, fontSize: 7, fontWeight: pw.FontWeight.normal);
+    final regularBanglaStyle = pw.TextStyle(font: defaultFont, fontSize: 7, fontWeight: pw.FontWeight.normal);
+    final titleStyle = pw.TextStyle(font: englishFont, fontSize: 12, fontWeight: pw.FontWeight.bold);
+    final titleBanglaStyle = pw.TextStyle(font: defaultFont, fontSize: 12, fontWeight: pw.FontWeight.bold);
+    final totalStyle = pw.TextStyle(font: englishFont, fontSize: 8, fontWeight: pw.FontWeight.bold);
+    final totalBanglaStyle = pw.TextStyle(font: defaultFont, fontSize: 8, fontWeight: pw.FontWeight.bold);
+    final thankYouStyle = pw.TextStyle(font: englishFont, fontSize: 7, fontWeight: pw.FontWeight.bold);
+    final thankYouBanglaStyle = pw.TextStyle(font: defaultFont, fontSize: 7, fontWeight: pw.FontWeight.bold);
 
     pdf.addPage(
       pw.Page(
@@ -43,29 +48,19 @@ class PdfGenerator {
               pw.Center(
                 child: pw.Column(
                   children: [
-                    Text('ভিলেজকো স্টোর', style: titleStyle, banglaStyle: titleStyle),
-                    Text('মুদি দোকান ও পিওএস কেন্দ্র', style: regularStyle, banglaStyle: regularStyle),
-                    Text('মোবাইল: +৮৮০১৭০০০০০০০০', style: regularStyle, banglaStyle: regularStyle),
+                    Text('ভিলেজকো স্টোর', style: titleStyle, banglaStyle: titleBanglaStyle),
+                    Text('মুদি দোকান ও পিওএস কেন্দ্র', style: regularStyle, banglaStyle: regularBanglaStyle),
+                    Text('মোবাইল: +৮৮০১৭০০০০০০০০', style: regularStyle, banglaStyle: regularBanglaStyle),
                     pw.SizedBox(height: 6),
                     pw.Divider(thickness: 0.8, color: PdfColors.grey600, borderStyle: const pw.BorderStyle(pattern: <num>[1.5, 1.5])),
                   ],
                 ),
               ),
               pw.SizedBox(height: 4),
-              pw.Row(
-                children: [
-                  Text('রশিদ নং: ', style: regularStyle, banglaStyle: regularStyle),
-                  pw.Text(saleId.substring(0, 8).toUpperCase(), style: pw.TextStyle(font: pw.Font.helvetica(), fontSize: 7)),
-                ],
-              ),
-              pw.Row(
-                children: [
-                  Text('তারিখ ও সময়: ', style: regularStyle, banglaStyle: regularStyle),
-                  pw.Text(dateStr, style: pw.TextStyle(font: pw.Font.helvetica(), fontSize: 7)),
-                ],
-              ),
-              Text('পেমেন্ট পদ্ধতি: $paymentMethod', style: regularStyle, banglaStyle: regularStyle),
-              Text('ক্রেতার নাম: $customerName', style: regularStyle, banglaStyle: regularStyle),
+              Text('রশিদ নং: ${saleId.substring(0, 8).toUpperCase()}', style: regularStyle, banglaStyle: regularBanglaStyle),
+              Text('তারিখ ও সময়: $dateStr', style: regularStyle, banglaStyle: regularBanglaStyle),
+              Text('পেমেন্ট পদ্ধতি: $paymentMethod', style: regularStyle, banglaStyle: regularBanglaStyle),
+              Text('ক্রেতার নাম: $customerName', style: regularStyle, banglaStyle: regularBanglaStyle),
               pw.SizedBox(height: 4),
               pw.Divider(thickness: 0.8, color: PdfColors.grey600, borderStyle: const pw.BorderStyle(pattern: <num>[1.5, 1.5])),
               
@@ -73,9 +68,9 @@ class PdfGenerator {
               pw.Row(
                 mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
                 children: [
-                  pw.Expanded(flex: 5, child: Text('পণ্যের বিবরণ', style: regularStyle, banglaStyle: regularStyle)),
-                  pw.Expanded(flex: 2, child: Text('পরিমাণ', style: regularStyle, banglaStyle: regularStyle, textAlign: pw.TextAlign.center)),
-                  pw.Expanded(flex: 2, child: Text('মোট টাকা', style: regularStyle, banglaStyle: regularStyle, textAlign: pw.TextAlign.right)),
+                  pw.Expanded(flex: 5, child: Text('পণ্যের বিবরণ', style: regularStyle, banglaStyle: regularBanglaStyle)),
+                  pw.Expanded(flex: 2, child: Text('পরিমাণ', style: regularStyle, banglaStyle: regularBanglaStyle, textAlign: pw.TextAlign.center)),
+                  pw.Expanded(flex: 2, child: Text('মোট টাকা', style: regularStyle, banglaStyle: regularBanglaStyle, textAlign: pw.TextAlign.right)),
                 ],
               ),
               pw.Divider(thickness: 0.8, color: PdfColors.grey600, borderStyle: const pw.BorderStyle(pattern: <num>[1.5, 1.5])),
@@ -87,21 +82,16 @@ class PdfGenerator {
                   child: pw.Row(
                     mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
                     children: [
-                      pw.Expanded(flex: 5, child: Text(item['name'] as String, style: regularStyle, banglaStyle: regularStyle)),
+                      pw.Expanded(flex: 5, child: Text(item['name'] as String, style: regularStyle, banglaStyle: regularBanglaStyle)),
                       pw.Expanded(
                         flex: 2,
                         child: pw.Align(
                           alignment: pw.Alignment.center,
-                          child: RegExp(r'[\u0980-\u09FF]').hasMatch(item['qty'] as String)
-                              ? Text(
-                                  item['qty'] as String,
-                                  style: regularStyle,
-                                  banglaStyle: regularStyle,
-                                )
-                              : pw.Text(
-                                  item['qty'] as String,
-                                  style: pw.TextStyle(font: pw.Font.helvetica(), fontSize: 7),
-                                ),
+                          child: Text(
+                            item['qty'] as String,
+                            style: regularStyle,
+                            banglaStyle: regularBanglaStyle,
+                          ),
                         ),
                       ),
                       pw.Expanded(
@@ -121,7 +111,7 @@ class PdfGenerator {
               pw.Row(
                 mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
                 children: [
-                  Text('উপ-মোট বিল:', style: regularStyle, banglaStyle: regularStyle),
+                  Text('উপ-মোট বিল:', style: regularStyle, banglaStyle: regularBanglaStyle),
                   _currencyText(subtotal, style: regularStyle),
                 ],
               ),
@@ -130,7 +120,7 @@ class PdfGenerator {
                 pw.Row(
                   mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
                   children: [
-                    Text('ডিসকাউন্ট ছাড়:', style: regularStyle, banglaStyle: regularStyle),
+                    Text('ডিসকাউন্ট ছাড়:', style: regularStyle, banglaStyle: regularBanglaStyle),
                     _currencyText(-discount, style: regularStyle),
                   ],
                 ),
@@ -139,7 +129,7 @@ class PdfGenerator {
               pw.Row(
                 mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
                 children: [
-                  Text('পরিশোধযোগ্য মোট বিল:', style: totalStyle, banglaStyle: totalStyle),
+                  Text('পরিশোধযোগ্য মোট বিল:', style: totalStyle, banglaStyle: totalBanglaStyle),
                   _currencyText(total, style: totalStyle, isBold: true),
                 ],
               ),
@@ -148,21 +138,21 @@ class PdfGenerator {
                 pw.Row(
                   mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
                   children: [
-                    Text('পরিশোধিত টাকা:', style: regularStyle, banglaStyle: regularStyle),
+                    Text('পরিশোধিত টাকা:', style: regularStyle, banglaStyle: regularBanglaStyle),
                     _currencyText(paidAmount, style: regularStyle),
                   ],
                 ),
                 pw.Row(
                   mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
                   children: [
-                    Text('ফেরতযোগ্য টাকা:', style: regularStyle, banglaStyle: regularStyle),
+                    Text('ফেরতযোগ্য টাকা:', style: regularStyle, banglaStyle: regularBanglaStyle),
                     _currencyText(paidAmount - total < 0 ? 0.0 : paidAmount - total, style: regularStyle),
                   ],
                 ),
               ],
               pw.SizedBox(height: 12),
               pw.Center(
-                child: Text('ভিলেজকো স্টোরে কেনাকাটার জন্য ধন্যবাদ!', style: thankYouStyle, banglaStyle: thankYouStyle),
+                child: Text('ভিলেজকো স্টোরে কেনাকাটার জন্য ধন্যবাদ!', style: thankYouStyle, banglaStyle: thankYouBanglaStyle),
               ),
             ],
           );
@@ -267,14 +257,18 @@ class PdfGenerator {
               pw.Center(
                 child: pw.Column(
                   children: [
-                    Text('ভিলেজকো স্টোর', style: pw.TextStyle(fontWeight: pw.FontWeight.bold, fontSize: 20)),
-                    Text('লাভ-ক্ষতি বিবরণী (Profit & Loss Statement)', style: const pw.TextStyle(fontSize: 12, color: PdfColors.grey700)),
+                    Text('ভিলেজকো স্টোর', fontSize: 20, fontWeight: pw.FontWeight.bold),
                     pw.Row(
                       mainAxisAlignment: pw.MainAxisAlignment.center,
                       children: [
-                        Text('তারিখ ও সময়: ', style: const pw.TextStyle(fontSize: 9, color: PdfColors.grey500)),
-                        pw.Text(Formatters.dateTime(DateTime.now()), style: pw.TextStyle(font: pw.Font.helvetica(), fontSize: 9, color: PdfColors.grey500)),
+                        Text('লাভ-ক্ষতি বিবরণী ', fontSize: 12, color: PdfColors.grey700),
+                        pw.Text('(Profit & Loss Statement)', style: pw.TextStyle(font: pw.Font.helvetica(), fontSize: 12, color: PdfColors.grey700)),
                       ],
+                    ),
+                    Text(
+                      'তারিখ ও সময়: ${Formatters.dateTime(DateTime.now())}',
+                      fontSize: 9,
+                      color: PdfColors.grey500,
                     ),
                     pw.SizedBox(height: 12),
                     pw.Divider(thickness: 1, color: PdfColors.black),
@@ -295,11 +289,11 @@ class PdfGenerator {
                     children: [
                       pw.Padding(
                         padding: const pw.EdgeInsets.all(10),
-                        child: Text('বিবরণ (Description)', style: pw.TextStyle(fontWeight: pw.FontWeight.bold, fontSize: 11)),
+                        child: Text('বিবরণ (Description)', fontSize: 11, fontWeight: pw.FontWeight.bold),
                       ),
                       pw.Padding(
                         padding: const pw.EdgeInsets.all(10),
-                        child: Text('টাকা (Amount)', style: pw.TextStyle(fontWeight: pw.FontWeight.bold, fontSize: 11), textAlign: pw.TextAlign.right),
+                        child: Text('টাকা (Amount)', fontSize: 11, fontWeight: pw.FontWeight.bold, textAlign: pw.TextAlign.right),
                       ),
                     ],
                   ),
@@ -307,7 +301,7 @@ class PdfGenerator {
                     children: [
                       pw.Padding(
                         padding: const pw.EdgeInsets.all(10),
-                        child: Text('আজকের বিক্রির পরিমাণ', style: const pw.TextStyle(fontSize: 10)),
+                        child: Text('আজকের বিক্রির পরিমাণ', fontSize: 10),
                       ),
                       pw.Padding(
                         padding: const pw.EdgeInsets.all(10),
@@ -322,7 +316,7 @@ class PdfGenerator {
                     children: [
                       pw.Padding(
                         padding: const pw.EdgeInsets.all(10),
-                        child: Text('মজুদ পণ্যের মূল্য', style: const pw.TextStyle(fontSize: 10)),
+                        child: Text('মজুদ পণ্যের মূল্য', fontSize: 10),
                       ),
                       pw.Padding(
                         padding: const pw.EdgeInsets.all(10),
@@ -337,7 +331,7 @@ class PdfGenerator {
                     children: [
                       pw.Padding(
                         padding: const pw.EdgeInsets.all(10),
-                        child: Text('মোট খরচের পরিমাণ', style: const pw.TextStyle(fontSize: 10)),
+                        child: Text('মোট খরচের পরিমাণ', fontSize: 10),
                       ),
                       pw.Padding(
                         padding: const pw.EdgeInsets.all(10),
@@ -353,13 +347,13 @@ class PdfGenerator {
                     children: [
                       pw.Padding(
                         padding: const pw.EdgeInsets.all(10),
-                        child: Text('আজকের নিট লাভ', style: pw.TextStyle(fontWeight: pw.FontWeight.bold, fontSize: 11)),
+                        child: Text('আজকের নিট লাভ', fontSize: 11, fontWeight: pw.FontWeight.bold),
                       ),
                       pw.Padding(
                         padding: const pw.EdgeInsets.all(10),
                         child: pw.Align(
                           alignment: pw.Alignment.centerRight,
-                          child: _currencyText(netProfit, style: pw.TextStyle(fontWeight: pw.FontWeight.bold, fontSize: 11), isBold: true, textAlign: pw.TextAlign.right),
+                          child: _currencyText(netProfit, style: const pw.TextStyle(fontSize: 11), isBold: true, textAlign: pw.TextAlign.right),
                         ),
                       ),
                     ],
@@ -370,7 +364,7 @@ class PdfGenerator {
               pw.SizedBox(height: 40),
               pw.Divider(thickness: 0.5, color: PdfColors.grey),
               pw.Center(
-                child: Text('VillageCO Store Inventory & POS System', style: const pw.TextStyle(fontSize: 8, color: PdfColors.grey600)),
+                child: Text('VillageCO Store Inventory & POS System', fontSize: 8, color: PdfColors.grey600),
               ),
             ],
           );
@@ -527,10 +521,15 @@ class PdfGenerator {
   }) async {
     final pdf = pw.Document();
     final defaultFont = BanglaFontManager().defaultFont;
-    final regularStyle = pw.TextStyle(font: defaultFont, fontSize: 10, fontWeight: pw.FontWeight.normal);
-    final titleStyle = pw.TextStyle(font: defaultFont, fontSize: 18, fontWeight: pw.FontWeight.bold);
-    final subTitleStyle = pw.TextStyle(font: defaultFont, fontSize: 12, fontWeight: pw.FontWeight.bold);
-    final headerStyle = pw.TextStyle(font: defaultFont, fontSize: 10, fontWeight: pw.FontWeight.bold);
+    final englishFont = pw.Font.helvetica();
+    final regularStyle = pw.TextStyle(font: englishFont, fontSize: 10, fontWeight: pw.FontWeight.normal);
+    final regularBanglaStyle = pw.TextStyle(font: defaultFont, fontSize: 10, fontWeight: pw.FontWeight.normal);
+    final titleStyle = pw.TextStyle(font: englishFont, fontSize: 18, fontWeight: pw.FontWeight.bold);
+    final titleBanglaStyle = pw.TextStyle(font: defaultFont, fontSize: 18, fontWeight: pw.FontWeight.bold);
+    final subTitleStyle = pw.TextStyle(font: englishFont, fontSize: 12, fontWeight: pw.FontWeight.bold);
+    final subTitleBanglaStyle = pw.TextStyle(font: defaultFont, fontSize: 12, fontWeight: pw.FontWeight.bold);
+    final headerStyle = pw.TextStyle(font: englishFont, fontSize: 10, fontWeight: pw.FontWeight.bold);
+    final headerBanglaStyle = pw.TextStyle(font: defaultFont, fontSize: 10, fontWeight: pw.FontWeight.bold);
 
     pdf.addPage(
       pw.MultiPage(
@@ -541,18 +540,20 @@ class PdfGenerator {
             pw.Center(
               child: pw.Column(
                 children: [
-                  Text('ভিলেজকো স্টোর', style: titleStyle, banglaStyle: titleStyle),
-                  pw.SizedBox(height: 4),
-                  Text('দৈনিক লেনদেন রিপোর্ট (Daily Transaction Report)', style: subTitleStyle, banglaStyle: subTitleStyle),
+                  Text('ভিলেজকো স্টোর', style: titleStyle, banglaStyle: titleBanglaStyle),
                   pw.SizedBox(height: 4),
                   pw.Row(
                     mainAxisAlignment: pw.MainAxisAlignment.center,
                     children: [
-                      Text('তারিখ: ', style: regularStyle, banglaStyle: regularStyle),
-                      pw.Text(Formatters.date(DateTime.now()), style: pw.TextStyle(font: pw.Font.helvetica(), fontSize: 10)),
-                      Text(' • সময়: ', style: regularStyle, banglaStyle: regularStyle),
-                      pw.Text(Formatters.dateTime(DateTime.now()).split(" ").last, style: pw.TextStyle(font: pw.Font.helvetica(), fontSize: 10)),
+                      Text('দৈনিক লেনদেন রিপোর্ট ', style: subTitleStyle, banglaStyle: subTitleBanglaStyle),
+                      pw.Text('(Daily Transaction Report)', style: subTitleStyle),
                     ],
+                  ),
+                  pw.SizedBox(height: 4),
+                  Text(
+                    'তারিখ: ${Formatters.date(DateTime.now())} | সময়: ${Formatters.dateTime(DateTime.now()).split(" ").last}',
+                    style: regularStyle,
+                    banglaStyle: regularBanglaStyle,
                   ),
                   pw.SizedBox(height: 8),
                   pw.Divider(thickness: 1, color: PdfColors.black),
@@ -562,7 +563,12 @@ class PdfGenerator {
             pw.SizedBox(height: 16),
             
             // Financial Summary Block
-            Text('আর্থিক সারসংক্ষেপ (Financial Summary)', style: subTitleStyle, banglaStyle: subTitleStyle),
+            pw.Row(
+              children: [
+                Text('আর্থিক সারসংক্ষেপ ', style: subTitleStyle, banglaStyle: subTitleBanglaStyle),
+                pw.Text('(Financial Summary)', style: subTitleStyle),
+              ],
+            ),
             pw.SizedBox(height: 8),
             pw.Table(
               border: pw.TableBorder.all(color: PdfColors.grey400, width: 0.5),
@@ -572,11 +578,11 @@ class PdfGenerator {
                   children: [
                     pw.Padding(
                       padding: const pw.EdgeInsets.all(8),
-                      child: Text('খাত', style: headerStyle, banglaStyle: headerStyle),
+                      child: Text('খাত', style: headerStyle, banglaStyle: headerBanglaStyle),
                     ),
                     pw.Padding(
                       padding: const pw.EdgeInsets.all(8),
-                      child: Text('পরিমাণ (টাকা)', style: headerStyle, banglaStyle: headerStyle, textAlign: pw.TextAlign.right),
+                      child: Text('পরিমাণ (টাকা)', style: headerStyle, banglaStyle: headerBanglaStyle, textAlign: pw.TextAlign.right),
                     ),
                   ],
                 ),
@@ -584,7 +590,7 @@ class PdfGenerator {
                   children: [
                     pw.Padding(
                       padding: const pw.EdgeInsets.all(8),
-                      child: Text('আজকের মোট বিক্রি', style: regularStyle, banglaStyle: regularStyle),
+                      child: Text('আজকের মোট বিক্রি', style: regularStyle, banglaStyle: regularBanglaStyle),
                     ),
                     pw.Padding(
                       padding: const pw.EdgeInsets.all(8),
@@ -599,7 +605,7 @@ class PdfGenerator {
                   children: [
                     pw.Padding(
                       padding: const pw.EdgeInsets.all(8),
-                      child: Text('আজকের মোট খরচ', style: regularStyle, banglaStyle: regularStyle),
+                      child: Text('আজকের মোট খরচ', style: regularStyle, banglaStyle: regularBanglaStyle),
                     ),
                     pw.Padding(
                       padding: const pw.EdgeInsets.all(8),
@@ -617,7 +623,7 @@ class PdfGenerator {
                   children: [
                     pw.Padding(
                       padding: const pw.EdgeInsets.all(8),
-                      child: Text('আজকের নিট লাভ', style: headerStyle, banglaStyle: headerStyle),
+                      child: Text('আজকের নিট লাভ', style: headerStyle, banglaStyle: headerBanglaStyle),
                     ),
                     pw.Padding(
                       padding: const pw.EdgeInsets.all(8),
@@ -632,26 +638,17 @@ class PdfGenerator {
                   children: [
                     pw.Padding(
                       padding: const pw.EdgeInsets.all(8),
-                      child: Text('মোট লেনদেন সংখ্যা', style: regularStyle, banglaStyle: regularStyle),
+                      child: Text('মোট লেনদেন সংখ্যা', style: regularStyle, banglaStyle: regularBanglaStyle),
                     ),
                     pw.Padding(
                       padding: const pw.EdgeInsets.all(8),
                       child: pw.Align(
                         alignment: pw.Alignment.centerRight,
-                        child: pw.RichText(
+                        child: Text(
+                          '$totalTransactionsCount',
+                          style: regularStyle,
+                          banglaStyle: regularBanglaStyle,
                           textAlign: pw.TextAlign.right,
-                          text: pw.TextSpan(
-                            style: regularStyle,
-                            children: [
-                              pw.TextSpan(
-                                text: '$totalTransactionsCount',
-                                style: pw.TextStyle(font: pw.Font.helvetica(), fontSize: 10, color: regularStyle.color),
-                              ),
-                              pw.TextSpan(
-                                text: ' টি',
-                              ),
-                            ],
-                          ),
                         ),
                       ),
                     ),
@@ -662,12 +659,17 @@ class PdfGenerator {
             pw.SizedBox(height: 24),
             
             // Transactions list
-            Text('আজকের বিক্রয় বিবরণী (Today\'s Sales list)', style: subTitleStyle, banglaStyle: subTitleStyle),
+            pw.Row(
+              children: [
+                Text('আজকের বিক্রয় বিবরণী ', style: subTitleStyle, banglaStyle: subTitleBanglaStyle),
+                pw.Text('(Today\'s Sales list)', style: subTitleStyle),
+              ],
+            ),
             pw.SizedBox(height: 8),
             if (todaySalesList.isEmpty)
               pw.Padding(
                 padding: const pw.EdgeInsets.all(12),
-                child: Text('আজকে কোনো বিক্রির লেনদেন হয়নি।', style: regularStyle, banglaStyle: regularStyle),
+                child: Text('আজকে কোনো বিক্রির লেনদেন হয়নি।', style: regularStyle, banglaStyle: regularBanglaStyle),
               )
             else
               pw.Table(
@@ -685,23 +687,23 @@ class PdfGenerator {
                     children: [
                       pw.Padding(
                         padding: const pw.EdgeInsets.all(6),
-                        child: Text('রশিদ নং', style: headerStyle, banglaStyle: headerStyle),
+                        child: Text('রশিদ নং', style: headerStyle, banglaStyle: headerBanglaStyle),
                       ),
                       pw.Padding(
                         padding: const pw.EdgeInsets.all(6),
-                        child: Text('সময়', style: headerStyle, banglaStyle: headerStyle),
+                        child: Text('সময়', style: headerStyle, banglaStyle: headerBanglaStyle),
                       ),
                       pw.Padding(
                         padding: const pw.EdgeInsets.all(6),
-                        child: Text('কাস্টমার', style: headerStyle, banglaStyle: headerStyle),
+                        child: Text('কাস্টমার', style: headerStyle, banglaStyle: headerBanglaStyle),
                       ),
                       pw.Padding(
                         padding: const pw.EdgeInsets.all(6),
-                        child: Text('পদ্ধতি', style: headerStyle, banglaStyle: headerStyle),
+                        child: Text('পদ্ধতি', style: headerStyle, banglaStyle: headerBanglaStyle),
                       ),
                       pw.Padding(
                         padding: const pw.EdgeInsets.all(6),
-                        child: Text('মোট বিল', style: headerStyle, banglaStyle: headerStyle, textAlign: pw.TextAlign.right),
+                        child: Text('মোট বিল', style: headerStyle, banglaStyle: headerBanglaStyle, textAlign: pw.TextAlign.right),
                       ),
                     ],
                   ),
@@ -710,19 +712,19 @@ class PdfGenerator {
                       children: [
                         pw.Padding(
                           padding: const pw.EdgeInsets.all(6),
-                          child: pw.Text(sale['id'].toString().substring(0, 8).toUpperCase(), style: pw.TextStyle(font: pw.Font.helvetica(), fontSize: 10)),
+                          child: Text(sale['id'].toString().substring(0, 8).toUpperCase(), style: regularStyle, banglaStyle: regularBanglaStyle),
                         ),
                         pw.Padding(
                           padding: const pw.EdgeInsets.all(6),
-                          child: pw.Text(sale['time'] as String, style: pw.TextStyle(font: pw.Font.helvetica(), fontSize: 10)),
+                          child: Text(sale['time'] as String, style: regularStyle, banglaStyle: regularBanglaStyle),
                         ),
                         pw.Padding(
                           padding: const pw.EdgeInsets.all(6),
-                          child: Text(sale['customer'] as String, style: regularStyle, banglaStyle: regularStyle),
+                          child: Text(sale['customer'] as String, style: regularStyle, banglaStyle: regularBanglaStyle),
                         ),
                         pw.Padding(
                           padding: const pw.EdgeInsets.all(6),
-                          child: Text(sale['payment'] as String, style: regularStyle, banglaStyle: regularStyle),
+                          child: Text(sale['payment'] as String, style: regularStyle, banglaStyle: regularBanglaStyle),
                         ),
                         pw.Padding(
                           padding: const pw.EdgeInsets.all(6),
@@ -739,7 +741,7 @@ class PdfGenerator {
             pw.SizedBox(height: 40),
             pw.Divider(thickness: 0.5, color: PdfColors.grey),
             pw.Center(
-              child: Text('ভিলেজকো স্টোর - দৈনিক লেনদেন রিপোর্ট ক্লোজিং সেশন', style: regularStyle, banglaStyle: regularStyle),
+              child: Text('ভিলেজকো স্টোর - দৈনিক লেনদেন রিপোর্ট ক্লোজিং সেশন', style: regularStyle, banglaStyle: regularBanglaStyle),
             ),
           ];
         },
@@ -817,11 +819,17 @@ class PdfGenerator {
   }) async {
     final pdf = pw.Document();
     final defaultFont = BanglaFontManager().defaultFont;
-    final regularStyle = pw.TextStyle(font: defaultFont, fontSize: 8, fontWeight: pw.FontWeight.normal);
-    final boldStyle = pw.TextStyle(font: defaultFont, fontSize: 8, fontWeight: pw.FontWeight.bold);
-    final titleStyle = pw.TextStyle(font: defaultFont, fontSize: 16, fontWeight: pw.FontWeight.bold);
-    final subTitleStyle = pw.TextStyle(font: defaultFont, fontSize: 11, fontWeight: pw.FontWeight.bold);
-    final headerStyle = pw.TextStyle(font: defaultFont, fontSize: 8, fontWeight: pw.FontWeight.bold);
+    final englishFont = pw.Font.helvetica();
+    final regularStyle = pw.TextStyle(font: englishFont, fontSize: 8, fontWeight: pw.FontWeight.normal);
+    final regularBanglaStyle = pw.TextStyle(font: defaultFont, fontSize: 8, fontWeight: pw.FontWeight.normal);
+    final boldStyle = pw.TextStyle(font: englishFont, fontSize: 8, fontWeight: pw.FontWeight.bold);
+    final boldBanglaStyle = pw.TextStyle(font: defaultFont, fontSize: 8, fontWeight: pw.FontWeight.bold);
+    final titleStyle = pw.TextStyle(font: englishFont, fontSize: 16, fontWeight: pw.FontWeight.bold);
+    final titleBanglaStyle = pw.TextStyle(font: defaultFont, fontSize: 16, fontWeight: pw.FontWeight.bold);
+    final subTitleStyle = pw.TextStyle(font: englishFont, fontSize: 11, fontWeight: pw.FontWeight.bold);
+    final subTitleBanglaStyle = pw.TextStyle(font: defaultFont, fontSize: 11, fontWeight: pw.FontWeight.bold);
+    final headerStyle = pw.TextStyle(font: englishFont, fontSize: 8, fontWeight: pw.FontWeight.bold);
+    final headerBanglaStyle = pw.TextStyle(font: defaultFont, fontSize: 8, fontWeight: pw.FontWeight.bold);
 
     pdf.addPage(
       pw.MultiPage(
@@ -835,18 +843,14 @@ class PdfGenerator {
             pw.Center(
               child: pw.Column(
                 children: [
-                  Text('ভিলেজকো স্টোর', style: titleStyle, banglaStyle: titleStyle),
+                  Text('ভিলেজকো স্টোর', style: titleStyle, banglaStyle: titleBanglaStyle),
                   pw.SizedBox(height: 4),
-                  Text('সরবরাহকারী স্টক ও লেনদেন রিপোর্ট ', style: subTitleStyle, banglaStyle: subTitleStyle),
+                  Text('সরবরাহকারী স্টক ও লেনদেন রিপোর্ট ', style: subTitleStyle, banglaStyle: subTitleBanglaStyle),
                   pw.SizedBox(height: 4),
-                  pw.Row(
-                    mainAxisAlignment: pw.MainAxisAlignment.center,
-                    children: [
-                      Text('তারিখ: ', style: regularStyle, banglaStyle: regularStyle),
-                      pw.Text(Formatters.date(DateTime.now()), style: pw.TextStyle(font: pw.Font.helvetica(), fontSize: 8)),
-                      Text(' • সময়: ', style: regularStyle, banglaStyle: regularStyle),
-                      pw.Text(Formatters.dateTime(DateTime.now()).split(" ").last, style: pw.TextStyle(font: pw.Font.helvetica(), fontSize: 8)),
-                    ],
+                  Text(
+                    'তারিখ: ${Formatters.date(DateTime.now())} | সময়: ${Formatters.dateTime(DateTime.now()).split(" ").last}',
+                    style: regularStyle,
+                    banglaStyle: regularBanglaStyle,
                   ),
                   pw.SizedBox(height: 8),
                   pw.Divider(thickness: 1, color: PdfColors.black),
@@ -888,27 +892,13 @@ class PdfGenerator {
                 child: pw.Column(
                   crossAxisAlignment: pw.CrossAxisAlignment.start,
                   children: [
-                    Text('সরবরাহকারী: ${sup.name}', style: subTitleStyle, banglaStyle: subTitleStyle),
-                    pw.RichText(
-                      text: pw.TextSpan(
-                        style: regularStyle,
-                        children: [
-                          pw.TextSpan(text: 'মোবাইল: '),
-                          pw.TextSpan(
-                            text: sup.phone,
-                            style: pw.TextStyle(font: pw.Font.helvetica(), fontSize: 8, color: regularStyle.color),
-                          ),
-                          if (sup.email != null) ...[
-                            pw.TextSpan(text: ' | ইমেইল: '),
-                            pw.TextSpan(
-                              text: sup.email!,
-                              style: pw.TextStyle(font: pw.Font.helvetica(), fontSize: 8, color: regularStyle.color),
-                            ),
-                          ],
-                        ],
-                      ),
+                    Text('সরবরাহকারী: ${sup.name}', style: subTitleStyle, banglaStyle: subTitleBanglaStyle),
+                    Text(
+                      'মোবাইল: ${sup.phone}${sup.email != null ? ' | ইমেইল: ${sup.email}' : ''}',
+                      style: regularStyle,
+                      banglaStyle: regularBanglaStyle,
                     ),
-                    if (sup.address != null) Text('ঠিকানা: ${sup.address}', style: regularStyle, banglaStyle: regularStyle),
+                    if (sup.address != null) Text('ঠিকানা: ${sup.address}', style: regularStyle, banglaStyle: regularBanglaStyle),
                   ],
                 ),
               ),
@@ -922,13 +912,13 @@ class PdfGenerator {
                   pw.TableRow(
                     decoration: const pw.BoxDecoration(color: PdfColors.grey200),
                     children: [
-                      pw.Padding(padding: const pw.EdgeInsets.all(6), child: Text('মোট বিল', style: boldStyle, banglaStyle: boldStyle, textAlign: pw.TextAlign.center)),
-                      pw.Padding(padding: const pw.EdgeInsets.all(6), child: Text('মোট পরিশোধ', style: boldStyle, banglaStyle: boldStyle, textAlign: pw.TextAlign.center)),
-                      pw.Padding(padding: const pw.EdgeInsets.all(6), child: Text('বকেয়া পাওনা', style: boldStyle, banglaStyle: boldStyle, textAlign: pw.TextAlign.center)),
-                      pw.Padding(padding: const pw.EdgeInsets.all(6), child: Text('অর্ডার পণ্য', style: boldStyle, banglaStyle: boldStyle, textAlign: pw.TextAlign.center)),
-                      pw.Padding(padding: const pw.EdgeInsets.all(6), child: Text('রিসিভড পণ্য', style: boldStyle, banglaStyle: boldStyle, textAlign: pw.TextAlign.center)),
-                      pw.Padding(padding: const pw.EdgeInsets.all(6), child: Text('বাকি পণ্য', style: boldStyle, banglaStyle: boldStyle, textAlign: pw.TextAlign.center)),
-                      pw.Padding(padding: const pw.EdgeInsets.all(6), child: Text('ক্ষতিগ্রস্ত পণ্য', style: boldStyle, banglaStyle: boldStyle, textAlign: pw.TextAlign.center)),
+                      pw.Padding(padding: const pw.EdgeInsets.all(6), child: Text('মোট বিল', style: boldStyle, banglaStyle: boldBanglaStyle, textAlign: pw.TextAlign.center)),
+                      pw.Padding(padding: const pw.EdgeInsets.all(6), child: Text('মোট পরিশোধ', style: boldStyle, banglaStyle: boldBanglaStyle, textAlign: pw.TextAlign.center)),
+                      pw.Padding(padding: const pw.EdgeInsets.all(6), child: Text('বকেয়া পাওনা', style: boldStyle, banglaStyle: boldBanglaStyle, textAlign: pw.TextAlign.center)),
+                      pw.Padding(padding: const pw.EdgeInsets.all(6), child: Text('অর্ডার পণ্য', style: boldStyle, banglaStyle: boldBanglaStyle, textAlign: pw.TextAlign.center)),
+                      pw.Padding(padding: const pw.EdgeInsets.all(6), child: Text('রিসিভড পণ্য', style: boldStyle, banglaStyle: boldBanglaStyle, textAlign: pw.TextAlign.center)),
+                      pw.Padding(padding: const pw.EdgeInsets.all(6), child: Text('বাকি পণ্য', style: boldStyle, banglaStyle: boldBanglaStyle, textAlign: pw.TextAlign.center)),
+                      pw.Padding(padding: const pw.EdgeInsets.all(6), child: Text('ক্ষতিগ্রস্ত পণ্য', style: boldStyle, banglaStyle: boldBanglaStyle, textAlign: pw.TextAlign.center)),
                     ],
                   ),
                   pw.TableRow(
@@ -958,9 +948,10 @@ class PdfGenerator {
                         padding: const pw.EdgeInsets.all(6),
                         child: pw.Align(
                           alignment: pw.Alignment.center,
-                          child: pw.Text(
+                          child: Text(
                             Formatters.number(quantityOrdered),
-                            style: pw.TextStyle(font: pw.Font.helvetica(), fontSize: 8),
+                            style: regularStyle,
+                            banglaStyle: regularBanglaStyle,
                           ),
                         ),
                       ),
@@ -968,9 +959,10 @@ class PdfGenerator {
                         padding: const pw.EdgeInsets.all(6),
                         child: pw.Align(
                           alignment: pw.Alignment.center,
-                          child: pw.Text(
+                          child: Text(
                             Formatters.number(quantityReceived),
-                            style: pw.TextStyle(font: pw.Font.helvetica(), fontSize: 8),
+                            style: regularStyle,
+                            banglaStyle: regularBanglaStyle,
                           ),
                         ),
                       ),
@@ -978,9 +970,10 @@ class PdfGenerator {
                         padding: const pw.EdgeInsets.all(6),
                         child: pw.Align(
                           alignment: pw.Alignment.center,
-                          child: pw.Text(
+                          child: Text(
                             Formatters.number(quantityPending > 0 ? quantityPending : 0),
-                            style: pw.TextStyle(font: pw.Font.helvetica(), fontSize: 8),
+                            style: regularStyle,
+                            banglaStyle: regularBanglaStyle,
                           ),
                         ),
                       ),
@@ -988,9 +981,10 @@ class PdfGenerator {
                         padding: const pw.EdgeInsets.all(6),
                         child: pw.Align(
                           alignment: pw.Alignment.center,
-                          child: pw.Text(
+                          child: Text(
                             Formatters.number(totalDamages),
-                            style: pw.TextStyle(font: pw.Font.helvetica(), fontSize: 8),
+                            style: regularStyle,
+                            banglaStyle: regularBanglaStyle,
                           ),
                         ),
                       ),
@@ -1002,11 +996,11 @@ class PdfGenerator {
             children.add(pw.SizedBox(height: 8));
 
             // 2. Supplied Products Table
-            children.add(Text('সরবরাহকৃত পণ্য ও বর্তমান স্টক', style: boldStyle, banglaStyle: boldStyle));
+            children.add(Text('সরবরাহকৃত পণ্য ও বর্তমান স্টক', style: boldStyle, banglaStyle: boldBanglaStyle));
             children.add(pw.SizedBox(height: 4));
 
             if (products.isEmpty) {
-              children.add(pw.Padding(padding: const pw.EdgeInsets.only(left: 12, bottom: 8), child: Text('কোনো পণ্য অ্যাসাইন করা নেই।', style: regularStyle, banglaStyle: regularStyle)));
+              children.add(pw.Padding(padding: const pw.EdgeInsets.only(left: 12, bottom: 8), child: Text('কোনো পণ্য অ্যাসাইন করা নেই।', style: regularStyle, banglaStyle: regularBanglaStyle)));
             } else {
               children.add(
                 pw.Table(
@@ -1015,46 +1009,25 @@ class PdfGenerator {
                     pw.TableRow(
                       decoration: const pw.BoxDecoration(color: PdfColors.grey100),
                       children: [
-                        pw.Padding(padding: const pw.EdgeInsets.all(5), child: Text('পণ্যের নাম', style: boldStyle, banglaStyle: boldStyle)),
-                        pw.Padding(padding: const pw.EdgeInsets.all(5), child: Text('বর্তমান স্টক', style: boldStyle, banglaStyle: boldStyle, textAlign: pw.TextAlign.right)),
-                        pw.Padding(padding: const pw.EdgeInsets.all(5), child: Text('ক্রয় মূল্য', style: boldStyle, banglaStyle: boldStyle, textAlign: pw.TextAlign.right)),
+                        pw.Padding(padding: const pw.EdgeInsets.all(5), child: Text('পণ্যের নাম', style: boldStyle, banglaStyle: boldBanglaStyle)),
+                        pw.Padding(padding: const pw.EdgeInsets.all(5), child: Text('বর্তমান স্টক', style: boldStyle, banglaStyle: boldBanglaStyle, textAlign: pw.TextAlign.right)),
+                        pw.Padding(padding: const pw.EdgeInsets.all(5), child: Text('ক্রয় মূল্য', style: boldStyle, banglaStyle: boldBanglaStyle, textAlign: pw.TextAlign.right)),
                       ],
                     ),
                     ...products.map((p) {
                       final isLow = p.currentStock <= p.minimumStock;
                       return pw.TableRow(
                         children: [
-                          pw.Padding(padding: const pw.EdgeInsets.all(5), child: Text(p.name, style: regularStyle, banglaStyle: regularStyle)),
+                          pw.Padding(padding: const pw.EdgeInsets.all(5), child: Text(p.name, style: regularStyle, banglaStyle: regularBanglaStyle)),
                           pw.Padding(
                             padding: const pw.EdgeInsets.all(5),
                             child: pw.Align(
                               alignment: pw.Alignment.centerRight,
-                              child: pw.RichText(
+                              child: Text(
+                                '${Formatters.number(p.currentStock)}${isLow ? ' (নিম্ন স্টক)' : ''}',
+                                style: isLow ? boldStyle.copyWith(color: PdfColors.red) : regularStyle,
+                                banglaStyle: isLow ? boldBanglaStyle.copyWith(color: PdfColors.red) : regularBanglaStyle,
                                 textAlign: pw.TextAlign.right,
-                                text: pw.TextSpan(
-                                  style: regularStyle,
-                                  children: [
-                                    pw.TextSpan(
-                                      text: Formatters.number(p.currentStock),
-                                      style: pw.TextStyle(
-                                        font: pw.Font.helvetica(),
-                                        fontSize: 8,
-                                        fontWeight: isLow ? pw.FontWeight.bold : pw.FontWeight.normal,
-                                        color: isLow ? PdfColors.red : regularStyle.color,
-                                      ),
-                                    ),
-                                    if (isLow)
-                                      pw.TextSpan(
-                                        text: ' (নিম্ন স্টক)',
-                                        style: pw.TextStyle(
-                                          font: defaultFont,
-                                          fontSize: 8,
-                                          fontWeight: pw.FontWeight.bold,
-                                          color: PdfColors.red,
-                                        ),
-                                      ),
-                                  ],
-                                ),
                               ),
                             ),
                           ),
