@@ -146,7 +146,9 @@ class SettingsController extends AsyncNotifier<AppSettingsTableData> {
       await _db.delete(_db.purchases).go();
       await _db.delete(_db.expenses).go();
       await _db.delete(_db.stockHistory).go();
-      await _db.delete(_db.appSettingsTable).go();
+      if (data['settings'] != null) {
+        await _db.delete(_db.appSettingsTable).go();
+      }
 
       // Insert Categories
       if (data['categories'] != null) {
