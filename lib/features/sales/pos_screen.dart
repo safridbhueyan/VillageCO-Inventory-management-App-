@@ -38,6 +38,7 @@ class _PosScreenState extends ConsumerState<PosScreen>
   late TabController _tabController;
   final TextEditingController _searchController = TextEditingController();
   final TextEditingController _paidAmountController = TextEditingController();
+  final GlobalKey<RefreshIndicatorState> _refreshIndicatorKey = GlobalKey<RefreshIndicatorState>();
 
   @override
   void initState() {
@@ -51,6 +52,42 @@ class _PosScreenState extends ConsumerState<PosScreen>
     _searchController.dispose();
     _paidAmountController.dispose();
     super.dispose();
+  }
+
+  Future<void> _handleRefresh(BuildContext context) async {
+    try {
+      ref.invalidate(allActiveProductsProvider);
+      ref.invalidate(productsListProvider);
+      ref.invalidate(categoriesControllerProvider);
+      ref.invalidate(posCustomersListProvider);
+
+      final settings = ref.read(settingsControllerProvider).valueOrNull;
+      if (settings != null) {
+        final syncService = ref.read(firebaseSyncServiceProvider);
+        await syncService.pullAndUpsertCatalog(settings);
+      }
+
+      await ref.read(allActiveProductsProvider.future);
+      await ref.read(categoriesControllerProvider.future);
+      await ref.read(posCustomersListProvider.future);
+
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('পণ্য ও ক্যাটাগরি তালিকা রিফ্রেশ করা হয়েছে'),
+            duration: Duration(seconds: 1),
+          ),
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('রিফ্রেশ করতে সমস্যা হয়েছে: $e'),
+          ),
+        );
+      }
+    }
   }
 
   @override
@@ -98,6 +135,17 @@ class _PosScreenState extends ConsumerState<PosScreen>
           ),
           actions: [
             IconButton(
+              icon: const Icon(Icons.refresh),
+              tooltip: 'রিফ্রেশ করুন',
+              onPressed: () {
+                if (_refreshIndicatorKey.currentState != null) {
+                  _refreshIndicatorKey.currentState!.show();
+                } else {
+                  _handleRefresh(context);
+                }
+              },
+            ),
+            IconButton(
               icon: const Icon(Icons.delete_sweep_outlined),
               tooltip: 'কার্ট খালি করুন',
               onPressed: () => ref.read(posCartProvider.notifier).clearCart(),
@@ -129,6 +177,19 @@ class _PosScreenState extends ConsumerState<PosScreen>
             'বিক্রয় কেন্দ্র (POS)',
             style: TextStyle(fontWeight: FontWeight.bold),
           ),
+          actions: [
+            IconButton(
+              icon: const Icon(Icons.refresh),
+              tooltip: 'রিফ্রেশ করুন',
+              onPressed: () {
+                if (_refreshIndicatorKey.currentState != null) {
+                  _refreshIndicatorKey.currentState!.show();
+                } else {
+                  _handleRefresh(context);
+                }
+              },
+            ),
+          ],
           bottom: TabBar(
             controller: _tabController,
             indicatorColor: theme.colorScheme.primary,
@@ -248,117 +309,129 @@ class _PosScreenState extends ConsumerState<PosScreen>
             ),
           ),
           Expanded(
-            child: products.isEmpty
-                ? const Center(child: Text('ম্যাচিং কোনো পণ্য পাওয়া যায়নি।'))
-                : GridView.builder(
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 16,
-                      vertical: 8,
-                    ),
-                    gridDelegate:
-                        const SliverGridDelegateWithMaxCrossAxisExtent(
-                          maxCrossAxisExtent: 180,
-                          childAspectRatio: 0.85,
-                          crossAxisSpacing: 12,
-                          mainAxisSpacing: 12,
-                        ),
-                    itemCount: products.length,
-                    itemBuilder: (context, index) {
-                      final item = products[index];
-                      final p = item.product;
-                      final cartItemIndex = cart.items.indexWhere((ci) => ci.product.id == p.id);
-                      final double cartQuantity = cartItemIndex >= 0 ? cart.items[cartItemIndex].quantity : 0.0;
-                      final isOut = (p.currentStock - cartQuantity) <= 0;
-
-                      return Card(
-                        elevation: 0,
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(12),
-                          side: BorderSide(
-                            color: theme.colorScheme.outlineVariant.withOpacity(
-                              0.5,
-                            ),
+            child: RefreshIndicator(
+              key: _refreshIndicatorKey,
+              onRefresh: () => _handleRefresh(context),
+              child: products.isEmpty
+                  ? SingleChildScrollView(
+                      physics: const AlwaysScrollableScrollPhysics(),
+                      child: Container(
+                        height: 300,
+                        alignment: Alignment.center,
+                        child: const Text('ম্যাচিং কোনো পণ্য পাওয়া যায়নি।'),
+                      ),
+                    )
+                  : GridView.builder(
+                      physics: const AlwaysScrollableScrollPhysics(),
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 16,
+                        vertical: 8,
+                      ),
+                      gridDelegate:
+                          const SliverGridDelegateWithMaxCrossAxisExtent(
+                            maxCrossAxisExtent: 180,
+                            childAspectRatio: 0.85,
+                            crossAxisSpacing: 12,
+                            mainAxisSpacing: 12,
                           ),
-                        ),
-                        child: InkWell(
-                          onTap: isOut
-                              ? null
-                              : () {
-                                  ref.read(posCartProvider.notifier).addItem(p);
-                                  ScaffoldMessenger.of(context).showSnackBar(
-                                    SnackBar(
-                                      content: Text(
-                                        '${p.name} কার্টে যোগ হয়েছে',
-                                      ),
-                                      duration: const Duration(
-                                        milliseconds: 600,
-                                      ),
-                                    ),
-                                  );
-                                },
-                          borderRadius: BorderRadius.circular(12),
-                          child: Opacity(
-                            opacity: isOut ? 0.5 : 1.0,
-                            child: Padding(
-                              padding: const EdgeInsets.all(10.0),
-                              child: Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  Expanded(
-                                    child: Container(
-                                      width: double.infinity,
-                                      decoration: BoxDecoration(
-                                        color: theme.colorScheme.surfaceVariant
-                                            .withOpacity(0.3),
-                                        borderRadius: BorderRadius.circular(8),
-                                      ),
-                                      child: ProductImageWidget(
-                                        imagePath: p.imagePath,
-                                        width: double.infinity,
-                                        height: double.infinity,
-                                        fit: BoxFit.cover,
-                                        borderRadius: 8,
-                                      ),
-                                    ),
-                                  ),
-                                  const SizedBox(height: 6),
-                                  Text(
-                                    p.name,
-                                    style: const TextStyle(
-                                      fontWeight: FontWeight.bold,
-                                      fontSize: 13,
-                                    ),
-                                    maxLines: 1,
-                                    overflow: TextOverflow.ellipsis,
-                                  ),
-                                  const SizedBox(height: 2),
-                                  Text(
-                                    Formatters.currency(p.sellingPrice),
-                                    style: const TextStyle(
-                                      fontWeight: FontWeight.w700,
-                                    ),
-                                  ),
-                                  const SizedBox(height: 4),
-                                  Text(
-                                    isOut
-                                        ? 'স্টক খালি'
-                                        : '${Formatters.number(p.currentStock)} ${p.unit} অবশিষ্ট',
-                                    style: TextStyle(
-                                      fontSize: 10,
-                                      color: isOut ? Colors.red : Colors.grey,
-                                      fontWeight: isOut
-                                          ? FontWeight.bold
-                                          : FontWeight.normal,
-                                    ),
-                                  ),
-                                ],
+                      itemCount: products.length,
+                      itemBuilder: (context, index) {
+                        final item = products[index];
+                        final p = item.product;
+                        final cartItemIndex = cart.items.indexWhere((ci) => ci.product.id == p.id);
+                        final double cartQuantity = cartItemIndex >= 0 ? cart.items[cartItemIndex].quantity : 0.0;
+                        final isOut = (p.currentStock - cartQuantity) <= 0;
+
+                        return Card(
+                          elevation: 0,
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(12),
+                            side: BorderSide(
+                              color: theme.colorScheme.outlineVariant.withOpacity(
+                                0.5,
                               ),
                             ),
                           ),
-                        ),
-                      );
-                    },
-                  ),
+                          child: InkWell(
+                            onTap: isOut
+                                ? null
+                                : () {
+                                    ref.read(posCartProvider.notifier).addItem(p);
+                                    ScaffoldMessenger.of(context).showSnackBar(
+                                      SnackBar(
+                                        content: Text(
+                                          '${p.name} কার্টে যোগ হয়েছে',
+                                        ),
+                                        duration: const Duration(
+                                          milliseconds: 600,
+                                        ),
+                                      ),
+                                    );
+                                  },
+                            borderRadius: BorderRadius.circular(12),
+                            child: Opacity(
+                              opacity: isOut ? 0.5 : 1.0,
+                              child: Padding(
+                                padding: const EdgeInsets.all(10.0),
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Expanded(
+                                      child: Container(
+                                        width: double.infinity,
+                                        decoration: BoxDecoration(
+                                          color: theme.colorScheme.surfaceVariant
+                                              .withOpacity(0.3),
+                                          borderRadius: BorderRadius.circular(8),
+                                        ),
+                                        child: ProductImageWidget(
+                                          imagePath: p.imagePath,
+                                          width: double.infinity,
+                                          height: double.infinity,
+                                          fit: BoxFit.cover,
+                                          borderRadius: 8,
+                                        ),
+                                      ),
+                                    ),
+                                    const SizedBox(height: 6),
+                                    Text(
+                                      p.name,
+                                      style: const TextStyle(
+                                        fontWeight: FontWeight.bold,
+                                        fontSize: 13,
+                                      ),
+                                      maxLines: 1,
+                                      overflow: TextOverflow.ellipsis,
+                                    ),
+                                    const SizedBox(height: 2),
+                                    Text(
+                                      Formatters.currency(p.sellingPrice),
+                                      style: const TextStyle(
+                                        fontWeight: FontWeight.w700,
+                                      ),
+                                    ),
+                                    const SizedBox(height: 4),
+                                    Text(
+                                      isOut
+                                          ? 'স্টক খালি'
+                                          : '${Formatters.number(p.currentStock)} ${p.unit} অবশিষ্ট',
+                                      style: TextStyle(
+                                        fontSize: 10,
+                                        color: isOut ? Colors.red : Colors.grey,
+                                        fontWeight: isOut
+                                            ? FontWeight.bold
+                                            : FontWeight.normal,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            ),
+                          ),
+                        );
+                      },
+                    ),
+            ),
           ),
         ],
       ),
