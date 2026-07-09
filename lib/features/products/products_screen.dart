@@ -173,6 +173,7 @@ class _ProductsScreenState extends ConsumerState<ProductsScreen> {
                     contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
                   ),
                   items: const [
+                    DropdownMenuItem(value: 'newest', child: Text('সর্বশেষ যোগ করা')),
                     DropdownMenuItem(value: 'name_asc', child: Text('নাম: ক-অ')),
                     DropdownMenuItem(value: 'name_desc', child: Text('নাম: অ-ক')),
                     DropdownMenuItem(value: 'stock_asc', child: Text('স্টক: কম থেকে বেশি')),
@@ -1086,30 +1087,36 @@ class _ProductsScreenState extends ConsumerState<ProductsScreen> {
                               ),
                               const SizedBox(height: 12),
                               categoriesAsync.maybeWhen(
-                                data: (categories) => DropdownButtonFormField<String>(
-                                  value: selectedCategoryId,
-                                  isExpanded: true,
-                                  decoration: const InputDecoration(labelText: 'ক্যাটাগরি সিলেক্ট করুন', border: OutlineInputBorder()),
-                                  items: [
-                                    const DropdownMenuItem(value: null, child: Text('ক্যাটাগরি ছাড়া')),
-                                    ...categories.map((c) => DropdownMenuItem(value: c.id, child: Text(c.name))),
-                                  ],
-                                  onChanged: (val) => setDialogState(() => selectedCategoryId = val),
-                                ),
+                                data: (categories) {
+                                  final hasCategory = categories.any((c) => c.id == selectedCategoryId);
+                                  return DropdownButtonFormField<String>(
+                                    value: hasCategory ? selectedCategoryId : null,
+                                    isExpanded: true,
+                                    decoration: const InputDecoration(labelText: 'ক্যাটাগরি সিলেক্ট করুন', border: OutlineInputBorder()),
+                                    items: [
+                                      const DropdownMenuItem(value: null, child: Text('ক্যাটাগরি ছাড়া')),
+                                      ...categories.map((c) => DropdownMenuItem(value: c.id, child: Text(c.name))),
+                                    ],
+                                    onChanged: (val) => setDialogState(() => selectedCategoryId = val),
+                                  );
+                                },
                                 orElse: () => const SizedBox.shrink(),
                               ),
                               const SizedBox(height: 12),
                               ref.watch(suppliersControllerProvider).maybeWhen(
-                                data: (suppliers) => DropdownButtonFormField<String>(
-                                  value: selectedSupplierId,
-                                  isExpanded: true,
-                                  decoration: const InputDecoration(labelText: 'সরবরাহকারী (Supplier) সিলেক্ট করুন', border: OutlineInputBorder()),
-                                  items: [
-                                    const DropdownMenuItem(value: null, child: Text('সরবরাহকারী ছাড়া')),
-                                    ...suppliers.map((s) => DropdownMenuItem(value: s.id, child: Text(s.name))),
-                                  ],
-                                  onChanged: (val) => setDialogState(() => selectedSupplierId = val),
-                                ),
+                                data: (suppliers) {
+                                  final hasSupplier = suppliers.any((s) => s.id == selectedSupplierId);
+                                  return DropdownButtonFormField<String>(
+                                    value: hasSupplier ? selectedSupplierId : null,
+                                    isExpanded: true,
+                                    decoration: const InputDecoration(labelText: 'সরবরাহকারী (Supplier) সিলেক্ট করুন', border: OutlineInputBorder()),
+                                    items: [
+                                      const DropdownMenuItem(value: null, child: Text('সরবরাহকারী ছাড়া')),
+                                      ...suppliers.map((s) => DropdownMenuItem(value: s.id, child: Text(s.name))),
+                                    ],
+                                    onChanged: (val) => setDialogState(() => selectedSupplierId = val),
+                                  );
+                                },
                                 orElse: () => const SizedBox.shrink(),
                               ),
                               const SizedBox(height: 12),
