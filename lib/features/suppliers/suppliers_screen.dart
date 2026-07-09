@@ -1,6 +1,7 @@
 import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:share_plus/share_plus.dart';
 
 import '../../core/database/database.dart';
 import '../../core/database/database_providers.dart';
@@ -458,6 +459,93 @@ class _SuppliersScreenState extends ConsumerState<SuppliersScreen> {
                                 tooltip: 'হালনাগাদ',
                                 onPressed: () => _showUpdateOrderDialog(context, order, supplierId),
                               ),
+                              PopupMenuButton<String>(
+                                icon: const Icon(Icons.more_vert_rounded),
+                                tooltip: 'পিডিএফ ও অন্যান্য অপশন',
+                                onSelected: (value) async {
+                                  final settings = ref.read(settingsControllerProvider).valueOrNull;
+                                  final pdfSavePath = settings?.pdfSavePath;
+                                  
+                                  final supplierList = ref.read(suppliersControllerProvider).valueOrNull ?? [];
+                                  final supplier = supplierList.cast<Supplier?>().firstWhere((s) => s?.id == supplierId, orElse: () => null);
+                                  
+                                  final productList = productsAsync.valueOrNull ?? [];
+                                  final product = productList.cast<ProductWithDetails?>().firstWhere((p) => p?.product.id == order.productId, orElse: () => null)?.product;
+
+                                  if (supplier == null || product == null) return;
+
+                                  if (value == 'download') {
+                                    try {
+                                      final savedPath = await PdfGenerator.generateAndSaveSupplierOrderPdf(
+                                        order: order,
+                                        supplier: supplier,
+                                        product: product,
+                                        customSavePath: pdfSavePath,
+                                      );
+                                      if (savedPath != null && context.mounted) {
+                                        DialogUtils.showSaveSuccessDialog(context, savedPath);
+                                      }
+                                    } catch (e) {
+                                      if (context.mounted) {
+                                        ScaffoldMessenger.of(context).showSnackBar(
+                                          SnackBar(content: Text('PDF তৈরি করতে ব্যর্থ: $e')),
+                                        );
+                                      }
+                                    }
+                                  } else if (value == 'print') {
+                                    try {
+                                      await PdfGenerator.printSupplierOrder(
+                                        order: order,
+                                        supplier: supplier,
+                                        product: product,
+                                      );
+                                    } catch (e) {
+                                      if (context.mounted) {
+                                        ScaffoldMessenger.of(context).showSnackBar(
+                                          SnackBar(content: Text('প্রিন্ট ব্যর্থ: $e')),
+                                        );
+                                      }
+                                    }
+                                  } else if (value == 'view_online') {
+                                    if (order.pdfUrl != null) {
+                                      await Share.share('অর্ডার পিডিএফ লিংক: ${order.pdfUrl!}', subject: 'Supplier Order PDF Link');
+                                    }
+                                  }
+                                },
+                                itemBuilder: (context) => [
+                                  const PopupMenuItem(
+                                    value: 'download',
+                                    child: Row(
+                                      children: [
+                                        Icon(Icons.download_rounded, size: 18),
+                                        SizedBox(width: 8),
+                                        Text('মেমো ডাউনলোড করুন'),
+                                      ],
+                                    ),
+                                  ),
+                                  const PopupMenuItem(
+                                    value: 'print',
+                                    child: Row(
+                                      children: [
+                                        Icon(Icons.print_rounded, size: 18),
+                                        SizedBox(width: 8),
+                                        Text('প্রিন্ট করুন'),
+                                      ],
+                                    ),
+                                  ),
+                                  if (order.pdfUrl != null)
+                                    const PopupMenuItem(
+                                      value: 'view_online',
+                                      child: Row(
+                                        children: [
+                                          Icon(Icons.share_rounded, size: 18),
+                                          SizedBox(width: 8),
+                                          Text('অনলাইন পিডিএফ শেয়ার'),
+                                        ],
+                                      ),
+                                    ),
+                                ],
+                              ),
                             ],
                           ),
                         );
@@ -681,6 +769,93 @@ class _SuppliersScreenState extends ConsumerState<SuppliersScreen> {
                                 tooltip: 'স্ট্যাটাস বদলুন',
                                 onPressed: () => _showUpdateDamageDialog(context, dmg, supplierId),
                               ),
+                              PopupMenuButton<String>(
+                                icon: const Icon(Icons.more_vert_rounded),
+                                tooltip: 'পিডিএফ ও অন্যান্য অপশন',
+                                onSelected: (value) async {
+                                  final settings = ref.read(settingsControllerProvider).valueOrNull;
+                                  final pdfSavePath = settings?.pdfSavePath;
+                                  
+                                  final supplierList = ref.read(suppliersControllerProvider).valueOrNull ?? [];
+                                  final supplier = supplierList.cast<Supplier?>().firstWhere((s) => s?.id == supplierId, orElse: () => null);
+                                  
+                                  final productList = productsAsync.valueOrNull ?? [];
+                                  final product = productList.cast<ProductWithDetails?>().firstWhere((p) => p?.product.id == dmg.productId, orElse: () => null)?.product;
+
+                                  if (supplier == null || product == null) return;
+
+                                  if (value == 'download') {
+                                    try {
+                                      final savedPath = await PdfGenerator.generateAndSaveDamagedItemPdf(
+                                        damage: dmg,
+                                        supplier: supplier,
+                                        product: product,
+                                        customSavePath: pdfSavePath,
+                                      );
+                                      if (savedPath != null && context.mounted) {
+                                        DialogUtils.showSaveSuccessDialog(context, savedPath);
+                                      }
+                                    } catch (e) {
+                                      if (context.mounted) {
+                                        ScaffoldMessenger.of(context).showSnackBar(
+                                          SnackBar(content: Text('PDF তৈরি করতে ব্যর্থ: $e')),
+                                        );
+                                      }
+                                    }
+                                  } else if (value == 'print') {
+                                    try {
+                                      await PdfGenerator.printDamagedItem(
+                                        damage: dmg,
+                                        supplier: supplier,
+                                        product: product,
+                                      );
+                                    } catch (e) {
+                                      if (context.mounted) {
+                                        ScaffoldMessenger.of(context).showSnackBar(
+                                          SnackBar(content: Text('প্রিন্ট ব্যর্থ: $e')),
+                                        );
+                                      }
+                                    }
+                                  } else if (value == 'view_online') {
+                                    if (dmg.pdfUrl != null) {
+                                      await Share.share('ক্ষতিগ্রস্ত পণ্য পিডিএফ লিংক: ${dmg.pdfUrl!}', subject: 'Damaged Item PDF Link');
+                                    }
+                                  }
+                                },
+                                itemBuilder: (context) => [
+                                  const PopupMenuItem(
+                                    value: 'download',
+                                    child: Row(
+                                      children: [
+                                        Icon(Icons.download_rounded, size: 18),
+                                        SizedBox(width: 8),
+                                        Text('বিবরণী ডাউনলোড করুন'),
+                                      ],
+                                    ),
+                                  ),
+                                  const PopupMenuItem(
+                                    value: 'print',
+                                    child: Row(
+                                      children: [
+                                        Icon(Icons.print_rounded, size: 18),
+                                        SizedBox(width: 8),
+                                        Text('প্রিন্ট করুন'),
+                                      ],
+                                    ),
+                                  ),
+                                  if (dmg.pdfUrl != null)
+                                    const PopupMenuItem(
+                                      value: 'view_online',
+                                      child: Row(
+                                        children: [
+                                          Icon(Icons.share_rounded, size: 18),
+                                          SizedBox(width: 8),
+                                          Text('অনলাইন পিডিএফ শেয়ার'),
+                                        ],
+                                      ),
+                                    ),
+                                ],
+                              ),
                             ],
                           ),
                         );
@@ -778,6 +953,7 @@ class _SuppliersScreenState extends ConsumerState<SuppliersScreen> {
     final qtyController = TextEditingController();
     final costController = TextEditingController();
     final paidController = TextEditingController();
+    final unitPriceController = TextEditingController();
     
     String? selectedProdId;
     String status = 'Pending';
@@ -800,6 +976,16 @@ class _SuppliersScreenState extends ConsumerState<SuppliersScreen> {
                 
                 return StatefulBuilder(
                   builder: (context, setDlgState) {
+                    void updateCost() {
+                      final qty = double.tryParse(qtyController.text) ?? 0.0;
+                      final unitPrice = double.tryParse(unitPriceController.text) ?? 0.0;
+                      if (qty > 0 && unitPrice > 0) {
+                        setDlgState(() {
+                          costController.text = (qty * unitPrice).toStringAsFixed(2);
+                        });
+                      }
+                    }
+
                     return SingleChildScrollView(
                       child: Column(
                         mainAxisSize: MainAxisSize.min,
@@ -809,13 +995,30 @@ class _SuppliersScreenState extends ConsumerState<SuppliersScreen> {
                             isExpanded: true,
                             decoration: const InputDecoration(labelText: 'পণ্য সিলেক্ট করুন *', border: OutlineInputBorder()),
                             items: products.map((p) => DropdownMenuItem(value: p.id, child: Text(p.name))).toList(),
-                            onChanged: (val) => setDlgState(() => selectedProdId = val),
+                            onChanged: (val) {
+                              setDlgState(() {
+                                selectedProdId = val;
+                                final prod = products.cast<Product?>().firstWhere((p) => p?.id == val, orElse: () => null);
+                                if (prod != null) {
+                                  unitPriceController.text = prod.buyingPrice.toStringAsFixed(2);
+                                  updateCost();
+                                }
+                              });
+                            },
                           ),
                           const SizedBox(height: 12),
                           TextField(
                             controller: qtyController,
                             decoration: const InputDecoration(labelText: 'অর্ডার পরিমাণ (Quantity) *', border: OutlineInputBorder()),
                             keyboardType: TextInputType.number,
+                            onChanged: (_) => updateCost(),
+                          ),
+                          const SizedBox(height: 12),
+                          TextField(
+                            controller: unitPriceController,
+                            decoration: const InputDecoration(labelText: 'ক্রয়মূল্য প্রতি ইউনিট (Unit Buying Price) *', border: OutlineInputBorder(), prefixText: '৳'),
+                            keyboardType: TextInputType.number,
+                            onChanged: (_) => updateCost(),
                           ),
                           const SizedBox(height: 12),
                           TextField(
@@ -862,6 +1065,7 @@ class _SuppliersScreenState extends ConsumerState<SuppliersScreen> {
                   final qty = double.tryParse(qtyController.text) ?? 0.0;
                   final cost = double.tryParse(costController.text) ?? 0.0;
                   final paid = double.tryParse(paidController.text) ?? 0.0;
+                  final unitPrice = double.tryParse(unitPriceController.text);
                   if (qty <= 0 || cost <= 0) return;
 
                   final qtyReceived = status == 'Received' ? qty : 0.0;
@@ -875,6 +1079,7 @@ class _SuppliersScreenState extends ConsumerState<SuppliersScreen> {
                     amtPaid: paid,
                     date: DateTime.now(),
                     status: status,
+                    newBuyingPrice: unitPrice,
                   );
                   Navigator.pop(context);
                 },
