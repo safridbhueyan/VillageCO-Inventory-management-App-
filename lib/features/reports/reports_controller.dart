@@ -16,6 +16,12 @@ class DashboardMetrics {
   final double totalExpenses;
   final double grossProfit;
   final double netProfit;
+  final double todayExpenses;
+  final double todayGrossProfit;
+  final double todayNetProfit;
+  final double totalSales;
+  final double todayCOGS;
+  final double totalCOGS;
 
   DashboardMetrics({
     required this.totalProducts,
@@ -28,6 +34,12 @@ class DashboardMetrics {
     required this.totalExpenses,
     required this.grossProfit,
     required this.netProfit,
+    required this.todayExpenses,
+    required this.todayGrossProfit,
+    required this.todayNetProfit,
+    required this.totalSales,
+    required this.todayCOGS,
+    required this.totalCOGS,
   });
 }
 
@@ -98,6 +110,7 @@ final dashboardMetricsProvider = FutureProvider<DashboardMetrics>((ref) async {
 
   double todayReturns = 0;
   double monthlyReturns = 0;
+  double totalReturns = 0;
   for (final ret in returnsList) {
     if (ret.date.isAfter(todayStart)) {
       todayReturns += ret.refundAmount;
@@ -105,10 +118,12 @@ final dashboardMetricsProvider = FutureProvider<DashboardMetrics>((ref) async {
     if (ret.date.isAfter(monthStart)) {
       monthlyReturns += ret.refundAmount;
     }
+    totalReturns += ret.refundAmount;
   }
   
   double todaySales = 0;
   double monthlySales = 0;
+  double totalSales = 0;
   for (final sale in sales) {
     if (sale.date.isAfter(todayStart)) {
       todaySales += sale.total;
@@ -116,10 +131,12 @@ final dashboardMetricsProvider = FutureProvider<DashboardMetrics>((ref) async {
     if (sale.date.isAfter(monthStart)) {
       monthlySales += sale.total;
     }
+    totalSales += sale.total;
   }
 
   todaySales = todaySales - todayReturns;
   monthlySales = monthlySales - monthlyReturns;
+  totalSales = totalSales - totalReturns;
 
   // Inventory value: Sum of (stock * buyingPrice)
   double invValue = 0;
@@ -131,26 +148,59 @@ final dashboardMetricsProvider = FutureProvider<DashboardMetrics>((ref) async {
 
   // Expenses
   final expenses = await db.select(db.expenses).get();
-  double totalExpenses = expenses.fold(0.0, (sum, item) => sum + item.amount);
-
-  // Gross profit: Sum of (price - cost) * quantity on sold items
-  double grossProfit = 0;
-  for (final item in saleItems) {
-    grossProfit += (item.price - item.cost) * item.quantity;
-  }
-
-  // Deduct returned profit/cost from gross profit
-  for (final ret in returnItems) {
-    if (ret.isRestocked) {
-      grossProfit -= (ret.price - ret.cost) * ret.quantity;
-    } else {
-      // Wasted/damaged return item: we lost both the profit and the item's cost
-      grossProfit -= ret.price * ret.quantity;
+  double todayExpenses = 0;
+  double totalExpenses = 0;
+  for (final exp in expenses) {
+    if (exp.date.isAfter(todayStart)) {
+      todayExpenses += exp.amount;
     }
+    totalExpenses += exp.amount;
   }
 
-  // Net Profit = Gross Profit - Expenses
-  double netProfit = grossProfit - totalExpenses;
+  // Maps to associate sales and returns dates
+  final saleDateMap = {for (final s in sales) s.id: s.date};
+  final returnDateMap = {for (final r in returnsList) r.id: r.date};
+
+  // Gross profit & COGS calculations
+  double todayCOGS = 0;
+  double totalCOGS = 0;
+  double todayGrossProfit = 0;
+  double totalGrossProfit = 0;
+
+  for (final item in saleItems) {
+    final saleDate = saleDateMap[item.saleId];
+    final itemCost = item.cost * item.quantity;
+    final profit = (item.price - item.cost) * item.quantity;
+
+    if (saleDate != null && saleDate.isAfter(todayStart)) {
+      todayCOGS += itemCost;
+      todayGrossProfit += profit;
+    }
+    totalCOGS += itemCost;
+    totalGrossProfit += profit;
+  }
+
+  for (final ret in returnItems) {
+    final returnDate = returnDateMap[ret.returnId];
+    final retCost = ret.isRestocked ? (ret.cost * ret.quantity) : 0.0;
+    
+    double deduction = 0;
+    if (ret.isRestocked) {
+      deduction = (ret.price - ret.cost) * ret.quantity;
+    } else {
+      deduction = ret.price * ret.quantity;
+    }
+
+    if (returnDate != null && returnDate.isAfter(todayStart)) {
+      todayCOGS -= retCost;
+      todayGrossProfit -= deduction;
+    }
+    totalCOGS -= retCost;
+    totalGrossProfit -= deduction;
+  }
+
+  double todayNetProfit = todayGrossProfit - todayExpenses;
+  double totalNetProfit = totalGrossProfit - totalExpenses;
 
   return DashboardMetrics(
     totalProducts: nonArchivedProducts.length,
@@ -161,8 +211,14 @@ final dashboardMetricsProvider = FutureProvider<DashboardMetrics>((ref) async {
     monthlySales: monthlySales,
     inventoryValue: invValue,
     totalExpenses: totalExpenses,
-    grossProfit: grossProfit,
-    netProfit: netProfit,
+    grossProfit: totalGrossProfit,
+    netProfit: totalNetProfit,
+    todayExpenses: todayExpenses,
+    todayGrossProfit: todayGrossProfit,
+    todayNetProfit: todayNetProfit,
+    totalSales: totalSales,
+    todayCOGS: todayCOGS,
+    totalCOGS: totalCOGS,
   );
 });
 
