@@ -853,6 +853,18 @@ class $ProductsTable extends Products with TableInfo<$ProductsTable, Product> {
     type: DriftSqlType.dateTime,
     requiredDuringInsert: false,
   );
+  static const VerificationMeta _createdAtMeta = const VerificationMeta(
+    'createdAt',
+  );
+  @override
+  late final GeneratedColumn<DateTime> createdAt = GeneratedColumn<DateTime>(
+    'created_at',
+    aliasedName,
+    true,
+    type: DriftSqlType.dateTime,
+    requiredDuringInsert: false,
+    defaultValue: currentDateAndTime,
+  );
   @override
   List<GeneratedColumn> get $columns => [
     id,
@@ -872,6 +884,7 @@ class $ProductsTable extends Products with TableInfo<$ProductsTable, Product> {
     isFavorite,
     batchNumber,
     expiryDate,
+    createdAt,
   ];
   @override
   String get aliasedName => _alias ?? actualTableName;
@@ -1016,6 +1029,12 @@ class $ProductsTable extends Products with TableInfo<$ProductsTable, Product> {
         expiryDate.isAcceptableOrUnknown(data['expiry_date']!, _expiryDateMeta),
       );
     }
+    if (data.containsKey('created_at')) {
+      context.handle(
+        _createdAtMeta,
+        createdAt.isAcceptableOrUnknown(data['created_at']!, _createdAtMeta),
+      );
+    }
     return context;
   }
 
@@ -1093,6 +1112,10 @@ class $ProductsTable extends Products with TableInfo<$ProductsTable, Product> {
         DriftSqlType.dateTime,
         data['${effectivePrefix}expiry_date'],
       ),
+      createdAt: attachedDatabase.typeMapping.read(
+        DriftSqlType.dateTime,
+        data['${effectivePrefix}created_at'],
+      ),
     );
   }
 
@@ -1120,6 +1143,7 @@ class Product extends DataClass implements Insertable<Product> {
   final bool isFavorite;
   final String? batchNumber;
   final DateTime? expiryDate;
+  final DateTime? createdAt;
   const Product({
     required this.id,
     required this.name,
@@ -1138,6 +1162,7 @@ class Product extends DataClass implements Insertable<Product> {
     required this.isFavorite,
     this.batchNumber,
     this.expiryDate,
+    this.createdAt,
   });
   @override
   Map<String, Expression> toColumns(bool nullToAbsent) {
@@ -1174,6 +1199,9 @@ class Product extends DataClass implements Insertable<Product> {
     }
     if (!nullToAbsent || expiryDate != null) {
       map['expiry_date'] = Variable<DateTime>(expiryDate);
+    }
+    if (!nullToAbsent || createdAt != null) {
+      map['created_at'] = Variable<DateTime>(createdAt);
     }
     return map;
   }
@@ -1213,6 +1241,9 @@ class Product extends DataClass implements Insertable<Product> {
       expiryDate: expiryDate == null && nullToAbsent
           ? const Value.absent()
           : Value(expiryDate),
+      createdAt: createdAt == null && nullToAbsent
+          ? const Value.absent()
+          : Value(createdAt),
     );
   }
 
@@ -1239,6 +1270,7 @@ class Product extends DataClass implements Insertable<Product> {
       isFavorite: serializer.fromJson<bool>(json['isFavorite']),
       batchNumber: serializer.fromJson<String?>(json['batchNumber']),
       expiryDate: serializer.fromJson<DateTime?>(json['expiryDate']),
+      createdAt: serializer.fromJson<DateTime?>(json['createdAt']),
     );
   }
   @override
@@ -1262,6 +1294,7 @@ class Product extends DataClass implements Insertable<Product> {
       'isFavorite': serializer.toJson<bool>(isFavorite),
       'batchNumber': serializer.toJson<String?>(batchNumber),
       'expiryDate': serializer.toJson<DateTime?>(expiryDate),
+      'createdAt': serializer.toJson<DateTime?>(createdAt),
     };
   }
 
@@ -1283,6 +1316,7 @@ class Product extends DataClass implements Insertable<Product> {
     bool? isFavorite,
     Value<String?> batchNumber = const Value.absent(),
     Value<DateTime?> expiryDate = const Value.absent(),
+    Value<DateTime?> createdAt = const Value.absent(),
   }) => Product(
     id: id ?? this.id,
     name: name ?? this.name,
@@ -1301,6 +1335,7 @@ class Product extends DataClass implements Insertable<Product> {
     isFavorite: isFavorite ?? this.isFavorite,
     batchNumber: batchNumber.present ? batchNumber.value : this.batchNumber,
     expiryDate: expiryDate.present ? expiryDate.value : this.expiryDate,
+    createdAt: createdAt.present ? createdAt.value : this.createdAt,
   );
   Product copyWithCompanion(ProductsCompanion data) {
     return Product(
@@ -1343,6 +1378,7 @@ class Product extends DataClass implements Insertable<Product> {
       expiryDate: data.expiryDate.present
           ? data.expiryDate.value
           : this.expiryDate,
+      createdAt: data.createdAt.present ? data.createdAt.value : this.createdAt,
     );
   }
 
@@ -1365,7 +1401,8 @@ class Product extends DataClass implements Insertable<Product> {
           ..write('isArchived: $isArchived, ')
           ..write('isFavorite: $isFavorite, ')
           ..write('batchNumber: $batchNumber, ')
-          ..write('expiryDate: $expiryDate')
+          ..write('expiryDate: $expiryDate, ')
+          ..write('createdAt: $createdAt')
           ..write(')'))
         .toString();
   }
@@ -1389,6 +1426,7 @@ class Product extends DataClass implements Insertable<Product> {
     isFavorite,
     batchNumber,
     expiryDate,
+    createdAt,
   );
   @override
   bool operator ==(Object other) =>
@@ -1410,7 +1448,8 @@ class Product extends DataClass implements Insertable<Product> {
           other.isArchived == this.isArchived &&
           other.isFavorite == this.isFavorite &&
           other.batchNumber == this.batchNumber &&
-          other.expiryDate == this.expiryDate);
+          other.expiryDate == this.expiryDate &&
+          other.createdAt == this.createdAt);
 }
 
 class ProductsCompanion extends UpdateCompanion<Product> {
@@ -1431,6 +1470,7 @@ class ProductsCompanion extends UpdateCompanion<Product> {
   final Value<bool> isFavorite;
   final Value<String?> batchNumber;
   final Value<DateTime?> expiryDate;
+  final Value<DateTime?> createdAt;
   final Value<int> rowid;
   const ProductsCompanion({
     this.id = const Value.absent(),
@@ -1450,6 +1490,7 @@ class ProductsCompanion extends UpdateCompanion<Product> {
     this.isFavorite = const Value.absent(),
     this.batchNumber = const Value.absent(),
     this.expiryDate = const Value.absent(),
+    this.createdAt = const Value.absent(),
     this.rowid = const Value.absent(),
   });
   ProductsCompanion.insert({
@@ -1470,6 +1511,7 @@ class ProductsCompanion extends UpdateCompanion<Product> {
     this.isFavorite = const Value.absent(),
     this.batchNumber = const Value.absent(),
     this.expiryDate = const Value.absent(),
+    this.createdAt = const Value.absent(),
     this.rowid = const Value.absent(),
   }) : id = Value(id),
        name = Value(name),
@@ -1496,6 +1538,7 @@ class ProductsCompanion extends UpdateCompanion<Product> {
     Expression<bool>? isFavorite,
     Expression<String>? batchNumber,
     Expression<DateTime>? expiryDate,
+    Expression<DateTime>? createdAt,
     Expression<int>? rowid,
   }) {
     return RawValuesInsertable({
@@ -1516,6 +1559,7 @@ class ProductsCompanion extends UpdateCompanion<Product> {
       if (isFavorite != null) 'is_favorite': isFavorite,
       if (batchNumber != null) 'batch_number': batchNumber,
       if (expiryDate != null) 'expiry_date': expiryDate,
+      if (createdAt != null) 'created_at': createdAt,
       if (rowid != null) 'rowid': rowid,
     });
   }
@@ -1538,6 +1582,7 @@ class ProductsCompanion extends UpdateCompanion<Product> {
     Value<bool>? isFavorite,
     Value<String?>? batchNumber,
     Value<DateTime?>? expiryDate,
+    Value<DateTime?>? createdAt,
     Value<int>? rowid,
   }) {
     return ProductsCompanion(
@@ -1558,6 +1603,7 @@ class ProductsCompanion extends UpdateCompanion<Product> {
       isFavorite: isFavorite ?? this.isFavorite,
       batchNumber: batchNumber ?? this.batchNumber,
       expiryDate: expiryDate ?? this.expiryDate,
+      createdAt: createdAt ?? this.createdAt,
       rowid: rowid ?? this.rowid,
     );
   }
@@ -1616,6 +1662,9 @@ class ProductsCompanion extends UpdateCompanion<Product> {
     if (expiryDate.present) {
       map['expiry_date'] = Variable<DateTime>(expiryDate.value);
     }
+    if (createdAt.present) {
+      map['created_at'] = Variable<DateTime>(createdAt.value);
+    }
     if (rowid.present) {
       map['rowid'] = Variable<int>(rowid.value);
     }
@@ -1642,6 +1691,7 @@ class ProductsCompanion extends UpdateCompanion<Product> {
           ..write('isFavorite: $isFavorite, ')
           ..write('batchNumber: $batchNumber, ')
           ..write('expiryDate: $expiryDate, ')
+          ..write('createdAt: $createdAt, ')
           ..write('rowid: $rowid')
           ..write(')'))
         .toString();
@@ -4835,6 +4885,26 @@ class $SupplierOrdersTable extends SupplierOrders
     requiredDuringInsert: false,
     defaultValue: const Constant('Pending'),
   );
+  static const VerificationMeta _unitCostMeta = const VerificationMeta(
+    'unitCost',
+  );
+  @override
+  late final GeneratedColumn<double> unitCost = GeneratedColumn<double>(
+    'unit_cost',
+    aliasedName,
+    true,
+    type: DriftSqlType.double,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _pdfUrlMeta = const VerificationMeta('pdfUrl');
+  @override
+  late final GeneratedColumn<String> pdfUrl = GeneratedColumn<String>(
+    'pdf_url',
+    aliasedName,
+    true,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+  );
   @override
   List<GeneratedColumn> get $columns => [
     id,
@@ -4846,6 +4916,8 @@ class $SupplierOrdersTable extends SupplierOrders
     amountPaid,
     date,
     status,
+    unitCost,
+    pdfUrl,
   ];
   @override
   String get aliasedName => _alias ?? actualTableName;
@@ -4928,6 +5000,18 @@ class $SupplierOrdersTable extends SupplierOrders
         status.isAcceptableOrUnknown(data['status']!, _statusMeta),
       );
     }
+    if (data.containsKey('unit_cost')) {
+      context.handle(
+        _unitCostMeta,
+        unitCost.isAcceptableOrUnknown(data['unit_cost']!, _unitCostMeta),
+      );
+    }
+    if (data.containsKey('pdf_url')) {
+      context.handle(
+        _pdfUrlMeta,
+        pdfUrl.isAcceptableOrUnknown(data['pdf_url']!, _pdfUrlMeta),
+      );
+    }
     return context;
   }
 
@@ -4973,6 +5057,14 @@ class $SupplierOrdersTable extends SupplierOrders
         DriftSqlType.string,
         data['${effectivePrefix}status'],
       )!,
+      unitCost: attachedDatabase.typeMapping.read(
+        DriftSqlType.double,
+        data['${effectivePrefix}unit_cost'],
+      ),
+      pdfUrl: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}pdf_url'],
+      ),
     );
   }
 
@@ -4992,6 +5084,8 @@ class SupplierOrder extends DataClass implements Insertable<SupplierOrder> {
   final double amountPaid;
   final DateTime date;
   final String status;
+  final double? unitCost;
+  final String? pdfUrl;
   const SupplierOrder({
     required this.id,
     required this.supplierId,
@@ -5002,6 +5096,8 @@ class SupplierOrder extends DataClass implements Insertable<SupplierOrder> {
     required this.amountPaid,
     required this.date,
     required this.status,
+    this.unitCost,
+    this.pdfUrl,
   });
   @override
   Map<String, Expression> toColumns(bool nullToAbsent) {
@@ -5015,6 +5111,12 @@ class SupplierOrder extends DataClass implements Insertable<SupplierOrder> {
     map['amount_paid'] = Variable<double>(amountPaid);
     map['date'] = Variable<DateTime>(date);
     map['status'] = Variable<String>(status);
+    if (!nullToAbsent || unitCost != null) {
+      map['unit_cost'] = Variable<double>(unitCost);
+    }
+    if (!nullToAbsent || pdfUrl != null) {
+      map['pdf_url'] = Variable<String>(pdfUrl);
+    }
     return map;
   }
 
@@ -5029,6 +5131,12 @@ class SupplierOrder extends DataClass implements Insertable<SupplierOrder> {
       amountPaid: Value(amountPaid),
       date: Value(date),
       status: Value(status),
+      unitCost: unitCost == null && nullToAbsent
+          ? const Value.absent()
+          : Value(unitCost),
+      pdfUrl: pdfUrl == null && nullToAbsent
+          ? const Value.absent()
+          : Value(pdfUrl),
     );
   }
 
@@ -5047,6 +5155,8 @@ class SupplierOrder extends DataClass implements Insertable<SupplierOrder> {
       amountPaid: serializer.fromJson<double>(json['amountPaid']),
       date: serializer.fromJson<DateTime>(json['date']),
       status: serializer.fromJson<String>(json['status']),
+      unitCost: serializer.fromJson<double?>(json['unitCost']),
+      pdfUrl: serializer.fromJson<String?>(json['pdfUrl']),
     );
   }
   @override
@@ -5062,6 +5172,8 @@ class SupplierOrder extends DataClass implements Insertable<SupplierOrder> {
       'amountPaid': serializer.toJson<double>(amountPaid),
       'date': serializer.toJson<DateTime>(date),
       'status': serializer.toJson<String>(status),
+      'unitCost': serializer.toJson<double?>(unitCost),
+      'pdfUrl': serializer.toJson<String?>(pdfUrl),
     };
   }
 
@@ -5075,6 +5187,8 @@ class SupplierOrder extends DataClass implements Insertable<SupplierOrder> {
     double? amountPaid,
     DateTime? date,
     String? status,
+    Value<double?> unitCost = const Value.absent(),
+    Value<String?> pdfUrl = const Value.absent(),
   }) => SupplierOrder(
     id: id ?? this.id,
     supplierId: supplierId ?? this.supplierId,
@@ -5085,6 +5199,8 @@ class SupplierOrder extends DataClass implements Insertable<SupplierOrder> {
     amountPaid: amountPaid ?? this.amountPaid,
     date: date ?? this.date,
     status: status ?? this.status,
+    unitCost: unitCost.present ? unitCost.value : this.unitCost,
+    pdfUrl: pdfUrl.present ? pdfUrl.value : this.pdfUrl,
   );
   SupplierOrder copyWithCompanion(SupplierOrdersCompanion data) {
     return SupplierOrder(
@@ -5105,6 +5221,8 @@ class SupplierOrder extends DataClass implements Insertable<SupplierOrder> {
           : this.amountPaid,
       date: data.date.present ? data.date.value : this.date,
       status: data.status.present ? data.status.value : this.status,
+      unitCost: data.unitCost.present ? data.unitCost.value : this.unitCost,
+      pdfUrl: data.pdfUrl.present ? data.pdfUrl.value : this.pdfUrl,
     );
   }
 
@@ -5119,7 +5237,9 @@ class SupplierOrder extends DataClass implements Insertable<SupplierOrder> {
           ..write('totalCost: $totalCost, ')
           ..write('amountPaid: $amountPaid, ')
           ..write('date: $date, ')
-          ..write('status: $status')
+          ..write('status: $status, ')
+          ..write('unitCost: $unitCost, ')
+          ..write('pdfUrl: $pdfUrl')
           ..write(')'))
         .toString();
   }
@@ -5135,6 +5255,8 @@ class SupplierOrder extends DataClass implements Insertable<SupplierOrder> {
     amountPaid,
     date,
     status,
+    unitCost,
+    pdfUrl,
   );
   @override
   bool operator ==(Object other) =>
@@ -5148,7 +5270,9 @@ class SupplierOrder extends DataClass implements Insertable<SupplierOrder> {
           other.totalCost == this.totalCost &&
           other.amountPaid == this.amountPaid &&
           other.date == this.date &&
-          other.status == this.status);
+          other.status == this.status &&
+          other.unitCost == this.unitCost &&
+          other.pdfUrl == this.pdfUrl);
 }
 
 class SupplierOrdersCompanion extends UpdateCompanion<SupplierOrder> {
@@ -5161,6 +5285,8 @@ class SupplierOrdersCompanion extends UpdateCompanion<SupplierOrder> {
   final Value<double> amountPaid;
   final Value<DateTime> date;
   final Value<String> status;
+  final Value<double?> unitCost;
+  final Value<String?> pdfUrl;
   final Value<int> rowid;
   const SupplierOrdersCompanion({
     this.id = const Value.absent(),
@@ -5172,6 +5298,8 @@ class SupplierOrdersCompanion extends UpdateCompanion<SupplierOrder> {
     this.amountPaid = const Value.absent(),
     this.date = const Value.absent(),
     this.status = const Value.absent(),
+    this.unitCost = const Value.absent(),
+    this.pdfUrl = const Value.absent(),
     this.rowid = const Value.absent(),
   });
   SupplierOrdersCompanion.insert({
@@ -5184,6 +5312,8 @@ class SupplierOrdersCompanion extends UpdateCompanion<SupplierOrder> {
     this.amountPaid = const Value.absent(),
     required DateTime date,
     this.status = const Value.absent(),
+    this.unitCost = const Value.absent(),
+    this.pdfUrl = const Value.absent(),
     this.rowid = const Value.absent(),
   }) : id = Value(id),
        supplierId = Value(supplierId),
@@ -5201,6 +5331,8 @@ class SupplierOrdersCompanion extends UpdateCompanion<SupplierOrder> {
     Expression<double>? amountPaid,
     Expression<DateTime>? date,
     Expression<String>? status,
+    Expression<double>? unitCost,
+    Expression<String>? pdfUrl,
     Expression<int>? rowid,
   }) {
     return RawValuesInsertable({
@@ -5213,6 +5345,8 @@ class SupplierOrdersCompanion extends UpdateCompanion<SupplierOrder> {
       if (amountPaid != null) 'amount_paid': amountPaid,
       if (date != null) 'date': date,
       if (status != null) 'status': status,
+      if (unitCost != null) 'unit_cost': unitCost,
+      if (pdfUrl != null) 'pdf_url': pdfUrl,
       if (rowid != null) 'rowid': rowid,
     });
   }
@@ -5227,6 +5361,8 @@ class SupplierOrdersCompanion extends UpdateCompanion<SupplierOrder> {
     Value<double>? amountPaid,
     Value<DateTime>? date,
     Value<String>? status,
+    Value<double?>? unitCost,
+    Value<String?>? pdfUrl,
     Value<int>? rowid,
   }) {
     return SupplierOrdersCompanion(
@@ -5239,6 +5375,8 @@ class SupplierOrdersCompanion extends UpdateCompanion<SupplierOrder> {
       amountPaid: amountPaid ?? this.amountPaid,
       date: date ?? this.date,
       status: status ?? this.status,
+      unitCost: unitCost ?? this.unitCost,
+      pdfUrl: pdfUrl ?? this.pdfUrl,
       rowid: rowid ?? this.rowid,
     );
   }
@@ -5273,6 +5411,12 @@ class SupplierOrdersCompanion extends UpdateCompanion<SupplierOrder> {
     if (status.present) {
       map['status'] = Variable<String>(status.value);
     }
+    if (unitCost.present) {
+      map['unit_cost'] = Variable<double>(unitCost.value);
+    }
+    if (pdfUrl.present) {
+      map['pdf_url'] = Variable<String>(pdfUrl.value);
+    }
     if (rowid.present) {
       map['rowid'] = Variable<int>(rowid.value);
     }
@@ -5291,6 +5435,8 @@ class SupplierOrdersCompanion extends UpdateCompanion<SupplierOrder> {
           ..write('amountPaid: $amountPaid, ')
           ..write('date: $date, ')
           ..write('status: $status, ')
+          ..write('unitCost: $unitCost, ')
+          ..write('pdfUrl: $pdfUrl, ')
           ..write('rowid: $rowid')
           ..write(')'))
         .toString();
@@ -5391,6 +5537,15 @@ class $DamagedItemsTable extends DamagedItems
     type: DriftSqlType.string,
     requiredDuringInsert: false,
   );
+  static const VerificationMeta _pdfUrlMeta = const VerificationMeta('pdfUrl');
+  @override
+  late final GeneratedColumn<String> pdfUrl = GeneratedColumn<String>(
+    'pdf_url',
+    aliasedName,
+    true,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+  );
   @override
   List<GeneratedColumn> get $columns => [
     id,
@@ -5401,6 +5556,7 @@ class $DamagedItemsTable extends DamagedItems
     date,
     resolutionDate,
     notes,
+    pdfUrl,
   ];
   @override
   String get aliasedName => _alias ?? actualTableName;
@@ -5472,6 +5628,12 @@ class $DamagedItemsTable extends DamagedItems
         notes.isAcceptableOrUnknown(data['notes']!, _notesMeta),
       );
     }
+    if (data.containsKey('pdf_url')) {
+      context.handle(
+        _pdfUrlMeta,
+        pdfUrl.isAcceptableOrUnknown(data['pdf_url']!, _pdfUrlMeta),
+      );
+    }
     return context;
   }
 
@@ -5513,6 +5675,10 @@ class $DamagedItemsTable extends DamagedItems
         DriftSqlType.string,
         data['${effectivePrefix}notes'],
       ),
+      pdfUrl: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}pdf_url'],
+      ),
     );
   }
 
@@ -5531,6 +5697,7 @@ class DamagedItem extends DataClass implements Insertable<DamagedItem> {
   final DateTime date;
   final DateTime? resolutionDate;
   final String? notes;
+  final String? pdfUrl;
   const DamagedItem({
     required this.id,
     required this.supplierId,
@@ -5540,6 +5707,7 @@ class DamagedItem extends DataClass implements Insertable<DamagedItem> {
     required this.date,
     this.resolutionDate,
     this.notes,
+    this.pdfUrl,
   });
   @override
   Map<String, Expression> toColumns(bool nullToAbsent) {
@@ -5555,6 +5723,9 @@ class DamagedItem extends DataClass implements Insertable<DamagedItem> {
     }
     if (!nullToAbsent || notes != null) {
       map['notes'] = Variable<String>(notes);
+    }
+    if (!nullToAbsent || pdfUrl != null) {
+      map['pdf_url'] = Variable<String>(pdfUrl);
     }
     return map;
   }
@@ -5573,6 +5744,9 @@ class DamagedItem extends DataClass implements Insertable<DamagedItem> {
       notes: notes == null && nullToAbsent
           ? const Value.absent()
           : Value(notes),
+      pdfUrl: pdfUrl == null && nullToAbsent
+          ? const Value.absent()
+          : Value(pdfUrl),
     );
   }
 
@@ -5590,6 +5764,7 @@ class DamagedItem extends DataClass implements Insertable<DamagedItem> {
       date: serializer.fromJson<DateTime>(json['date']),
       resolutionDate: serializer.fromJson<DateTime?>(json['resolutionDate']),
       notes: serializer.fromJson<String?>(json['notes']),
+      pdfUrl: serializer.fromJson<String?>(json['pdfUrl']),
     );
   }
   @override
@@ -5604,6 +5779,7 @@ class DamagedItem extends DataClass implements Insertable<DamagedItem> {
       'date': serializer.toJson<DateTime>(date),
       'resolutionDate': serializer.toJson<DateTime?>(resolutionDate),
       'notes': serializer.toJson<String?>(notes),
+      'pdfUrl': serializer.toJson<String?>(pdfUrl),
     };
   }
 
@@ -5616,6 +5792,7 @@ class DamagedItem extends DataClass implements Insertable<DamagedItem> {
     DateTime? date,
     Value<DateTime?> resolutionDate = const Value.absent(),
     Value<String?> notes = const Value.absent(),
+    Value<String?> pdfUrl = const Value.absent(),
   }) => DamagedItem(
     id: id ?? this.id,
     supplierId: supplierId ?? this.supplierId,
@@ -5627,6 +5804,7 @@ class DamagedItem extends DataClass implements Insertable<DamagedItem> {
         ? resolutionDate.value
         : this.resolutionDate,
     notes: notes.present ? notes.value : this.notes,
+    pdfUrl: pdfUrl.present ? pdfUrl.value : this.pdfUrl,
   );
   DamagedItem copyWithCompanion(DamagedItemsCompanion data) {
     return DamagedItem(
@@ -5642,6 +5820,7 @@ class DamagedItem extends DataClass implements Insertable<DamagedItem> {
           ? data.resolutionDate.value
           : this.resolutionDate,
       notes: data.notes.present ? data.notes.value : this.notes,
+      pdfUrl: data.pdfUrl.present ? data.pdfUrl.value : this.pdfUrl,
     );
   }
 
@@ -5655,7 +5834,8 @@ class DamagedItem extends DataClass implements Insertable<DamagedItem> {
           ..write('status: $status, ')
           ..write('date: $date, ')
           ..write('resolutionDate: $resolutionDate, ')
-          ..write('notes: $notes')
+          ..write('notes: $notes, ')
+          ..write('pdfUrl: $pdfUrl')
           ..write(')'))
         .toString();
   }
@@ -5670,6 +5850,7 @@ class DamagedItem extends DataClass implements Insertable<DamagedItem> {
     date,
     resolutionDate,
     notes,
+    pdfUrl,
   );
   @override
   bool operator ==(Object other) =>
@@ -5682,7 +5863,8 @@ class DamagedItem extends DataClass implements Insertable<DamagedItem> {
           other.status == this.status &&
           other.date == this.date &&
           other.resolutionDate == this.resolutionDate &&
-          other.notes == this.notes);
+          other.notes == this.notes &&
+          other.pdfUrl == this.pdfUrl);
 }
 
 class DamagedItemsCompanion extends UpdateCompanion<DamagedItem> {
@@ -5694,6 +5876,7 @@ class DamagedItemsCompanion extends UpdateCompanion<DamagedItem> {
   final Value<DateTime> date;
   final Value<DateTime?> resolutionDate;
   final Value<String?> notes;
+  final Value<String?> pdfUrl;
   final Value<int> rowid;
   const DamagedItemsCompanion({
     this.id = const Value.absent(),
@@ -5704,6 +5887,7 @@ class DamagedItemsCompanion extends UpdateCompanion<DamagedItem> {
     this.date = const Value.absent(),
     this.resolutionDate = const Value.absent(),
     this.notes = const Value.absent(),
+    this.pdfUrl = const Value.absent(),
     this.rowid = const Value.absent(),
   });
   DamagedItemsCompanion.insert({
@@ -5715,6 +5899,7 @@ class DamagedItemsCompanion extends UpdateCompanion<DamagedItem> {
     required DateTime date,
     this.resolutionDate = const Value.absent(),
     this.notes = const Value.absent(),
+    this.pdfUrl = const Value.absent(),
     this.rowid = const Value.absent(),
   }) : id = Value(id),
        supplierId = Value(supplierId),
@@ -5730,6 +5915,7 @@ class DamagedItemsCompanion extends UpdateCompanion<DamagedItem> {
     Expression<DateTime>? date,
     Expression<DateTime>? resolutionDate,
     Expression<String>? notes,
+    Expression<String>? pdfUrl,
     Expression<int>? rowid,
   }) {
     return RawValuesInsertable({
@@ -5741,6 +5927,7 @@ class DamagedItemsCompanion extends UpdateCompanion<DamagedItem> {
       if (date != null) 'date': date,
       if (resolutionDate != null) 'resolution_date': resolutionDate,
       if (notes != null) 'notes': notes,
+      if (pdfUrl != null) 'pdf_url': pdfUrl,
       if (rowid != null) 'rowid': rowid,
     });
   }
@@ -5754,6 +5941,7 @@ class DamagedItemsCompanion extends UpdateCompanion<DamagedItem> {
     Value<DateTime>? date,
     Value<DateTime?>? resolutionDate,
     Value<String?>? notes,
+    Value<String?>? pdfUrl,
     Value<int>? rowid,
   }) {
     return DamagedItemsCompanion(
@@ -5765,6 +5953,7 @@ class DamagedItemsCompanion extends UpdateCompanion<DamagedItem> {
       date: date ?? this.date,
       resolutionDate: resolutionDate ?? this.resolutionDate,
       notes: notes ?? this.notes,
+      pdfUrl: pdfUrl ?? this.pdfUrl,
       rowid: rowid ?? this.rowid,
     );
   }
@@ -5796,6 +5985,9 @@ class DamagedItemsCompanion extends UpdateCompanion<DamagedItem> {
     if (notes.present) {
       map['notes'] = Variable<String>(notes.value);
     }
+    if (pdfUrl.present) {
+      map['pdf_url'] = Variable<String>(pdfUrl.value);
+    }
     if (rowid.present) {
       map['rowid'] = Variable<int>(rowid.value);
     }
@@ -5813,6 +6005,7 @@ class DamagedItemsCompanion extends UpdateCompanion<DamagedItem> {
           ..write('date: $date, ')
           ..write('resolutionDate: $resolutionDate, ')
           ..write('notes: $notes, ')
+          ..write('pdfUrl: $pdfUrl, ')
           ..write('rowid: $rowid')
           ..write(')'))
         .toString();
@@ -7688,6 +7881,7 @@ typedef $$ProductsTableCreateCompanionBuilder =
       Value<bool> isFavorite,
       Value<String?> batchNumber,
       Value<DateTime?> expiryDate,
+      Value<DateTime?> createdAt,
       Value<int> rowid,
     });
 typedef $$ProductsTableUpdateCompanionBuilder =
@@ -7709,6 +7903,7 @@ typedef $$ProductsTableUpdateCompanionBuilder =
       Value<bool> isFavorite,
       Value<String?> batchNumber,
       Value<DateTime?> expiryDate,
+      Value<DateTime?> createdAt,
       Value<int> rowid,
     });
 
@@ -7934,6 +8129,11 @@ class $$ProductsTableFilterComposer
 
   ColumnFilters<DateTime> get expiryDate => $composableBuilder(
     column: $table.expiryDate,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<DateTime> get createdAt => $composableBuilder(
+    column: $table.createdAt,
     builder: (column) => ColumnFilters(column),
   );
 
@@ -8193,6 +8393,11 @@ class $$ProductsTableOrderingComposer
     builder: (column) => ColumnOrderings(column),
   );
 
+  ColumnOrderings<DateTime> get createdAt => $composableBuilder(
+    column: $table.createdAt,
+    builder: (column) => ColumnOrderings(column),
+  );
+
   $$CategoriesTableOrderingComposer get categoryId {
     final $$CategoriesTableOrderingComposer composer = $composerBuilder(
       composer: this,
@@ -8311,6 +8516,9 @@ class $$ProductsTableAnnotationComposer
     column: $table.expiryDate,
     builder: (column) => column,
   );
+
+  GeneratedColumn<DateTime> get createdAt =>
+      $composableBuilder(column: $table.createdAt, builder: (column) => column);
 
   $$CategoriesTableAnnotationComposer get categoryId {
     final $$CategoriesTableAnnotationComposer composer = $composerBuilder(
@@ -8537,6 +8745,7 @@ class $$ProductsTableTableManager
                 Value<bool> isFavorite = const Value.absent(),
                 Value<String?> batchNumber = const Value.absent(),
                 Value<DateTime?> expiryDate = const Value.absent(),
+                Value<DateTime?> createdAt = const Value.absent(),
                 Value<int> rowid = const Value.absent(),
               }) => ProductsCompanion(
                 id: id,
@@ -8556,6 +8765,7 @@ class $$ProductsTableTableManager
                 isFavorite: isFavorite,
                 batchNumber: batchNumber,
                 expiryDate: expiryDate,
+                createdAt: createdAt,
                 rowid: rowid,
               ),
           createCompanionCallback:
@@ -8577,6 +8787,7 @@ class $$ProductsTableTableManager
                 Value<bool> isFavorite = const Value.absent(),
                 Value<String?> batchNumber = const Value.absent(),
                 Value<DateTime?> expiryDate = const Value.absent(),
+                Value<DateTime?> createdAt = const Value.absent(),
                 Value<int> rowid = const Value.absent(),
               }) => ProductsCompanion.insert(
                 id: id,
@@ -8596,6 +8807,7 @@ class $$ProductsTableTableManager
                 isFavorite: isFavorite,
                 batchNumber: batchNumber,
                 expiryDate: expiryDate,
+                createdAt: createdAt,
                 rowid: rowid,
               ),
           withReferenceMapper: (p0) => p0
@@ -11369,6 +11581,8 @@ typedef $$SupplierOrdersTableCreateCompanionBuilder =
       Value<double> amountPaid,
       required DateTime date,
       Value<String> status,
+      Value<double?> unitCost,
+      Value<String?> pdfUrl,
       Value<int> rowid,
     });
 typedef $$SupplierOrdersTableUpdateCompanionBuilder =
@@ -11382,6 +11596,8 @@ typedef $$SupplierOrdersTableUpdateCompanionBuilder =
       Value<double> amountPaid,
       Value<DateTime> date,
       Value<String> status,
+      Value<double?> unitCost,
+      Value<String?> pdfUrl,
       Value<int> rowid,
     });
 
@@ -11476,6 +11692,16 @@ class $$SupplierOrdersTableFilterComposer
     builder: (column) => ColumnFilters(column),
   );
 
+  ColumnFilters<double> get unitCost => $composableBuilder(
+    column: $table.unitCost,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get pdfUrl => $composableBuilder(
+    column: $table.pdfUrl,
+    builder: (column) => ColumnFilters(column),
+  );
+
   $$SuppliersTableFilterComposer get supplierId {
     final $$SuppliersTableFilterComposer composer = $composerBuilder(
       composer: this,
@@ -11567,6 +11793,16 @@ class $$SupplierOrdersTableOrderingComposer
     builder: (column) => ColumnOrderings(column),
   );
 
+  ColumnOrderings<double> get unitCost => $composableBuilder(
+    column: $table.unitCost,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get pdfUrl => $composableBuilder(
+    column: $table.pdfUrl,
+    builder: (column) => ColumnOrderings(column),
+  );
+
   $$SuppliersTableOrderingComposer get supplierId {
     final $$SuppliersTableOrderingComposer composer = $composerBuilder(
       composer: this,
@@ -11649,6 +11885,12 @@ class $$SupplierOrdersTableAnnotationComposer
 
   GeneratedColumn<String> get status =>
       $composableBuilder(column: $table.status, builder: (column) => column);
+
+  GeneratedColumn<double> get unitCost =>
+      $composableBuilder(column: $table.unitCost, builder: (column) => column);
+
+  GeneratedColumn<String> get pdfUrl =>
+      $composableBuilder(column: $table.pdfUrl, builder: (column) => column);
 
   $$SuppliersTableAnnotationComposer get supplierId {
     final $$SuppliersTableAnnotationComposer composer = $composerBuilder(
@@ -11736,6 +11978,8 @@ class $$SupplierOrdersTableTableManager
                 Value<double> amountPaid = const Value.absent(),
                 Value<DateTime> date = const Value.absent(),
                 Value<String> status = const Value.absent(),
+                Value<double?> unitCost = const Value.absent(),
+                Value<String?> pdfUrl = const Value.absent(),
                 Value<int> rowid = const Value.absent(),
               }) => SupplierOrdersCompanion(
                 id: id,
@@ -11747,6 +11991,8 @@ class $$SupplierOrdersTableTableManager
                 amountPaid: amountPaid,
                 date: date,
                 status: status,
+                unitCost: unitCost,
+                pdfUrl: pdfUrl,
                 rowid: rowid,
               ),
           createCompanionCallback:
@@ -11760,6 +12006,8 @@ class $$SupplierOrdersTableTableManager
                 Value<double> amountPaid = const Value.absent(),
                 required DateTime date,
                 Value<String> status = const Value.absent(),
+                Value<double?> unitCost = const Value.absent(),
+                Value<String?> pdfUrl = const Value.absent(),
                 Value<int> rowid = const Value.absent(),
               }) => SupplierOrdersCompanion.insert(
                 id: id,
@@ -11771,6 +12019,8 @@ class $$SupplierOrdersTableTableManager
                 amountPaid: amountPaid,
                 date: date,
                 status: status,
+                unitCost: unitCost,
+                pdfUrl: pdfUrl,
                 rowid: rowid,
               ),
           withReferenceMapper: (p0) => p0
@@ -11865,6 +12115,7 @@ typedef $$DamagedItemsTableCreateCompanionBuilder =
       required DateTime date,
       Value<DateTime?> resolutionDate,
       Value<String?> notes,
+      Value<String?> pdfUrl,
       Value<int> rowid,
     });
 typedef $$DamagedItemsTableUpdateCompanionBuilder =
@@ -11877,6 +12128,7 @@ typedef $$DamagedItemsTableUpdateCompanionBuilder =
       Value<DateTime> date,
       Value<DateTime?> resolutionDate,
       Value<String?> notes,
+      Value<String?> pdfUrl,
       Value<int> rowid,
     });
 
@@ -11959,6 +12211,11 @@ class $$DamagedItemsTableFilterComposer
 
   ColumnFilters<String> get notes => $composableBuilder(
     column: $table.notes,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get pdfUrl => $composableBuilder(
+    column: $table.pdfUrl,
     builder: (column) => ColumnFilters(column),
   );
 
@@ -12048,6 +12305,11 @@ class $$DamagedItemsTableOrderingComposer
     builder: (column) => ColumnOrderings(column),
   );
 
+  ColumnOrderings<String> get pdfUrl => $composableBuilder(
+    column: $table.pdfUrl,
+    builder: (column) => ColumnOrderings(column),
+  );
+
   $$SuppliersTableOrderingComposer get supplierId {
     final $$SuppliersTableOrderingComposer composer = $composerBuilder(
       composer: this,
@@ -12123,6 +12385,9 @@ class $$DamagedItemsTableAnnotationComposer
 
   GeneratedColumn<String> get notes =>
       $composableBuilder(column: $table.notes, builder: (column) => column);
+
+  GeneratedColumn<String> get pdfUrl =>
+      $composableBuilder(column: $table.pdfUrl, builder: (column) => column);
 
   $$SuppliersTableAnnotationComposer get supplierId {
     final $$SuppliersTableAnnotationComposer composer = $composerBuilder(
@@ -12207,6 +12472,7 @@ class $$DamagedItemsTableTableManager
                 Value<DateTime> date = const Value.absent(),
                 Value<DateTime?> resolutionDate = const Value.absent(),
                 Value<String?> notes = const Value.absent(),
+                Value<String?> pdfUrl = const Value.absent(),
                 Value<int> rowid = const Value.absent(),
               }) => DamagedItemsCompanion(
                 id: id,
@@ -12217,6 +12483,7 @@ class $$DamagedItemsTableTableManager
                 date: date,
                 resolutionDate: resolutionDate,
                 notes: notes,
+                pdfUrl: pdfUrl,
                 rowid: rowid,
               ),
           createCompanionCallback:
@@ -12229,6 +12496,7 @@ class $$DamagedItemsTableTableManager
                 required DateTime date,
                 Value<DateTime?> resolutionDate = const Value.absent(),
                 Value<String?> notes = const Value.absent(),
+                Value<String?> pdfUrl = const Value.absent(),
                 Value<int> rowid = const Value.absent(),
               }) => DamagedItemsCompanion.insert(
                 id: id,
@@ -12239,6 +12507,7 @@ class $$DamagedItemsTableTableManager
                 date: date,
                 resolutionDate: resolutionDate,
                 notes: notes,
+                pdfUrl: pdfUrl,
                 rowid: rowid,
               ),
           withReferenceMapper: (p0) => p0
