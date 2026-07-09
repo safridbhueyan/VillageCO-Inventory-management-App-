@@ -135,7 +135,7 @@ class _ReportsScreenState extends ConsumerState<ReportsScreen>
                         'লাভ-ক্ষতি বিবরণী (Profit & Loss Statement)',
                         style: TextStyle(
                           fontWeight: FontWeight.bold,
-                          fontSize: 16,
+                          fontSize: 18,
                           color: theme.colorScheme.onSurface,
                         ),
                       ),
@@ -143,41 +143,69 @@ class _ReportsScreenState extends ConsumerState<ReportsScreen>
                       Text(
                         'তারিখ: ${Formatters.dateTime(DateTime.now())}',
                         style: TextStyle(
-                          fontSize: 10,
+                          fontSize: 11,
                           color: theme.colorScheme.onSurfaceVariant,
                         ),
                       ),
-                      Divider(
-                        height: 24,
-                        color: theme.colorScheme.outlineVariant,
+                      const SizedBox(height: 16),
+                      
+                      Text(
+                        'আজকের লাভ-ক্ষতি বিবরণী (Today\'s Financials)',
+                        style: TextStyle(
+                          fontWeight: FontWeight.bold,
+                          fontSize: 14,
+                          color: theme.colorScheme.primary,
+                        ),
                       ),
+                      const SizedBox(height: 8),
+                      _buildPlRow('বিক্রয় রাজস্ব (Sales Revenue)', Formatters.currency(metrics.todaySales), isPositive: true),
+                      const SizedBox(height: 6),
+                      _buildPlRow('বিক্রীত পণ্যের খরচ (COGS)', '- ${Formatters.currency(metrics.todayCOGS)}', isNegative: true),
+                      const SizedBox(height: 6),
+                      _buildPlRow('মোট লাভ (Gross Profit)', Formatters.currency(metrics.todayGrossProfit), isBold: true),
+                      const SizedBox(height: 6),
+                      _buildPlRow('আজকের খরচ (Operating Expenses)', '- ${Formatters.currency(metrics.todayExpenses)}', isNegative: true),
+                      const SizedBox(height: 6),
                       _buildPlRow(
-                        'আজকের বিক্রির পরিমাণ',
-                        Formatters.currency(metrics.todaySales),
-                        isPositive: true,
+                        'আজকের নিট লাভ (Net Profit)', 
+                        Formatters.currency(metrics.todayNetProfit),
+                        isBold: true,
+                        isPositive: metrics.todayNetProfit >= 0,
+                        isNegative: metrics.todayNetProfit < 0,
                       ),
-                      const SizedBox(height: 10),
+                      
+                      const Divider(height: 24),
+                      
+                      Text(
+                        'সর্বমোট লাভ-ক্ষতি বিবরণী (All-Time Financials)',
+                        style: TextStyle(
+                          fontWeight: FontWeight.bold,
+                          fontSize: 14,
+                          color: theme.colorScheme.primary,
+                        ),
+                      ),
+                      const SizedBox(height: 8),
+                      _buildPlRow('সর্বমোট বিক্রয় (Total Sales)', Formatters.currency(metrics.totalSales), isPositive: true),
+                      const SizedBox(height: 6),
+                      _buildPlRow('সর্বমোট পণ্যের খরচ (Total COGS)', '- ${Formatters.currency(metrics.totalCOGS)}', isNegative: true),
+                      const SizedBox(height: 6),
+                      _buildPlRow('সর্বমোট মোট লাভ (Total Gross Profit)', Formatters.currency(metrics.grossProfit), isBold: true),
+                      const SizedBox(height: 6),
+                      _buildPlRow('সর্বমোট খরচ (Total Expenses)', '- ${Formatters.currency(metrics.totalExpenses)}', isNegative: true),
+                      const SizedBox(height: 6),
                       _buildPlRow(
-                        'মজুদ পণ্যের মূল্য',
-                        Formatters.currency(metrics.inventoryValue),
-                      ),
-                      const SizedBox(height: 10),
-                      _buildPlRow(
-                        'মোট খরচের পরিমাণ',
-                        '- ${Formatters.currency(metrics.totalExpenses)}',
-                        isNegative: true,
-                      ),
-                      Divider(
-                        height: 24,
-                        color: theme.colorScheme.outlineVariant,
-                      ),
-                      _buildPlRow(
-                        'আজকের নিট লাভ',
+                        'সর্বমোট নিট লাভ (Total Net Profit)', 
                         Formatters.currency(metrics.netProfit),
                         isBold: true,
-                        fontSize: 16,
                         isPositive: metrics.netProfit >= 0,
                         isNegative: metrics.netProfit < 0,
+                      ),
+                      
+                      const Divider(height: 24),
+                      
+                      _buildPlRow(
+                        'মজুদ পণ্যের মূল্য (Inventory Value)', 
+                        Formatters.currency(metrics.inventoryValue),
                       ),
                     ],
                   ),
@@ -1115,11 +1143,24 @@ class _ReportsScreenState extends ConsumerState<ReportsScreen>
       }
 
       final buffer = StringBuffer();
-      buffer.writeln('বিবরণ,টাকা');
-      buffer.writeln('আজকের বিক্রির পরিমাণ,${metrics.todaySales}');
-      buffer.writeln('মজুদ পণ্যের মূল্য,${metrics.inventoryValue}');
-      buffer.writeln('মোট খরচের পরিমাণ,-${metrics.totalExpenses}');
-      buffer.writeln('আজকের নিট লাভ,${metrics.netProfit}');
+      buffer.writeln('লাভ-ক্ষতি বিবরণী (Profit & Loss Statement)');
+      buffer.writeln('তারিখ,${Formatters.dateTime(DateTime.now())}');
+      buffer.writeln();
+      buffer.writeln('আজকের লাভ-ক্ষতি বিবরণী (Today\'s Financials)');
+      buffer.writeln('আজকের বিক্রয় রাজস্ব (Sales Revenue),${metrics.todaySales}');
+      buffer.writeln('আজকের বিক্রীত পণ্যের খরচ (COGS),-${metrics.todayCOGS}');
+      buffer.writeln('আজকের মোট লাভ (Gross Profit),${metrics.todayGrossProfit}');
+      buffer.writeln('আজকের খরচ (Operating Expenses),-${metrics.todayExpenses}');
+      buffer.writeln('আজকের নিট লাভ (Net Profit),${metrics.todayNetProfit}');
+      buffer.writeln();
+      buffer.writeln('সর্বমোট লাভ-ক্ষতি বিবরণী (All-Time Financials)');
+      buffer.writeln('সর্বমোট বিক্রয় (Total Sales),${metrics.totalSales}');
+      buffer.writeln('সর্বমোট বিক্রীত পণ্যের খরচ (Total COGS),-${metrics.totalCOGS}');
+      buffer.writeln('সর্বমোট মোট লাভ (Total Gross Profit),${metrics.grossProfit}');
+      buffer.writeln('সর্বমোট খরচ (Total Expenses),-${metrics.totalExpenses}');
+      buffer.writeln('সর্বমোট নিট লাভ (Total Net Profit),${metrics.netProfit}');
+      buffer.writeln();
+      buffer.writeln('মজুদ পণ্যের মূল্য (Inventory Value),${metrics.inventoryValue}');
 
       final settings = ref.read(settingsControllerProvider).valueOrNull;
       final csvSavePath = settings?.csvSavePath;
@@ -1164,6 +1205,13 @@ class _ReportsScreenState extends ConsumerState<ReportsScreen>
         inventoryValue: metrics.inventoryValue,
         totalExpenses: metrics.totalExpenses,
         netProfit: metrics.netProfit,
+        todayExpenses: metrics.todayExpenses,
+        todayGrossProfit: metrics.todayGrossProfit,
+        todayNetProfit: metrics.todayNetProfit,
+        totalSales: metrics.totalSales,
+        todayCOGS: metrics.todayCOGS,
+        totalCOGS: metrics.totalCOGS,
+        grossProfit: metrics.grossProfit,
         customSavePath: pdfSavePath,
       );
 
@@ -1188,6 +1236,13 @@ class _ReportsScreenState extends ConsumerState<ReportsScreen>
         inventoryValue: metrics.inventoryValue,
         totalExpenses: metrics.totalExpenses,
         netProfit: metrics.netProfit,
+        todayExpenses: metrics.todayExpenses,
+        todayGrossProfit: metrics.todayGrossProfit,
+        todayNetProfit: metrics.todayNetProfit,
+        totalSales: metrics.totalSales,
+        todayCOGS: metrics.todayCOGS,
+        totalCOGS: metrics.totalCOGS,
+        grossProfit: metrics.grossProfit,
       );
     } catch (e) {
       if (mounted) {
