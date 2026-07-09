@@ -200,9 +200,9 @@ class PosCartNotifier extends StateNotifier<PosCartState> {
         );
         await _db.into(_db.saleItems).insert(saleItemCompanion);
 
-        // 3. Subtract stock level from Products
-        final currentStock = item.product.currentStock;
-        final newStock = currentStock - item.quantity;
+        // 3. Subtract stock level from Products (fetching latest stock to prevent stale overrides)
+        final dbProduct = await (_db.select(_db.products)..where((t) => t.id.equals(item.product.id))).getSingle();
+        final newStock = dbProduct.currentStock - item.quantity;
         await (_db.update(_db.products)..where((t) => t.id.equals(item.product.id))).write(
           ProductsCompanion(currentStock: Value(newStock)),
         );
