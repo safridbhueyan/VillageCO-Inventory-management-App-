@@ -34,6 +34,7 @@ class Products extends Table {
   BoolColumn get isFavorite => boolean().withDefault(const Constant(false))();
   TextColumn get batchNumber => text().nullable()();
   DateTimeColumn get expiryDate => dateTime().nullable()();
+  DateTimeColumn get createdAt => dateTime().nullable().withDefault(currentDateAndTime)();
 
   @override
   Set<Column> get primaryKey => {id};
@@ -148,6 +149,8 @@ class SupplierOrders extends Table {
   RealColumn get amountPaid => real().withDefault(const Constant(0.0))();
   DateTimeColumn get date => dateTime()();
   TextColumn get status => text().withDefault(const Constant('Pending'))(); // 'Pending', 'Partially Received', 'Received'
+  RealColumn get unitCost => real().nullable()();
+  TextColumn get pdfUrl => text().nullable()();
 
   @override
   Set<Column> get primaryKey => {id};
@@ -162,6 +165,7 @@ class DamagedItems extends Table {
   DateTimeColumn get date => dateTime()();
   DateTimeColumn get resolutionDate => dateTime().nullable()();
   TextColumn get notes => text().nullable()();
+  TextColumn get pdfUrl => text().nullable()();
 
   @override
   Set<Column> get primaryKey => {id};
@@ -211,7 +215,7 @@ class AppDatabase extends _$AppDatabase {
   AppDatabase([QueryExecutor? e]) : super(e ?? _openConnection());
 
   @override
-  int get schemaVersion => 5;
+  int get schemaVersion => 8;
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
@@ -231,6 +235,16 @@ class AppDatabase extends _$AppDatabase {
           if (from < 5) {
             await migrator.addColumn(products, products.batchNumber);
             await migrator.addColumn(products, products.expiryDate);
+          }
+          if (from < 6) {
+            await migrator.addColumn(products, products.createdAt);
+          }
+          if (from < 7) {
+            await migrator.addColumn(supplierOrders, supplierOrders.unitCost);
+            await migrator.addColumn(supplierOrders, supplierOrders.pdfUrl);
+          }
+          if (from < 8) {
+            await migrator.addColumn(damagedItems, damagedItems.pdfUrl);
           }
         },
       );
