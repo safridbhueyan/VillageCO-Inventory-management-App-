@@ -149,9 +149,10 @@ class _ProductReturnDialogState extends ConsumerState<ProductReturnDialog> {
               ),
             );
 
-            // Adjust inventory stock
+            // Adjust inventory stock (fetching latest stock to prevent stale overrides)
             if (isRestocked) {
-              final updatedStock = itemWithProduct.product.currentStock + returnQty;
+              final dbProduct = await (db.select(db.products)..where((t) => t.id.equals(productId))).getSingle();
+              final updatedStock = dbProduct.currentStock + returnQty;
               await (db.update(db.products)
                 ..where((t) => t.id.equals(productId)))
                 .write(ProductsCompanion(currentStock: drift.Value(updatedStock)));
