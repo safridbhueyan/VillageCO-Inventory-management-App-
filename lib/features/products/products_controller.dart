@@ -32,7 +32,7 @@ class ProductsFilterState {
     this.categoryId,
     this.stockStatus,
     this.favoritesOnly = false,
-    this.sortBy = 'name_asc',
+    this.sortBy = 'newest',
     Set<String>? selectedIds,
   }) : selectedIds = selectedIds ?? {};
 
@@ -67,13 +67,15 @@ final allActiveProductsProvider = FutureProvider<List<ProductWithDetails>>((ref)
   ]);
   query.where(db.products.isArchived.equals(false));
   final rows = await query.get();
-  return rows.map((row) {
+  final list = rows.map((row) {
     return ProductWithDetails(
       product: row.readTable(db.products),
       category: row.readTableOrNull(db.categories),
       supplier: row.readTableOrNull(db.suppliers),
     );
   }).toList();
+  list.sort((a, b) => (b.product.createdAt ?? DateTime(1970)).compareTo(a.product.createdAt ?? DateTime(1970)));
+  return list;
 });
 
 final productsListProvider = FutureProvider<List<ProductWithDetails>>((ref) async {
@@ -123,6 +125,9 @@ final productsListProvider = FutureProvider<List<ProductWithDetails>>((ref) asyn
   }
 
   switch (filters.sortBy) {
+    case 'newest':
+      list.sort((a, b) => (b.product.createdAt ?? DateTime(1970)).compareTo(a.product.createdAt ?? DateTime(1970)));
+      break;
     case 'name_asc':
       list.sort((a, b) => a.product.name.toLowerCase().compareTo(b.product.name.toLowerCase()));
       break;
