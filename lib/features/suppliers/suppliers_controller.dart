@@ -236,23 +236,46 @@ class SuppliersController extends AsyncNotifier<List<Supplier>> {
       );
       await _db.into(_db.damagedItems).insert(companion);
 
+      final product = await (_db.select(_db.products)..where((t) => t.id.equals(productId))).getSingle();
+      final isInitialReplaced = status == 'Replaced';
+
+      if (!isInitialReplaced) {
+        final newStock = product.currentStock - quantity;
+        await (_db.update(_db.products)..where((t) => t.id.equals(productId))).write(
+          ProductsCompanion(currentStock: Value(newStock)),
+        );
+
+        await _db.into(_db.stockHistory).insert(
+          StockHistoryCompanion(
+            id: Value(const Uuid().v4()),
+            productId: Value(productId),
+            changeAmount: Value(-quantity),
+            reason: Value('Damaged Item Logged'),
+            supplierId: Value(supplierId),
+            date: Value(DateTime.now()),
+          ),
+        );
+      }
+
       // Trigger background PDF generation and upload/sync!
       final settings = ref.read(settingsControllerProvider).valueOrNull;
       final supplier = await (_db.select(_db.suppliers)..where((t) => t.id.equals(supplierId))).getSingle();
-      final product = await (_db.select(_db.products)..where((t) => t.id.equals(productId))).getSingle();
+      final updatedProduct = await (_db.select(_db.products)..where((t) => t.id.equals(productId))).getSingle();
       final createdDamage = await (_db.select(_db.damagedItems)..where((t) => t.id.equals(damageId))).getSingle();
 
       if (settings != null) {
         ref.read(firebaseSyncServiceProvider).syncDamagedItemOnComplete(
           damage: createdDamage,
           supplier: supplier,
-          product: product,
+          product: updatedProduct,
           settings: settings,
         ).catchError((e) {
           debugPrint('Failed to sync damaged item: $e');
         });
       }
 
+      ref.invalidate(productsListProvider);
+      ref.invalidate(allActiveProductsProvider);
       ref.invalidate(supplierDamagesProvider(supplierId));
       triggerAutoSync(ref);
       return _fetchSuppliers();
@@ -268,6 +291,9 @@ class SuppliersController extends AsyncNotifier<List<Supplier>> {
   }) async {
     state = const AsyncValue.loading();
     state = await AsyncValue.guard(() async {
+      final oldDamage = await (_db.select(_db.damagedItems)..where((t) => t.id.equals(id))).getSingle();
+      final oldStatus = oldDamage.status;
+
       await (_db.update(_db.damagedItems)..where((t) => t.id.equals(id))).write(
         DamagedItemsCompanion(
           status: Value(status),
@@ -276,23 +302,62 @@ class SuppliersController extends AsyncNotifier<List<Supplier>> {
         ),
       );
 
+      final product = await (_db.select(_db.products)..where((t) => t.id.equals(oldDamage.productId))).getSingle();
+
+      // If transition is to Replaced: increase stock (since supplier replaced items)
+      if (status == 'Replaced' && oldStatus != 'Replaced') {
+        final newStock = product.currentStock + oldDamage.quantity;
+        await (_db.update(_db.products)..where((t) => t.id.equals(oldDamage.productId))).write(
+          ProductsCompanion(currentStock: Value(newStock)),
+        );
+        await _db.into(_db.stockHistory).insert(
+          StockHistoryCompanion(
+            id: Value(const Uuid().v4()),
+            productId: Value(oldDamage.productId),
+            changeAmount: Value(oldDamage.quantity),
+            reason: Value('Damaged Item Replaced'),
+            supplierId: Value(supplierId),
+            date: Value(DateTime.now()),
+          ),
+        );
+      } 
+      // If transition is away from Replaced: decrease stock (undo)
+      else if (status != 'Replaced' && oldStatus == 'Replaced') {
+        final newStock = product.currentStock - oldDamage.quantity;
+        await (_db.update(_db.products)..where((t) => t.id.equals(oldDamage.productId))).write(
+          ProductsCompanion(currentStock: Value(newStock)),
+        );
+        await _db.into(_db.stockHistory).insert(
+          StockHistoryCompanion(
+            id: Value(const Uuid().v4()),
+            productId: Value(oldDamage.productId),
+            changeAmount: Value(-oldDamage.quantity),
+            reason: Value('Reverted Damaged Replacement'),
+            supplierId: Value(supplierId),
+            date: Value(DateTime.now()),
+          ),
+        );
+      }
+
       // Trigger background PDF generation and upload/sync!
       final settings = ref.read(settingsControllerProvider).valueOrNull;
       final supplier = await (_db.select(_db.suppliers)..where((t) => t.id.equals(supplierId))).getSingle();
       final updatedDamage = await (_db.select(_db.damagedItems)..where((t) => t.id.equals(id))).getSingle();
-      final product = await (_db.select(_db.products)..where((t) => t.id.equals(updatedDamage.productId))).getSingle();
+      final updatedProduct = await (_db.select(_db.products)..where((t) => t.id.equals(updatedDamage.productId))).getSingle();
 
       if (settings != null) {
         ref.read(firebaseSyncServiceProvider).syncDamagedItemOnComplete(
           damage: updatedDamage,
           supplier: supplier,
-          product: product,
+          product: updatedProduct,
           settings: settings,
         ).catchError((e) {
           debugPrint('Failed to sync updated damaged item: $e');
         });
       }
 
+      ref.invalidate(productsListProvider);
+      ref.invalidate(allActiveProductsProvider);
       ref.invalidate(supplierDamagesProvider(supplierId));
       triggerAutoSync(ref);
       return _fetchSuppliers();
