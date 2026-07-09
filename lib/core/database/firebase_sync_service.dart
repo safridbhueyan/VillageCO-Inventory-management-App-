@@ -391,6 +391,7 @@ class FirebaseSyncService {
         'description': prod.description,
         'isArchived': prod.isArchived,
         'isFavorite': prod.isFavorite,
+        'createdAt': prod.createdAt?.toIso8601String(),
       });
     }
 
@@ -457,7 +458,7 @@ class FirebaseSyncService {
     // 9. Sync SupplierOrders
     final supplierOrders = await _db.select(_db.supplierOrders).get();
     for (final order in supplierOrders) {
-      await storeRef.collection('supplierOrders').doc(order.id).set({
+      final orderData = {
         'id': order.id,
         'supplierId': order.supplierId,
         'productId': order.productId,
@@ -467,13 +468,22 @@ class FirebaseSyncService {
         'amountPaid': order.amountPaid,
         'date': Timestamp.fromDate(order.date),
         'status': order.status,
-      });
+        'unitCost': order.unitCost,
+        'pdfUrl': order.pdfUrl,
+      };
+      await storeRef.collection('supplierOrders').doc(order.id).set(orderData, SetOptions(merge: true));
+      await storeRef
+          .collection('suppliers')
+          .doc(order.supplierId)
+          .collection('supplierOrders')
+          .doc(order.id)
+          .set(orderData, SetOptions(merge: true));
     }
 
     // 10. Sync DamagedItems
     final damagedItems = await _db.select(_db.damagedItems).get();
     for (final dmg in damagedItems) {
-      await storeRef.collection('damagedItems').doc(dmg.id).set({
+      final dmgData = {
         'id': dmg.id,
         'supplierId': dmg.supplierId,
         'productId': dmg.productId,
@@ -482,7 +492,15 @@ class FirebaseSyncService {
         'date': Timestamp.fromDate(dmg.date),
         'resolutionDate': dmg.resolutionDate != null ? Timestamp.fromDate(dmg.resolutionDate!) : null,
         'notes': dmg.notes,
-      });
+        'pdfUrl': dmg.pdfUrl,
+      };
+      await storeRef.collection('damagedItems').doc(dmg.id).set(dmgData, SetOptions(merge: true));
+      await storeRef
+          .collection('suppliers')
+          .doc(dmg.supplierId)
+          .collection('damagedItems')
+          .doc(dmg.id)
+          .set(dmgData, SetOptions(merge: true));
     }
   }
 
@@ -641,6 +659,262 @@ class FirebaseSyncService {
       'totalTransactionsCount': totalTransactionsCount,
       'pdfUrl': pdfUrl,
     });
+  }
+
+  /// Pulls the latest products, categories, suppliers, and customers from Firestore and upserts them locally.
+  Future<void> pullAndUpsertCatalog(AppSettingsTableData settings) async {
+    try {
+      final docInfo = await getStoreDocIdAndShopID(settings.shopName).timeout(const Duration(seconds: 4));
+      final storeDocId = docInfo['storeDocId']!;
+      if (storeDocId.isEmpty) return;
+
+      final docRef = _firestore.collection('stores').doc(storeDocId);
+
+      // Fetch collections from Firestore
+      final categoriesSnap = await docRef.collection('categories').get().timeout(const Duration(seconds: 5));
+      final suppliersSnap = await docRef.collection('suppliers').get().timeout(const Duration(seconds: 5));
+      final customersSnap = await docRef.collection('customers').get().timeout(const Duration(seconds: 5));
+      final productsSnap = await docRef.collection('products').get().timeout(const Duration(seconds: 5));
+
+      await _db.transaction(() async {
+        // Upsert Categories
+        for (var doc in categoriesSnap.docs) {
+          final d = doc.data();
+          await _db.into(_db.categories).insert(
+            CategoriesCompanion(
+              id: drift.Value(d['id']),
+              name: drift.Value(d['name'] ?? ''),
+              icon: drift.Value(d['icon'] ?? 'category'),
+              color: drift.Value(d['color'] ?? '0xFF008060'),
+            ),
+            mode: drift.InsertMode.insertOrReplace,
+          );
+        }
+
+        // Upsert Suppliers
+        for (var doc in suppliersSnap.docs) {
+          final d = doc.data();
+          await _db.into(_db.suppliers).insert(
+            SuppliersCompanion(
+              id: drift.Value(d['id']),
+              name: drift.Value(d['name'] ?? ''),
+              phone: drift.Value(d['phone'] ?? ''),
+              email: drift.Value(d['email']),
+              address: drift.Value(d['address']),
+            ),
+            mode: drift.InsertMode.insertOrReplace,
+          );
+        }
+
+        // Upsert Customers
+        for (var doc in customersSnap.docs) {
+          final d = doc.data();
+          await _db.into(_db.customers).insert(
+            CustomersCompanion(
+              id: drift.Value(d['id']),
+              name: drift.Value(d['name'] ?? ''),
+              phone: drift.Value(d['phone'] ?? ''),
+              email: drift.Value(d['email']),
+              address: drift.Value(d['address']),
+            ),
+            mode: drift.InsertMode.insertOrReplace,
+          );
+        }
+
+        // Upsert Products
+        for (var doc in productsSnap.docs) {
+          final d = doc.data();
+          await _db.into(_db.products).insert(
+            ProductsCompanion(
+              id: drift.Value(d['id']),
+              name: drift.Value(d['name'] ?? ''),
+              barcode: drift.Value(d['barcode']),
+              categoryId: drift.Value(d['categoryId']),
+              brand: drift.Value(d['brand']),
+              buyingPrice: drift.Value((d['buyingPrice'] as num?)?.toDouble() ?? 0.0),
+              sellingPrice: drift.Value((d['sellingPrice'] as num?)?.toDouble() ?? 0.0),
+              currentStock: drift.Value((d['currentStock'] as num?)?.toDouble() ?? 0.0),
+              minimumStock: drift.Value((d['minimumStock'] as num?)?.toDouble() ?? 0.0),
+              unit: drift.Value(d['unit'] ?? 'pcs'),
+              supplierId: drift.Value(d['supplierId']),
+              imagePath: drift.Value(d['imagePath']),
+              description: drift.Value(d['description']),
+              isArchived: drift.Value(d['isArchived'] ?? false),
+              isFavorite: drift.Value(d['isFavorite'] ?? false),
+              createdAt: drift.Value(d['createdAt'] != null ? DateTime.tryParse(d['createdAt']) : DateTime.now()),
+            ),
+            mode: drift.InsertMode.insertOrReplace,
+          );
+        }
+      });
+    } catch (e) {
+      debugPrint('Failed to pull and upsert catalog from Firestore: $e');
+      rethrow;
+    }
+  }
+
+  Future<String?> uploadSupplierOrderPdf(String storeId, String supplierId, String localPath) async {
+    try {
+      final file = File(localPath);
+      if (!await file.exists()) {
+        debugPrint('Supplier order PDF file does not exist at path: $localPath');
+        return null;
+      }
+      
+      final fileName = p.basename(localPath);
+      final ref = _storage.ref().child('stores/$storeId/suppliers/$supplierId/orders/$fileName');
+      
+      final uploadTask = await ref.putFile(file);
+      final downloadUrl = await uploadTask.ref.getDownloadURL();
+      return downloadUrl;
+    } catch (e) {
+      debugPrint('Failed to upload supplier order PDF: $e');
+      return null;
+    }
+  }
+
+  Future<void> syncSupplierOrderOnComplete({
+    required SupplierOrder order,
+    required Supplier supplier,
+    required Product product,
+    required AppSettingsTableData settings,
+  }) async {
+    try {
+      final docInfo = await getStoreDocIdAndShopID(settings.shopName);
+      final storeDocId = docInfo['storeDocId']!;
+
+      // 1. Generate PDF in background
+      final localPdfPath = await PdfGenerator.generateAndSaveSupplierOrderPdf(
+        order: order,
+        supplier: supplier,
+        product: product,
+        customSavePath: settings.pdfSavePath,
+      );
+
+      String? pdfUrl;
+      if (localPdfPath != null) {
+        // 2. Upload to Firebase Storage
+        pdfUrl = await uploadSupplierOrderPdf(storeDocId, supplier.id, localPdfPath);
+      }
+
+      // 3. Update pdfUrl locally in SQLite
+      if (pdfUrl != null) {
+        await (_db.update(_db.supplierOrders)..where((t) => t.id.equals(order.id))).write(
+          SupplierOrdersCompanion(pdfUrl: drift.Value(pdfUrl)),
+        );
+      }
+
+      // 4. Sync to Firestore in BOTH locations
+      final storeRef = _firestore.collection('stores').doc(storeDocId);
+      final orderData = {
+        'id': order.id,
+        'supplierId': order.supplierId,
+        'productId': order.productId,
+        'quantityOrdered': order.quantityOrdered,
+        'quantityReceived': order.quantityReceived,
+        'totalCost': order.totalCost,
+        'amountPaid': order.amountPaid,
+        'date': Timestamp.fromDate(order.date),
+        'status': order.status,
+        'unitCost': order.unitCost,
+        'pdfUrl': pdfUrl ?? order.pdfUrl,
+      };
+
+      // General collection
+      await storeRef.collection('supplierOrders').doc(order.id).set(orderData, SetOptions(merge: true));
+
+      // Supplier subcollection
+      await storeRef
+          .collection('suppliers')
+          .doc(supplier.id)
+          .collection('supplierOrders')
+          .doc(order.id)
+          .set(orderData, SetOptions(merge: true));
+
+    } catch (e) {
+      debugPrint('Background supplier order sync failed: $e');
+    }
+  }
+
+  Future<String?> uploadDamagedItemPdf(String storeId, String supplierId, String localPath) async {
+    try {
+      final file = File(localPath);
+      if (!await file.exists()) {
+        debugPrint('Damaged record PDF file does not exist at path: $localPath');
+        return null;
+      }
+      
+      final fileName = p.basename(localPath);
+      final ref = _storage.ref().child('stores/$storeId/suppliers/$supplierId/damages/$fileName');
+      
+      final uploadTask = await ref.putFile(file);
+      final downloadUrl = await uploadTask.ref.getDownloadURL();
+      return downloadUrl;
+    } catch (e) {
+      debugPrint('Failed to upload damaged item PDF: $e');
+      return null;
+    }
+  }
+
+  Future<void> syncDamagedItemOnComplete({
+    required DamagedItem damage,
+    required Supplier supplier,
+    required Product product,
+    required AppSettingsTableData settings,
+  }) async {
+    try {
+      final docInfo = await getStoreDocIdAndShopID(settings.shopName);
+      final storeDocId = docInfo['storeDocId']!;
+
+      // 1. Generate PDF in background
+      final localPdfPath = await PdfGenerator.generateAndSaveDamagedItemPdf(
+        damage: damage,
+        supplier: supplier,
+        product: product,
+        customSavePath: settings.pdfSavePath,
+      );
+
+      String? pdfUrl;
+      if (localPdfPath != null) {
+        // 2. Upload to Firebase Storage
+        pdfUrl = await uploadDamagedItemPdf(storeDocId, supplier.id, localPdfPath);
+      }
+
+      // 3. Update pdfUrl locally in SQLite
+      if (pdfUrl != null) {
+        await (_db.update(_db.damagedItems)..where((t) => t.id.equals(damage.id))).write(
+          DamagedItemsCompanion(pdfUrl: drift.Value(pdfUrl)),
+        );
+      }
+
+      // 4. Sync to Firestore in BOTH locations
+      final storeRef = _firestore.collection('stores').doc(storeDocId);
+      final dmgData = {
+        'id': damage.id,
+        'supplierId': damage.supplierId,
+        'productId': damage.productId,
+        'quantity': damage.quantity,
+        'status': damage.status,
+        'date': Timestamp.fromDate(damage.date),
+        'resolutionDate': damage.resolutionDate != null ? Timestamp.fromDate(damage.resolutionDate!) : null,
+        'notes': damage.notes,
+        'pdfUrl': pdfUrl ?? damage.pdfUrl,
+      };
+
+      // General collection
+      await storeRef.collection('damagedItems').doc(damage.id).set(dmgData, SetOptions(merge: true));
+
+      // Supplier subcollection
+      await storeRef
+          .collection('suppliers')
+          .doc(supplier.id)
+          .collection('damagedItems')
+          .doc(damage.id)
+          .set(dmgData, SetOptions(merge: true));
+
+    } catch (e) {
+      debugPrint('Background damaged item sync failed: $e');
+    }
   }
 }
 
