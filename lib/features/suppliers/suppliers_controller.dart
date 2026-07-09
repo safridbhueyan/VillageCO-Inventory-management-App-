@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:drift/drift.dart';
 import 'package:uuid/uuid.dart';
@@ -5,6 +6,7 @@ import '../../core/database/database.dart';
 import '../../core/database/database_providers.dart';
 import '../../core/database/firebase_sync_service.dart';
 import '../products/products_controller.dart';
+import '../settings/settings_controller.dart';
 
 class SuppliersController extends AsyncNotifier<List<Supplier>> {
   late AppDatabase _db;
@@ -74,11 +76,13 @@ class SuppliersController extends AsyncNotifier<List<Supplier>> {
     required double amtPaid,
     required DateTime date,
     required String status,
+    double? newBuyingPrice,
   }) async {
     state = const AsyncValue.loading();
     state = await AsyncValue.guard(() async {
+      final orderId = const Uuid().v4();
       final companion = SupplierOrdersCompanion(
-        id: Value(const Uuid().v4()),
+        id: Value(orderId),
         supplierId: Value(supplierId),
         productId: Value(productId),
         quantityOrdered: Value(qtyOrdered),
@@ -87,15 +91,22 @@ class SuppliersController extends AsyncNotifier<List<Supplier>> {
         amountPaid: Value(amtPaid),
         date: Value(date),
         status: Value(status),
+        unitCost: Value(newBuyingPrice),
       );
       await _db.into(_db.supplierOrders).insert(companion);
 
+      final product = await (_db.select(_db.products)..where((t) => t.id.equals(productId))).getSingle();
+      
+      // Update stock and buying price in products table if we are receiving stock now
+      final newStock = product.currentStock + qtyReceived;
+      await (_db.update(_db.products)..where((t) => t.id.equals(productId))).write(
+        ProductsCompanion(
+          currentStock: Value(newStock),
+          buyingPrice: (qtyReceived > 0 && newBuyingPrice != null) ? Value(newBuyingPrice) : const Value.absent(),
+        ),
+      );
+
       if (qtyReceived > 0) {
-        final product = await (_db.select(_db.products)..where((t) => t.id.equals(productId))).getSingle();
-        final newStock = product.currentStock + qtyReceived;
-        await (_db.update(_db.products)..where((t) => t.id.equals(productId))).write(
-          ProductsCompanion(currentStock: Value(newStock)),
-        );
         await _db.into(_db.stockHistory).insert(
           StockHistoryCompanion(
             id: Value(const Uuid().v4()),
@@ -106,10 +117,27 @@ class SuppliersController extends AsyncNotifier<List<Supplier>> {
             date: Value(DateTime.now()),
           ),
         );
-        ref.invalidate(productsListProvider);
-        ref.invalidate(allActiveProductsProvider);
       }
 
+      // Trigger background PDF generation and upload/sync!
+      final settings = ref.read(settingsControllerProvider).valueOrNull;
+      final supplier = await (_db.select(_db.suppliers)..where((t) => t.id.equals(supplierId))).getSingle();
+      final updatedProduct = await (_db.select(_db.products)..where((t) => t.id.equals(productId))).getSingle();
+      final createdOrder = await (_db.select(_db.supplierOrders)..where((t) => t.id.equals(orderId))).getSingle();
+
+      if (settings != null) {
+        ref.read(firebaseSyncServiceProvider).syncSupplierOrderOnComplete(
+          order: createdOrder,
+          supplier: supplier,
+          product: updatedProduct,
+          settings: settings,
+        ).catchError((e) {
+          debugPrint('Failed to sync supplier order: $e');
+        });
+      }
+
+      ref.invalidate(productsListProvider);
+      ref.invalidate(allActiveProductsProvider);
       ref.invalidate(supplierOrdersProvider(supplierId));
       triggerAutoSync(ref);
       return _fetchSuppliers();
@@ -137,12 +165,19 @@ class SuppliersController extends AsyncNotifier<List<Supplier>> {
         ),
       );
 
+      final product = await (_db.select(_db.products)..where((t) => t.id.equals(existing.productId))).getSingle();
+
       if (addedReceived > 0) {
-        final product = await (_db.select(_db.products)..where((t) => t.id.equals(existing.productId))).getSingle();
         final newStock = product.currentStock + addedReceived;
+        
+        // If order had a custom unit cost, we update the product's buyingPrice now since we are receiving the stock!
         await (_db.update(_db.products)..where((t) => t.id.equals(existing.productId))).write(
-          ProductsCompanion(currentStock: Value(newStock)),
+          ProductsCompanion(
+            currentStock: Value(newStock),
+            buyingPrice: existing.unitCost != null ? Value(existing.unitCost!) : const Value.absent(),
+          ),
         );
+
         await _db.into(_db.stockHistory).insert(
           StockHistoryCompanion(
             id: Value(const Uuid().v4()),
@@ -153,10 +188,27 @@ class SuppliersController extends AsyncNotifier<List<Supplier>> {
             date: Value(DateTime.now()),
           ),
         );
-        ref.invalidate(productsListProvider);
-        ref.invalidate(allActiveProductsProvider);
       }
 
+      // Trigger background PDF generation and upload/sync!
+      final settings = ref.read(settingsControllerProvider).valueOrNull;
+      final supplier = await (_db.select(_db.suppliers)..where((t) => t.id.equals(supplierId))).getSingle();
+      final updatedProduct = await (_db.select(_db.products)..where((t) => t.id.equals(existing.productId))).getSingle();
+      final updatedOrder = await (_db.select(_db.supplierOrders)..where((t) => t.id.equals(orderId))).getSingle();
+
+      if (settings != null) {
+        ref.read(firebaseSyncServiceProvider).syncSupplierOrderOnComplete(
+          order: updatedOrder,
+          supplier: supplier,
+          product: updatedProduct,
+          settings: settings,
+        ).catchError((e) {
+          debugPrint('Failed to sync updated supplier order: $e');
+        });
+      }
+
+      ref.invalidate(productsListProvider);
+      ref.invalidate(allActiveProductsProvider);
       ref.invalidate(supplierOrdersProvider(supplierId));
       triggerAutoSync(ref);
       return _fetchSuppliers();
@@ -172,8 +224,9 @@ class SuppliersController extends AsyncNotifier<List<Supplier>> {
   }) async {
     state = const AsyncValue.loading();
     state = await AsyncValue.guard(() async {
+      final damageId = const Uuid().v4();
       final companion = DamagedItemsCompanion(
-        id: Value(const Uuid().v4()),
+        id: Value(damageId),
         supplierId: Value(supplierId),
         productId: Value(productId),
         quantity: Value(quantity),
@@ -182,6 +235,24 @@ class SuppliersController extends AsyncNotifier<List<Supplier>> {
         date: Value(DateTime.now()),
       );
       await _db.into(_db.damagedItems).insert(companion);
+
+      // Trigger background PDF generation and upload/sync!
+      final settings = ref.read(settingsControllerProvider).valueOrNull;
+      final supplier = await (_db.select(_db.suppliers)..where((t) => t.id.equals(supplierId))).getSingle();
+      final product = await (_db.select(_db.products)..where((t) => t.id.equals(productId))).getSingle();
+      final createdDamage = await (_db.select(_db.damagedItems)..where((t) => t.id.equals(damageId))).getSingle();
+
+      if (settings != null) {
+        ref.read(firebaseSyncServiceProvider).syncDamagedItemOnComplete(
+          damage: createdDamage,
+          supplier: supplier,
+          product: product,
+          settings: settings,
+        ).catchError((e) {
+          debugPrint('Failed to sync damaged item: $e');
+        });
+      }
+
       ref.invalidate(supplierDamagesProvider(supplierId));
       triggerAutoSync(ref);
       return _fetchSuppliers();
@@ -204,6 +275,24 @@ class SuppliersController extends AsyncNotifier<List<Supplier>> {
           notes: notes != null ? Value(notes) : const Value.absent(),
         ),
       );
+
+      // Trigger background PDF generation and upload/sync!
+      final settings = ref.read(settingsControllerProvider).valueOrNull;
+      final supplier = await (_db.select(_db.suppliers)..where((t) => t.id.equals(supplierId))).getSingle();
+      final updatedDamage = await (_db.select(_db.damagedItems)..where((t) => t.id.equals(id))).getSingle();
+      final product = await (_db.select(_db.products)..where((t) => t.id.equals(updatedDamage.productId))).getSingle();
+
+      if (settings != null) {
+        ref.read(firebaseSyncServiceProvider).syncDamagedItemOnComplete(
+          damage: updatedDamage,
+          supplier: supplier,
+          product: product,
+          settings: settings,
+        ).catchError((e) {
+          debugPrint('Failed to sync updated damaged item: $e');
+        });
+      }
+
       ref.invalidate(supplierDamagesProvider(supplierId));
       triggerAutoSync(ref);
       return _fetchSuppliers();
