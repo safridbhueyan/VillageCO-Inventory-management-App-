@@ -366,6 +366,7 @@ class AdminRepository {
           description: Value(d['description']),
           isArchived: Value(d['isArchived'] ?? false),
           isFavorite: Value(d['isFavorite'] ?? false),
+          createdAt: Value(d['createdAt'] != null ? DateTime.tryParse(d['createdAt']) : DateTime.now()),
         ));
       }
 
@@ -465,7 +466,7 @@ class AdminRepository {
           }
         }
 
-        await _db.into(_db.supplierOrders).insert(SupplierOrdersCompanion(
+         await _db.into(_db.supplierOrders).insert(SupplierOrdersCompanion(
           id: Value(d['id']),
           supplierId: Value(d['supplierId'] ?? ''),
           productId: Value(d['productId'] ?? ''),
@@ -475,6 +476,8 @@ class AdminRepository {
           amountPaid: Value((d['amountPaid'] as num?)?.toDouble() ?? 0.0),
           status: Value(d['status'] ?? 'Pending'),
           date: Value(ordDate),
+          unitCost: Value(d['unitCost'] != null ? (d['unitCost'] as num).toDouble() : null),
+          pdfUrl: Value(d['pdfUrl']),
         ));
       }
 
@@ -509,6 +512,7 @@ class AdminRepository {
           notes: Value(d['notes']),
           date: Value(dmgDate),
           resolutionDate: Value(resDate),
+          pdfUrl: Value(d['pdfUrl']),
         ));
       }
     });
