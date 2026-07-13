@@ -174,6 +174,14 @@ class ProductsRepository {
     });
   }
 
+  void _triggerStockSync(List<String> ids) {
+    _ref.read(settingsControllerProvider).whenData((settings) {
+      _ref.read(firebaseSyncServiceProvider).syncProductsStock(ids, settings).catchError((e) {
+        debugPrint('Stock sync failed: $e');
+      });
+    });
+  }
+
   Future<void> addProduct(ProductsCompanion product) async {
     await _db.into(_db.products).insert(product);
     
@@ -289,7 +297,7 @@ class ProductsRepository {
     });
     _ref.invalidate(allActiveProductsProvider);
     _ref.invalidate(productsListProvider);
-    _triggerSync();
+    _triggerStockSync(ids);
   }
 
   Future<void> adjustStock(String productId, double difference, String reason, {String? supplierId}) async {
@@ -307,7 +315,7 @@ class ProductsRepository {
     );
     _ref.invalidate(allActiveProductsProvider);
     _ref.invalidate(productsListProvider);
-    _triggerSync();
+    _triggerStockSync([productId]);
   }
 
   Future<void> _logStockHistory({
