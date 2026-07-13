@@ -221,6 +221,7 @@ class PosCartNotifier extends StateNotifier<PosCartState> {
     });
 
     // Invalidate product queries to trigger updates
+    _ref.invalidate(allActiveProductsProvider);
     _ref.invalidate(productsListProvider);
 
     final completedSale = await (_db.select(_db.sales)..where((t) => t.id.equals(saleId))).getSingle();
