@@ -316,7 +316,7 @@ class AdminRepository {
       for (var doc in categoriesSnap.docs) {
         final d = doc.data();
         await _db.into(_db.categories).insert(CategoriesCompanion(
-          id: Value(d['id']),
+          id: Value(d['id'] ?? doc.id),
           name: Value(d['name'] ?? ''),
           icon: Value(d['icon'] ?? 'category'),
           color: Value(d['color'] ?? '0xFF008060'),
@@ -327,7 +327,7 @@ class AdminRepository {
       for (var doc in suppliersSnap.docs) {
         final d = doc.data();
         await _db.into(_db.suppliers).insert(SuppliersCompanion(
-          id: Value(d['id']),
+          id: Value(d['id'] ?? doc.id),
           name: Value(d['name'] ?? ''),
           phone: Value(d['phone'] ?? ''),
           email: Value(d['email']),
@@ -339,7 +339,7 @@ class AdminRepository {
       for (var doc in customersSnap.docs) {
         final d = doc.data();
         await _db.into(_db.customers).insert(CustomersCompanion(
-          id: Value(d['id']),
+          id: Value(d['id'] ?? doc.id),
           name: Value(d['name'] ?? ''),
           phone: Value(d['phone'] ?? ''),
           email: Value(d['email']),
@@ -351,14 +351,14 @@ class AdminRepository {
       for (var doc in productsSnap.docs) {
         final d = doc.data();
         await _db.into(_db.products).insert(ProductsCompanion(
-          id: Value(d['id']),
+          id: Value(d['id'] ?? doc.id),
           name: Value(d['name'] ?? ''),
           barcode: Value(d['barcode']),
           categoryId: Value(d['categoryId']),
           brand: Value(d['brand']),
           buyingPrice: Value((d['buyingPrice'] as num?)?.toDouble() ?? 0.0),
           sellingPrice: Value((d['sellingPrice'] as num?)?.toDouble() ?? 0.0),
-          currentStock: Value((d['currentStock'] as num?)?.toDouble() ?? 0.0),
+          currentStock: Value((d['currentStock'] as num?)?.toDouble() ?? (d['quantity'] as num?)?.toDouble() ?? (d['stock'] as num?)?.toDouble() ?? 0.0),
           minimumStock: Value((d['minimumStock'] as num?)?.toDouble() ?? 0.0),
           unit: Value(d['unit'] ?? 'pcs'),
           supplierId: Value(d['supplierId']),
@@ -373,7 +373,7 @@ class AdminRepository {
       // Sales & SaleItems
       for (var doc in salesSnap.docs) {
         final d = doc.data();
-        final saleId = d['id'];
+        final saleId = d['id'] ?? doc.id;
         
         DateTime saleDate = DateTime.now();
         if (d['date'] != null) {
@@ -421,7 +421,7 @@ class AdminRepository {
         }
 
         await _db.into(_db.expenses).insert(ExpensesCompanion(
-          id: Value(d['id']),
+          id: Value(d['id'] ?? doc.id),
           name: Value(d['name'] ?? ''),
           amount: Value((d['amount'] as num?)?.toDouble() ?? 0.0),
           category: Value(d['category'] ?? ''),
@@ -444,7 +444,7 @@ class AdminRepository {
         }
 
         await _db.into(_db.stockHistory).insert(StockHistoryCompanion(
-          id: Value(d['id']),
+          id: Value(d['id'] ?? doc.id),
           productId: Value(d['productId'] ?? ''),
           changeAmount: Value((d['changeAmount'] as num?)?.toDouble() ?? 0.0),
           reason: Value(d['reason'] ?? 'Adjust Stock'),
@@ -467,7 +467,7 @@ class AdminRepository {
         }
 
          await _db.into(_db.supplierOrders).insert(SupplierOrdersCompanion(
-          id: Value(d['id']),
+          id: Value(d['id'] ?? doc.id),
           supplierId: Value(d['supplierId'] ?? ''),
           productId: Value(d['productId'] ?? ''),
           quantityOrdered: Value((d['quantityOrdered'] as num?)?.toDouble() ?? 0.0),
@@ -504,7 +504,7 @@ class AdminRepository {
         }
 
         await _db.into(_db.damagedItems).insert(DamagedItemsCompanion(
-          id: Value(d['id']),
+          id: Value(d['id'] ?? doc.id),
           supplierId: Value(d['supplierId'] ?? ''),
           productId: Value(d['productId'] ?? ''),
           quantity: Value((d['quantity'] as num?)?.toDouble() ?? 0.0),
