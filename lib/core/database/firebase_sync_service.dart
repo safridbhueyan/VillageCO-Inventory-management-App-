@@ -163,6 +163,18 @@ class FirebaseSyncService {
     }
   }
 
+  /// Check if store config exists locally
+  Future<bool> isStoreConfigured() async {
+    try {
+      final directory = await getApplicationDocumentsDirectory();
+      final configFile = File(p.join(directory.path, 'shop_config.json'));
+      return await configFile.exists();
+    } catch (_) {
+      return false;
+    }
+  }
+
+
   /// Moves/renames a Firestore store document and all its subcollections.
   Future<void> moveFirestoreStore(String oldDocId, String newDocId) async {
     final oldDocRef = _firestore.collection('stores').doc(oldDocId);
@@ -384,6 +396,7 @@ class FirebaseSyncService {
         'buyingPrice': prod.buyingPrice,
         'sellingPrice': prod.sellingPrice,
         'currentStock': prod.currentStock,
+        'quantity': prod.currentStock,
         'minimumStock': prod.minimumStock,
         'unit': prod.unit,
         'supplierId': prod.supplierId,
@@ -518,7 +531,11 @@ class FirebaseSyncService {
 
       final storeRef = _firestore.collection('stores').doc(storeDocId);
 
-      // Generate the PDF receipt automatically in the background
+      // 1. Re-sync metadata and the unified inventoryDetails array to reflect updated stock levels for sold items IMMEDIATELY
+      final List<String> soldProductIds = items.map((item) => item.product.id).toList();
+      await syncProductsStock(soldProductIds, settings);
+
+      // 2. Generate the PDF receipt automatically in the background
       final itemsMappedForPdf = items.map((item) => {
         'name': item.product.name,
         'qty': '${Formatters.number(item.quantity)} ${item.product.unit}',
@@ -545,7 +562,7 @@ class FirebaseSyncService {
         pdfUrl = await uploadReceiptPdf(storeDocId, reportPath);
       }
 
-      // Sync the sale document
+      // 3. Sync the sale document
       final itemsMappedForFirestore = items.map((item) => {
         'id': const Uuid().v4(),
         'productId': item.product.id,
@@ -565,13 +582,44 @@ class FirebaseSyncService {
         'items': itemsMappedForFirestore,
         'receiptPdfUrl': pdfUrl,
       }, SetOptions(merge: true));
-
-      // Re-sync metadata and the unified inventoryDetails array to reflect updated stock levels
-      await syncAllData(settings);
     } catch (e) {
       debugPrint('Background sale sync failed: $e');
     }
   }
+
+  /// Syncs only the stock level of specific products to Firestore (fast path)
+  Future<void> syncProductsStock(List<String> productIds, AppSettingsTableData settings) async {
+    try {
+      final docInfo = await getStoreDocIdAndShopID(settings.shopName);
+      final storeDocId = docInfo['storeDocId']!;
+      final storeRef = _firestore.collection('stores').doc(storeDocId);
+
+      for (final id in productIds) {
+        final dbProduct = await (_db.select(_db.products)..where((t) => t.id.equals(id))).getSingleOrNull();
+        if (dbProduct != null) {
+          // Update in products collection
+          await storeRef.collection('products').doc(id).set({
+            'currentStock': dbProduct.currentStock,
+            'quantity': dbProduct.currentStock,
+          }, SetOptions(merge: true));
+
+          // Update in inventoryDetails collection
+          await storeRef.collection('inventoryDetails').doc(id).set({
+            'quantity': dbProduct.currentStock,
+          }, SetOptions(merge: true));
+        }
+      }
+      
+      // Update store sync timestamp
+      await storeRef.set({
+        'lastSyncedAt': FieldValue.serverTimestamp(),
+      }, SetOptions(merge: true));
+    } catch (e) {
+      debugPrint('Failed to sync products stock to Firestore: $e');
+      rethrow;
+    }
+  }
+
 
   /// Uploads daily transaction PDF report file to Firebase Storage.
   Future<String?> uploadReportPdf(String storeId, String localPath) async {
