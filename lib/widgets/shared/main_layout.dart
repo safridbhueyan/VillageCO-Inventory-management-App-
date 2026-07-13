@@ -18,9 +18,33 @@ Future<void> logoutAndGenerateClosingReport(BuildContext context, WidgetRef ref)
       context: context,
       barrierDismissible: false,
       builder: (context) => const Center(
-        child: CircularProgressIndicator(),
+        child: Card(
+          child: Padding(
+            padding: EdgeInsets.all(24.0),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                CircularProgressIndicator(),
+                SizedBox(height: 16),
+                Text(
+                  'ডাটাবেস ও রিপোর্ট সার্ভারে সিঙ্ক হচ্ছে...',
+                  style: TextStyle(fontWeight: FontWeight.bold),
+                ),
+              ],
+            ),
+          ),
+        ),
       ),
     );
+    try {
+      final settings = ref.read(settingsControllerProvider).valueOrNull;
+      if (settings != null) {
+        await ref.read(firebaseSyncServiceProvider).syncAllData(settings);
+      }
+    } catch (syncError) {
+      debugPrint('Firebase Sync failed during impersonation logout: $syncError');
+    }
+
     try {
       await ref.read(adminRepositoryProvider).clearLocalDatabase();
       ref.read(adminImpersonationProvider.notifier).stopImpersonation();
@@ -243,7 +267,7 @@ class MainLayout extends ConsumerWidget {
                                   CircularProgressIndicator(),
                                   SizedBox(height: 16),
                                   Text(
-                                    'অ্যাডমিন প্যানেলে ফিরে যাওয়া হচ্ছে...',
+                                    'ডাটাবেস সিঙ্ক ও প্যানেলে ফিরে যাওয়া হচ্ছে...',
                                     style: TextStyle(fontWeight: FontWeight.bold),
                                   ),
                                 ],
@@ -252,6 +276,15 @@ class MainLayout extends ConsumerWidget {
                           ),
                         ),
                       );
+
+                      try {
+                        final settings = ref.read(settingsControllerProvider).valueOrNull;
+                        if (settings != null) {
+                          await ref.read(firebaseSyncServiceProvider).syncAllData(settings);
+                        }
+                      } catch (syncError) {
+                        debugPrint('Firebase Sync failed during exit: $syncError');
+                      }
 
                       try {
                         await ref.read(adminRepositoryProvider).clearLocalDatabase();
