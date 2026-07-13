@@ -110,7 +110,25 @@ class _SuperAdminScreenState extends ConsumerState<SuperAdminScreen> {
             Expanded(
               child: shopsAsync.when(
                 loading: () => const Center(child: CircularProgressIndicator()),
-                error: (error, stack) => Center(child: Text('ত্রুটি: $error')),
+                error: (error, stack) => RefreshIndicator(
+                  onRefresh: () async {
+                    ref.invalidate(superAdminShopsStreamProvider);
+                    try {
+                      await ref.read(superAdminShopsStreamProvider.future);
+                    } catch (_) {}
+                  },
+                  child: ListView(
+                    physics: const AlwaysScrollableScrollPhysics(),
+                    children: [
+                      SizedBox(
+                        height: MediaQuery.of(context).size.height * 0.5,
+                        child: Center(
+                          child: Text('ত্রুটি: $error'),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
                 data: (snapshot) {
                   final docs = snapshot.docs;
                   final filteredDocs = docs.where((doc) {
@@ -127,21 +145,37 @@ class _SuperAdminScreenState extends ConsumerState<SuperAdminScreen> {
                   }).toList();
 
                   if (filteredDocs.isEmpty) {
-                    return Center(
-                      child: Column(
-                        mainAxisAlignment: MainAxisAlignment.center,
+                    return RefreshIndicator(
+                      onRefresh: () async {
+                        ref.invalidate(superAdminShopsStreamProvider);
+                        try {
+                          await ref.read(superAdminShopsStreamProvider.future);
+                        } catch (_) {}
+                      },
+                      child: ListView(
+                        physics: const AlwaysScrollableScrollPhysics(),
                         children: [
-                          Icon(
-                            Icons.store_outlined,
-                            size: 64,
-                            color: theme.colorScheme.onSurfaceVariant
-                                .withOpacity(0.5),
-                          ),
-                          const SizedBox(height: 16),
-                          Text(
-                            'কোনো দোকান পাওয়া যায়নি।',
-                            style: TextStyle(
-                              color: theme.colorScheme.onSurfaceVariant,
+                          SizedBox(
+                            height: MediaQuery.of(context).size.height * 0.5,
+                            child: Center(
+                              child: Column(
+                                mainAxisAlignment: MainAxisAlignment.center,
+                                children: [
+                                  Icon(
+                                    Icons.store_outlined,
+                                    size: 64,
+                                    color: theme.colorScheme.onSurfaceVariant
+                                        .withOpacity(0.5),
+                                  ),
+                                  const SizedBox(height: 16),
+                                  Text(
+                                    'কোনো দোকান পাওয়া যায়নি।',
+                                    style: TextStyle(
+                                      color: theme.colorScheme.onSurfaceVariant,
+                                    ),
+                                  ),
+                                ],
+                              ),
                             ),
                           ),
                         ],
@@ -149,41 +183,50 @@ class _SuperAdminScreenState extends ConsumerState<SuperAdminScreen> {
                     );
                   }
 
-                  return GridView.builder(
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 24,
-                      vertical: 8,
-                    ),
-                    gridDelegate:
-                        const SliverGridDelegateWithMaxCrossAxisExtent(
-                          maxCrossAxisExtent: 400,
-                          mainAxisSpacing: 18,
-                          crossAxisSpacing: 18,
-                          childAspectRatio: 1.25,
-                        ),
-                    itemCount: filteredDocs.length,
-                    itemBuilder: (context, index) {
-                      final doc = filteredDocs[index];
-                      final data = doc.data();
-                      final shopName = data['shopName'] ?? 'Unnamed Shop';
-                      final storeDocId = doc.id;
-                      final pin = data['adminPin'] ?? '';
-                      final currency = data['currency'] ?? 'BDT';
-                      final taxRate =
-                          (data['taxRate'] as num?)?.toDouble() ?? 0.0;
-
-                      return _ShopCard(
-                            storeDocId: storeDocId,
-                            shopName: shopName,
-                            pin: pin,
-                            currency: currency,
-                            taxRate: taxRate,
-                            docRef: doc.reference,
-                          )
-                          .animate()
-                          .fadeIn(delay: (50 * index).ms)
-                          .scale(delay: (50 * index).ms);
+                  return RefreshIndicator(
+                    onRefresh: () async {
+                      ref.invalidate(superAdminShopsStreamProvider);
+                      try {
+                        await ref.read(superAdminShopsStreamProvider.future);
+                      } catch (_) {}
                     },
+                    child: GridView.builder(
+                      physics: const AlwaysScrollableScrollPhysics(),
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 24,
+                        vertical: 8,
+                      ),
+                      gridDelegate:
+                          const SliverGridDelegateWithMaxCrossAxisExtent(
+                            maxCrossAxisExtent: 400,
+                            mainAxisSpacing: 18,
+                            crossAxisSpacing: 18,
+                            childAspectRatio: 1.25,
+                          ),
+                      itemCount: filteredDocs.length,
+                      itemBuilder: (context, index) {
+                        final doc = filteredDocs[index];
+                        final data = doc.data();
+                        final shopName = data['shopName'] ?? 'Unnamed Shop';
+                        final storeDocId = doc.id;
+                        final pin = data['adminPin'] ?? '';
+                        final currency = data['currency'] ?? 'BDT';
+                        final taxRate =
+                            (data['taxRate'] as num?)?.toDouble() ?? 0.0;
+
+                        return _ShopCard(
+                              storeDocId: storeDocId,
+                              shopName: shopName,
+                              pin: pin,
+                              currency: currency,
+                              taxRate: taxRate,
+                              docRef: doc.reference,
+                            )
+                            .animate()
+                            .fadeIn(delay: (50 * index).ms)
+                            .scale(delay: (50 * index).ms);
+                      },
+                    ),
                   );
                 },
               ),
