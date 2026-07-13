@@ -5,6 +5,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import '../settings/settings_controller.dart';
 import '../super_admin/admin_controller.dart';
+import '../../core/database/firebase_sync_service.dart';
 
 // Riverpod state providers for login screen
 final loginPinProvider = StateProvider.autoDispose<String>((ref) => '');
@@ -57,7 +58,11 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
       orElse: () => '1234',
     );
 
-    if (pinVal == correctPin) {
+    // Check if store is already configured locally
+    final syncService = ref.read(firebaseSyncServiceProvider);
+    final isConfigured = await syncService.isStoreConfigured();
+
+    if (isConfigured && pinVal == correctPin) {
       if (context.mounted) {
         context.go('/dashboard');
       }
@@ -110,12 +115,26 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
         if (mounted) {
           Navigator.of(context, rootNavigator: true).pop(); // dismiss loading dialog
         }
+        // Fallback for unconfigured store when pin matches local settings (e.g. default 1234 offline)
+        if (pinVal == correctPin) {
+          if (mounted) {
+            context.go('/dashboard');
+          }
+          return;
+        }
         ref.read(loginPinProvider.notifier).state = '';
         ref.read(loginErrorMessageProvider.notifier).state = 'ভুল পিন। আবার চেষ্টা করুন।';
       }
     } catch (e) {
       if (mounted) {
         Navigator.of(context, rootNavigator: true).pop(); // dismiss loading dialog
+      }
+      // Fallback for offline access with the local PIN
+      if (pinVal == correctPin) {
+        if (mounted) {
+          context.go('/dashboard');
+        }
+        return;
       }
       ref.read(loginPinProvider.notifier).state = '';
       ref.read(loginErrorMessageProvider.notifier).state = 'সংযোগ ত্রুটি বা পিনটি পাওয়া যায়নি।';
