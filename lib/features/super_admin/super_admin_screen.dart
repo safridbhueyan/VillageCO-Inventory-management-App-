@@ -10,12 +10,17 @@ import 'admin_controller.dart';
 import '../supply_chain/supply_chain_controller.dart';
 import '../../core/utils/pdf_generator.dart';
 
-final superAdminSearchQueryProvider = StateProvider.autoDispose<String>((ref) => '');
-final superAdminDialogCurrencyProvider = StateProvider.autoDispose<String>((ref) => 'BDT');
-final superAdminShopsStreamProvider = StreamProvider.autoDispose<QuerySnapshot<Map<String, dynamic>>>((ref) {
-  final adminRepo = ref.watch(adminRepositoryProvider);
-  return adminRepo.getShopsStream();
-});
+final superAdminSearchQueryProvider = StateProvider.autoDispose<String>(
+  (ref) => '',
+);
+final superAdminDialogCurrencyProvider = StateProvider.autoDispose<String>(
+  (ref) => 'BDT',
+);
+final superAdminShopsStreamProvider =
+    StreamProvider.autoDispose<QuerySnapshot<Map<String, dynamic>>>((ref) {
+      final adminRepo = ref.watch(adminRepositoryProvider);
+      return adminRepo.getShopsStream();
+    });
 
 class SuperAdminScreen extends ConsumerStatefulWidget {
   const SuperAdminScreen({super.key});
@@ -100,7 +105,13 @@ class _SuperAdminScreenState extends ConsumerState<SuperAdminScreen> {
                                       icon: const Icon(Icons.clear),
                                       onPressed: () {
                                         _searchController.clear();
-                                        ref.read(superAdminSearchQueryProvider.notifier).state = '';
+                                        ref
+                                                .read(
+                                                  superAdminSearchQueryProvider
+                                                      .notifier,
+                                                )
+                                                .state =
+                                            '';
                                       },
                                     )
                                   : null,
@@ -111,7 +122,11 @@ class _SuperAdminScreenState extends ConsumerState<SuperAdminScreen> {
                               fillColor: theme.colorScheme.surface,
                             ),
                             onChanged: (val) {
-                              ref.read(superAdminSearchQueryProvider.notifier).state = val.trim().toLowerCase();
+                              ref
+                                  .read(superAdminSearchQueryProvider.notifier)
+                                  .state = val
+                                  .trim()
+                                  .toLowerCase();
                             },
                           ),
                         ),
@@ -122,12 +137,15 @@ class _SuperAdminScreenState extends ConsumerState<SuperAdminScreen> {
                   // Shops List
                   Expanded(
                     child: shopsAsync.when(
-                      loading: () => const Center(child: CircularProgressIndicator()),
+                      loading: () =>
+                          const Center(child: CircularProgressIndicator()),
                       error: (error, stack) => RefreshIndicator(
                         onRefresh: () async {
                           ref.invalidate(superAdminShopsStreamProvider);
                           try {
-                            await ref.read(superAdminShopsStreamProvider.future);
+                            await ref.read(
+                              superAdminShopsStreamProvider.future,
+                            );
                           } catch (_) {}
                         },
                         child: ListView(
@@ -135,9 +153,7 @@ class _SuperAdminScreenState extends ConsumerState<SuperAdminScreen> {
                           children: [
                             SizedBox(
                               height: MediaQuery.of(context).size.height * 0.5,
-                              child: Center(
-                                child: Text('ত্রুটি: $error'),
-                              ),
+                              child: Center(child: Text('ত্রুটি: $error')),
                             ),
                           ],
                         ),
@@ -162,29 +178,37 @@ class _SuperAdminScreenState extends ConsumerState<SuperAdminScreen> {
                             onRefresh: () async {
                               ref.invalidate(superAdminShopsStreamProvider);
                               try {
-                                await ref.read(superAdminShopsStreamProvider.future);
+                                await ref.read(
+                                  superAdminShopsStreamProvider.future,
+                                );
                               } catch (_) {}
                             },
                             child: ListView(
                               physics: const AlwaysScrollableScrollPhysics(),
                               children: [
                                 SizedBox(
-                                  height: MediaQuery.of(context).size.height * 0.5,
+                                  height:
+                                      MediaQuery.of(context).size.height * 0.5,
                                   child: Center(
                                     child: Column(
-                                      mainAxisAlignment: MainAxisAlignment.center,
+                                      mainAxisAlignment:
+                                          MainAxisAlignment.center,
                                       children: [
                                         Icon(
                                           Icons.store_outlined,
                                           size: 64,
-                                          color: theme.colorScheme.onSurfaceVariant
+                                          color: theme
+                                              .colorScheme
+                                              .onSurfaceVariant
                                               .withOpacity(0.5),
                                         ),
                                         const SizedBox(height: 16),
                                         Text(
                                           'কোনো দোকান পাওয়া যায়নি।',
                                           style: TextStyle(
-                                            color: theme.colorScheme.onSurfaceVariant,
+                                            color: theme
+                                                .colorScheme
+                                                .onSurfaceVariant,
                                           ),
                                         ),
                                       ],
@@ -200,7 +224,9 @@ class _SuperAdminScreenState extends ConsumerState<SuperAdminScreen> {
                           onRefresh: () async {
                             ref.invalidate(superAdminShopsStreamProvider);
                             try {
-                              await ref.read(superAdminShopsStreamProvider.future);
+                              await ref.read(
+                                superAdminShopsStreamProvider.future,
+                              );
                             } catch (_) {}
                           },
                           child: GridView.builder(
@@ -211,16 +237,17 @@ class _SuperAdminScreenState extends ConsumerState<SuperAdminScreen> {
                             ),
                             gridDelegate:
                                 const SliverGridDelegateWithMaxCrossAxisExtent(
-                              maxCrossAxisExtent: 400,
-                              mainAxisSpacing: 18,
-                              crossAxisSpacing: 18,
-                              childAspectRatio: 1.25,
-                            ),
+                                  maxCrossAxisExtent: 400,
+                                  mainAxisSpacing: 18,
+                                  crossAxisSpacing: 18,
+                                  childAspectRatio: 1.25,
+                                ),
                             itemCount: filteredDocs.length,
                             itemBuilder: (context, index) {
                               final doc = filteredDocs[index];
                               final data = doc.data();
-                              final shopName = data['shopName'] ?? 'Unnamed Shop';
+                              final shopName =
+                                  data['shopName'] ?? 'Unnamed Shop';
                               final storeDocId = doc.id;
                               final pin = data['adminPin'] ?? '';
                               final currency = data['currency'] ?? 'BDT';
@@ -268,7 +295,8 @@ class _SuperAdminScreenState extends ConsumerState<SuperAdminScreen> {
     final taxController = TextEditingController(
       text: currentTax?.toString() ?? '0.0',
     );
-    ref.read(superAdminDialogCurrencyProvider.notifier).state = currentCurrency ?? 'BDT';
+    ref.read(superAdminDialogCurrencyProvider.notifier).state =
+        currentCurrency ?? 'BDT';
     final formKey = GlobalKey<FormState>();
 
     showDialog(
@@ -328,7 +356,11 @@ class _SuperAdminScreenState extends ConsumerState<SuperAdminScreen> {
                       DropdownMenuItem(value: 'EUR', child: Text('EUR (€)')),
                     ],
                     onChanged: (val) {
-                      if (val != null) ref.read(superAdminDialogCurrencyProvider.notifier).state = val;
+                      if (val != null)
+                        ref
+                                .read(superAdminDialogCurrencyProvider.notifier)
+                                .state =
+                            val;
                     },
                   ),
                   const SizedBox(height: 12),
@@ -911,16 +943,24 @@ class _AdminSupplyChainTab extends ConsumerWidget {
       ),
       child: ordersAsync.when(
         loading: () => const Center(child: CircularProgressIndicator()),
-        error: (err, stack) => Center(child: Text('অনুরোধ লোড করতে ব্যর্থ: $err')),
+        error: (err, stack) =>
+            Center(child: Text('অনুরোধ লোড করতে ব্যর্থ: $err')),
         data: (orders) {
           if (orders.isEmpty) {
             return Center(
               child: Column(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
-                  Icon(Icons.hub_outlined, size: 64, color: Colors.grey.shade400),
+                  Icon(
+                    Icons.hub_outlined,
+                    size: 64,
+                    color: Colors.grey.shade400,
+                  ),
                   const SizedBox(height: 16),
-                  Text('কোনো সাপ্লাই চেইন অনুরোধ পাওয়া যায়নি।', style: TextStyle(color: Colors.grey.shade600, fontSize: 16)),
+                  Text(
+                    'কোনো সাপ্লাই চেইন অনুরোধ পাওয়া যায়নি।',
+                    style: TextStyle(color: Colors.grey.shade600, fontSize: 16),
+                  ),
                 ],
               ),
             );
@@ -928,8 +968,11 @@ class _AdminSupplyChainTab extends ConsumerWidget {
 
           return ListView.builder(
             padding: const EdgeInsets.all(24),
-            itemCount: orders.length,
+            itemCount: orders.length + 1,
             itemBuilder: (context, index) {
+              if (index == orders.length) {
+                return const SizedBox(height: 200);
+              }
               final order = orders[index];
               return _AdminOrderApprovalCard(order: order)
                   .animate()
@@ -949,10 +992,12 @@ class _AdminOrderApprovalCard extends ConsumerStatefulWidget {
   const _AdminOrderApprovalCard({required this.order});
 
   @override
-  ConsumerState<_AdminOrderApprovalCard> createState() => _AdminOrderApprovalCardState();
+  ConsumerState<_AdminOrderApprovalCard> createState() =>
+      _AdminOrderApprovalCardState();
 }
 
-class _AdminOrderApprovalCardState extends ConsumerState<_AdminOrderApprovalCard> {
+class _AdminOrderApprovalCardState
+    extends ConsumerState<_AdminOrderApprovalCard> {
   late TextEditingController _qtySentController;
   late TextEditingController _qtyRecController;
   final _formKey = GlobalKey<FormState>();
@@ -960,8 +1005,12 @@ class _AdminOrderApprovalCardState extends ConsumerState<_AdminOrderApprovalCard
   @override
   void initState() {
     super.initState();
-    _qtySentController = TextEditingController(text: widget.order.quantityRequested.toString());
-    _qtyRecController = TextEditingController(text: widget.order.quantityRequested.toString());
+    _qtySentController = TextEditingController(
+      text: widget.order.quantityRequested.toString(),
+    );
+    _qtyRecController = TextEditingController(
+      text: widget.order.quantityRequested.toString(),
+    );
   }
 
   @override
@@ -1008,7 +1057,9 @@ class _AdminOrderApprovalCardState extends ConsumerState<_AdminOrderApprovalCard
       shadowColor: theme.colorScheme.shadow.withOpacity(0.05),
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(24),
-        side: BorderSide(color: theme.colorScheme.outlineVariant.withOpacity(0.4)),
+        side: BorderSide(
+          color: theme.colorScheme.outlineVariant.withOpacity(0.4),
+        ),
       ),
       child: Padding(
         padding: const EdgeInsets.all(20.0),
@@ -1021,7 +1072,11 @@ class _AdminOrderApprovalCardState extends ConsumerState<_AdminOrderApprovalCard
                 Expanded(
                   child: Row(
                     children: [
-                      Icon(Icons.receipt_long_rounded, color: theme.colorScheme.onSurfaceVariant, size: 20),
+                      Icon(
+                        Icons.receipt_long_rounded,
+                        color: theme.colorScheme.onSurfaceVariant,
+                        size: 20,
+                      ),
                       const SizedBox(width: 8),
                       Expanded(
                         child: Text(
@@ -1038,11 +1093,17 @@ class _AdminOrderApprovalCardState extends ConsumerState<_AdminOrderApprovalCard
                 ),
                 const SizedBox(width: 12),
                 Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 12,
+                    vertical: 6,
+                  ),
                   decoration: BoxDecoration(
                     color: statusColor.withOpacity(0.08),
                     borderRadius: BorderRadius.circular(20),
-                    border: Border.all(color: statusColor.withOpacity(0.3), width: 1.5),
+                    border: Border.all(
+                      color: statusColor.withOpacity(0.3),
+                      width: 1.5,
+                    ),
                   ),
                   child: Row(
                     mainAxisSize: MainAxisSize.min,
@@ -1058,7 +1119,11 @@ class _AdminOrderApprovalCardState extends ConsumerState<_AdminOrderApprovalCard
                       const SizedBox(width: 6),
                       Text(
                         _getStatusText(order.status),
-                        style: TextStyle(color: statusColor, fontSize: 12, fontWeight: FontWeight.bold),
+                        style: TextStyle(
+                          color: statusColor,
+                          fontSize: 12,
+                          fontWeight: FontWeight.bold,
+                        ),
                       ),
                     ],
                   ),
@@ -1080,19 +1145,27 @@ class _AdminOrderApprovalCardState extends ConsumerState<_AdminOrderApprovalCard
                       children: [
                         Text(
                           'অনুরোধকারী শাখা',
-                          style: theme.textTheme.bodySmall?.copyWith(color: theme.colorScheme.onSurfaceVariant),
+                          style: theme.textTheme.bodySmall?.copyWith(
+                            color: theme.colorScheme.onSurfaceVariant,
+                          ),
                         ),
                         const SizedBox(height: 2),
                         Text(
                           order.fromStoreName,
-                          style: theme.textTheme.titleSmall?.copyWith(fontWeight: FontWeight.bold),
+                          style: theme.textTheme.titleSmall?.copyWith(
+                            fontWeight: FontWeight.bold,
+                          ),
                         ),
                       ],
                     ),
                   ),
                   Padding(
                     padding: const EdgeInsets.symmetric(horizontal: 12),
-                    child: Icon(Icons.arrow_forward_rounded, color: theme.colorScheme.primary, size: 20),
+                    child: Icon(
+                      Icons.arrow_forward_rounded,
+                      color: theme.colorScheme.primary,
+                      size: 20,
+                    ),
                   ),
                   Expanded(
                     child: Column(
@@ -1100,12 +1173,16 @@ class _AdminOrderApprovalCardState extends ConsumerState<_AdminOrderApprovalCard
                       children: [
                         Text(
                           'সরবরাহকারী শাখা',
-                          style: theme.textTheme.bodySmall?.copyWith(color: theme.colorScheme.onSurfaceVariant),
+                          style: theme.textTheme.bodySmall?.copyWith(
+                            color: theme.colorScheme.onSurfaceVariant,
+                          ),
                         ),
                         const SizedBox(height: 2),
                         Text(
                           order.toStoreName,
-                          style: theme.textTheme.titleSmall?.copyWith(fontWeight: FontWeight.bold),
+                          style: theme.textTheme.titleSmall?.copyWith(
+                            fontWeight: FontWeight.bold,
+                          ),
                         ),
                       ],
                     ),
@@ -1117,7 +1194,9 @@ class _AdminOrderApprovalCardState extends ConsumerState<_AdminOrderApprovalCard
               margin: const EdgeInsets.only(top: 16),
               padding: const EdgeInsets.all(16),
               decoration: BoxDecoration(
-                border: Border.all(color: theme.colorScheme.outlineVariant.withOpacity(0.4)),
+                border: Border.all(
+                  color: theme.colorScheme.outlineVariant.withOpacity(0.4),
+                ),
                 borderRadius: BorderRadius.circular(16),
               ),
               child: Column(
@@ -1131,7 +1210,11 @@ class _AdminOrderApprovalCardState extends ConsumerState<_AdminOrderApprovalCard
                           color: theme.colorScheme.primary.withOpacity(0.08),
                           borderRadius: BorderRadius.circular(12),
                         ),
-                        child: Icon(Icons.inventory_2_rounded, color: theme.colorScheme.primary, size: 24),
+                        child: Icon(
+                          Icons.inventory_2_rounded,
+                          color: theme.colorScheme.primary,
+                          size: 24,
+                        ),
                       ),
                       const SizedBox(width: 14),
                       Expanded(
@@ -1140,14 +1223,18 @@ class _AdminOrderApprovalCardState extends ConsumerState<_AdminOrderApprovalCard
                           children: [
                             Text(
                               order.productName,
-                              style: theme.textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold),
+                              style: theme.textTheme.titleMedium?.copyWith(
+                                fontWeight: FontWeight.bold,
+                              ),
                               maxLines: 2,
                               overflow: TextOverflow.ellipsis,
                             ),
                             const SizedBox(height: 4),
                             Text(
                               'বারকোড: ${order.productBarcode.isNotEmpty ? order.productBarcode : "N/A"}',
-                              style: theme.textTheme.bodySmall?.copyWith(color: theme.colorScheme.onSurfaceVariant),
+                              style: theme.textTheme.bodySmall?.copyWith(
+                                color: theme.colorScheme.onSurfaceVariant,
+                              ),
                             ),
                           ],
                         ),
@@ -1165,12 +1252,16 @@ class _AdminOrderApprovalCardState extends ConsumerState<_AdminOrderApprovalCard
                         children: [
                           Text(
                             'একক মূল্য',
-                            style: theme.textTheme.bodySmall?.copyWith(color: theme.colorScheme.onSurfaceVariant),
+                            style: theme.textTheme.bodySmall?.copyWith(
+                              color: theme.colorScheme.onSurfaceVariant,
+                            ),
                           ),
                           const SizedBox(height: 2),
                           Text(
                             Formatters.currency(order.productSellingPrice),
-                            style: theme.textTheme.titleSmall?.copyWith(fontWeight: FontWeight.bold),
+                            style: theme.textTheme.titleSmall?.copyWith(
+                              fontWeight: FontWeight.bold,
+                            ),
                           ),
                         ],
                       ),
@@ -1179,7 +1270,9 @@ class _AdminOrderApprovalCardState extends ConsumerState<_AdminOrderApprovalCard
                         children: [
                           Text(
                             'অনুরোধকৃত পরিমাণ',
-                            style: theme.textTheme.bodySmall?.copyWith(color: theme.colorScheme.onSurfaceVariant),
+                            style: theme.textTheme.bodySmall?.copyWith(
+                              color: theme.colorScheme.onSurfaceVariant,
+                            ),
                           ),
                           const SizedBox(height: 2),
                           Text(
@@ -1205,10 +1298,17 @@ class _AdminOrderApprovalCardState extends ConsumerState<_AdminOrderApprovalCard
                           children: [
                             Text(
                               'প্রেরিত পরিমাণ',
-                              style: theme.textTheme.bodySmall?.copyWith(color: theme.colorScheme.onSurfaceVariant),
+                              style: theme.textTheme.bodySmall?.copyWith(
+                                color: theme.colorScheme.onSurfaceVariant,
+                              ),
                             ),
                             const SizedBox(height: 2),
-                            Text('${order.quantitySent} ${order.productUnit}', style: const TextStyle(fontWeight: FontWeight.w600)),
+                            Text(
+                              '${order.quantitySent} ${order.productUnit}',
+                              style: const TextStyle(
+                                fontWeight: FontWeight.w600,
+                              ),
+                            ),
                           ],
                         ),
                         Column(
@@ -1216,10 +1316,17 @@ class _AdminOrderApprovalCardState extends ConsumerState<_AdminOrderApprovalCard
                           children: [
                             Text(
                               'গৃহীত পরিমাণ',
-                              style: theme.textTheme.bodySmall?.copyWith(color: theme.colorScheme.onSurfaceVariant),
+                              style: theme.textTheme.bodySmall?.copyWith(
+                                color: theme.colorScheme.onSurfaceVariant,
+                              ),
                             ),
                             const SizedBox(height: 2),
-                            Text('${order.quantityReceived} ${order.productUnit}', style: const TextStyle(fontWeight: FontWeight.w600)),
+                            Text(
+                              '${order.quantityReceived} ${order.productUnit}',
+                              style: const TextStyle(
+                                fontWeight: FontWeight.w600,
+                              ),
+                            ),
                           ],
                         ),
                       ],
@@ -1235,7 +1342,9 @@ class _AdminOrderApprovalCardState extends ConsumerState<_AdminOrderApprovalCard
                           children: [
                             Text(
                               'মোট মূল্য',
-                              style: theme.textTheme.bodySmall?.copyWith(color: theme.colorScheme.onSurfaceVariant),
+                              style: theme.textTheme.bodySmall?.copyWith(
+                                color: theme.colorScheme.onSurfaceVariant,
+                              ),
                             ),
                             const SizedBox(height: 2),
                             Text(
@@ -1252,20 +1361,31 @@ class _AdminOrderApprovalCardState extends ConsumerState<_AdminOrderApprovalCard
                           children: [
                             Text(
                               'পরিশোধিত / বকেয়া',
-                              style: theme.textTheme.bodySmall?.copyWith(color: theme.colorScheme.onSurfaceVariant),
+                              style: theme.textTheme.bodySmall?.copyWith(
+                                color: theme.colorScheme.onSurfaceVariant,
+                              ),
                             ),
                             const SizedBox(height: 2),
                             Row(
                               children: [
                                 Text(
                                   Formatters.currency(order.amountPaid),
-                                  style: TextStyle(color: Colors.green.shade700, fontSize: 13, fontWeight: FontWeight.w600),
+                                  style: TextStyle(
+                                    color: Colors.green.shade700,
+                                    fontSize: 13,
+                                    fontWeight: FontWeight.w600,
+                                  ),
                                 ),
-                                const Text(' / ', style: TextStyle(fontSize: 13)),
+                                const Text(
+                                  ' / ',
+                                  style: TextStyle(fontSize: 13),
+                                ),
                                 Text(
                                   Formatters.currency(order.paymentDue),
                                   style: TextStyle(
-                                    color: order.paymentDue > 0 ? Colors.red.shade700 : theme.colorScheme.onSurface,
+                                    color: order.paymentDue > 0
+                                        ? Colors.red.shade700
+                                        : theme.colorScheme.onSurface,
                                     fontSize: 13,
                                     fontWeight: FontWeight.bold,
                                   ),
@@ -1293,11 +1413,14 @@ class _AdminOrderApprovalCardState extends ConsumerState<_AdminOrderApprovalCard
                           labelText: 'প্রেরিত পরিমাণ',
                           prefixIcon: const Icon(Icons.unarchive_rounded),
                           suffixText: order.productUnit,
-                          border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+                          border: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(12),
+                          ),
                         ),
                         keyboardType: TextInputType.number,
                         validator: (val) {
-                          if (val == null || val.trim().isEmpty) return 'পরিমাণ দিন';
+                          if (val == null || val.trim().isEmpty)
+                            return 'পরিমাণ দিন';
                           final num = double.tryParse(val);
                           if (num == null || num < 0) return 'সঠিক পরিমাণ দিন';
                           return null;
@@ -1315,11 +1438,14 @@ class _AdminOrderApprovalCardState extends ConsumerState<_AdminOrderApprovalCard
                           labelText: 'গৃহীত পরিমাণ',
                           prefixIcon: const Icon(Icons.archive_rounded),
                           suffixText: order.productUnit,
-                          border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+                          border: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(12),
+                          ),
                         ),
                         keyboardType: TextInputType.number,
                         validator: (val) {
-                          if (val == null || val.trim().isEmpty) return 'পরিমাণ দিন';
+                          if (val == null || val.trim().isEmpty)
+                            return 'পরিমাণ দিন';
                           final num = double.tryParse(val);
                           if (num == null || num < 0) return 'সঠিক পরিমাণ দিন';
                           return null;
@@ -1338,10 +1464,15 @@ class _AdminOrderApprovalCardState extends ConsumerState<_AdminOrderApprovalCard
                         foregroundColor: Colors.red,
                         side: const BorderSide(color: Colors.red),
                         padding: const EdgeInsets.symmetric(vertical: 14),
-                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(12),
+                        ),
                       ),
                       icon: const Icon(Icons.cancel_outlined),
-                      label: const Text('প্রত্যাখ্যান করুন', style: TextStyle(fontWeight: FontWeight.bold)),
+                      label: const Text(
+                        'প্রত্যাখ্যান করুন',
+                        style: TextStyle(fontWeight: FontWeight.bold),
+                      ),
                       onPressed: () => _handleReject(context),
                     ),
                   ),
@@ -1352,11 +1483,16 @@ class _AdminOrderApprovalCardState extends ConsumerState<_AdminOrderApprovalCard
                         backgroundColor: Colors.green,
                         foregroundColor: Colors.white,
                         padding: const EdgeInsets.symmetric(vertical: 14),
-                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(12),
+                        ),
                         elevation: 0,
                       ),
                       icon: const Icon(Icons.check_circle_outline),
-                      label: const Text('অনুমোদন করুন', style: TextStyle(fontWeight: FontWeight.bold)),
+                      label: const Text(
+                        'অনুমোদন করুন',
+                        style: TextStyle(fontWeight: FontWeight.bold),
+                      ),
                       onPressed: () => _handleApprove(context),
                     ),
                   ),
@@ -1371,12 +1507,23 @@ class _AdminOrderApprovalCardState extends ConsumerState<_AdminOrderApprovalCard
                     style: ElevatedButton.styleFrom(
                       backgroundColor: theme.colorScheme.secondaryContainer,
                       foregroundColor: theme.colorScheme.onSecondaryContainer,
-                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 16,
+                        vertical: 12,
+                      ),
                       elevation: 0,
                     ),
-                    icon: const Icon(Icons.picture_as_pdf_outlined, color: Colors.red),
-                    label: const Text('ইনভয়েস প্রিন্ট', style: TextStyle(fontWeight: FontWeight.bold)),
+                    icon: const Icon(
+                      Icons.picture_as_pdf_outlined,
+                      color: Colors.red,
+                    ),
+                    label: const Text(
+                      'ইনভয়েস প্রিন্ট',
+                      style: TextStyle(fontWeight: FontWeight.bold),
+                    ),
                     onPressed: () => PdfGenerator.printSupplyChainOrder(order),
                   ),
                 ],
@@ -1400,19 +1547,25 @@ class _AdminOrderApprovalCardState extends ConsumerState<_AdminOrderApprovalCard
       );
 
       try {
-        await ref.read(supplyChainServiceProvider).approveRequest(widget.order.id, qtySent, qtyRec);
+        await ref
+            .read(supplyChainServiceProvider)
+            .approveRequest(widget.order.id, qtySent, qtyRec);
         if (context.mounted) {
           Navigator.pop(context); // dismiss loading
           ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text('অনুরোধটি সফলভাবে অনুমোদিত হয়েছে এবং স্টক আপডেট হয়েছে।')),
+            const SnackBar(
+              content: Text(
+                'অনুরোধটি সফলভাবে অনুমোদিত হয়েছে এবং স্টক আপডেট হয়েছে।',
+              ),
+            ),
           );
         }
       } catch (e) {
         if (context.mounted) {
           Navigator.pop(context);
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(content: Text('অনুমোদন ব্যর্থ হয়েছে: $e')),
-          );
+          ScaffoldMessenger.of(
+            context,
+          ).showSnackBar(SnackBar(content: Text('অনুমোদন ব্যর্থ হয়েছে: $e')));
         }
       }
     }
@@ -1436,9 +1589,9 @@ class _AdminOrderApprovalCardState extends ConsumerState<_AdminOrderApprovalCard
     } catch (e) {
       if (context.mounted) {
         Navigator.pop(context);
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('অপারেশন ব্যর্থ হয়েছে: $e')),
-        );
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text('অপারেশন ব্যর্থ হয়েছে: $e')));
       }
     }
   }
