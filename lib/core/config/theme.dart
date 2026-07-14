@@ -9,7 +9,7 @@ class AppTheme {
   static const Color brandOrange = Color(0xFFF59E0B); // Amber/Orange 500
 
   static ThemeData get light {
-    return FlexThemeData.light(
+    final baseTheme = FlexThemeData.light(
       colors: FlexSchemeColor.from(
         primary: brandGreen,
         secondary: brandSlate,
@@ -45,10 +45,19 @@ class AppTheme {
       useMaterial3: true,
       fontFamily: GoogleFonts.plusJakartaSans().fontFamily,
     );
+
+    return baseTheme.copyWith(
+      textTheme: baseTheme.textTheme.apply(
+        fontFamilyFallback: const ['Hind Siliguri', 'SolaimanLipi', 'sans-serif'],
+      ),
+      primaryTextTheme: baseTheme.primaryTextTheme.apply(
+        fontFamilyFallback: const ['Hind Siliguri', 'SolaimanLipi', 'sans-serif'],
+      ),
+    );
   }
 
   static ThemeData get dark {
-    return FlexThemeData.dark(
+    final baseTheme = FlexThemeData.dark(
       colors: FlexSchemeColor.from(
         primary: brandGreen,
         secondary: brandSlate,
@@ -79,6 +88,15 @@ class AppTheme {
       visualDensity: FlexColorScheme.comfortablePlatformDensity,
       useMaterial3: true,
       fontFamily: GoogleFonts.plusJakartaSans().fontFamily,
+    );
+
+    return baseTheme.copyWith(
+      textTheme: baseTheme.textTheme.apply(
+        fontFamilyFallback: const ['Hind Siliguri', 'SolaimanLipi', 'sans-serif'],
+      ),
+      primaryTextTheme: baseTheme.primaryTextTheme.apply(
+        fontFamilyFallback: const ['Hind Siliguri', 'SolaimanLipi', 'sans-serif'],
+      ),
     );
   }
 }
