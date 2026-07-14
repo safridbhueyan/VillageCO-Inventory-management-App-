@@ -7,6 +7,8 @@ import 'package:flutter_animate/flutter_animate.dart';
 import '../../core/utils/formatters.dart';
 import '../../features/settings/settings_controller.dart';
 import 'admin_controller.dart';
+import '../supply_chain/supply_chain_controller.dart';
+import '../../core/utils/pdf_generator.dart';
 
 final superAdminSearchQueryProvider = StateProvider.autoDispose<String>((ref) => '');
 final superAdminDialogCurrencyProvider = StateProvider.autoDispose<String>((ref) => 'BDT');
@@ -37,200 +39,216 @@ class _SuperAdminScreenState extends ConsumerState<SuperAdminScreen> {
     final shopsAsync = ref.watch(superAdminShopsStreamProvider);
     final searchQuery = ref.watch(superAdminSearchQueryProvider);
 
-    return Scaffold(
-      appBar: AppBar(
-        title: const Text(
-          'সুপার অ্যাডমিন ড্যাশবোর্ড',
-          style: TextStyle(fontWeight: FontWeight.bold),
-        ),
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.logout_rounded),
-            tooltip: 'লগআউট',
-            onPressed: () {
-              context.go('/login');
-            },
+    return DefaultTabController(
+      length: 2,
+      child: Scaffold(
+        appBar: AppBar(
+          title: const Text(
+            'সুপার অ্যাডমিন ড্যাশবোর্ড',
+            style: TextStyle(fontWeight: FontWeight.bold),
           ),
-        ],
-      ),
-      floatingActionButton: FloatingActionButton.extended(
-        onPressed: () => _showShopFormDialog(context),
-        icon: const Icon(Icons.add_business_rounded),
-        label: const Text('নতুন শপ তৈরি করুন'),
-      ),
-      body: Container(
-        decoration: BoxDecoration(
-          gradient: LinearGradient(
-            begin: Alignment.topCenter,
-            end: Alignment.bottomCenter,
-            colors: [
-              theme.colorScheme.primary.withOpacity(0.04),
-              theme.colorScheme.background,
+          actions: [
+            IconButton(
+              icon: const Icon(Icons.logout_rounded),
+              tooltip: 'লগআউট',
+              onPressed: () {
+                context.go('/login');
+              },
+            ),
+          ],
+          bottom: const TabBar(
+            tabs: [
+              Tab(icon: Icon(Icons.store_rounded), text: 'শপসমূহ'),
+              Tab(icon: Icon(Icons.hub_rounded), text: 'সাপ্লাই চেইন অনুরোধ'),
             ],
           ),
         ),
-        child: Column(
+        floatingActionButton: FloatingActionButton.extended(
+          onPressed: () => _showShopFormDialog(context),
+          icon: const Icon(Icons.add_business_rounded),
+          label: const Text('নতুন শপ তৈরি করুন'),
+        ),
+        body: TabBarView(
           children: [
-            // Search Bar & Stats Header
-            Padding(
-              padding: const EdgeInsets.all(24.0),
-              child: Row(
+            // Tab 1: Shops List
+            Container(
+              decoration: BoxDecoration(
+                gradient: LinearGradient(
+                  begin: Alignment.topCenter,
+                  end: Alignment.bottomCenter,
+                  colors: [
+                    theme.colorScheme.primary.withOpacity(0.04),
+                    theme.colorScheme.background,
+                  ],
+                ),
+              ),
+              child: Column(
                 children: [
-                  Expanded(
-                    child: TextField(
-                      controller: _searchController,
-                      decoration: InputDecoration(
-                        hintText: 'দোকান খুঁজুন...',
-                        prefixIcon: const Icon(Icons.search),
-                        suffixIcon: searchQuery.isNotEmpty
-                            ? IconButton(
-                                icon: const Icon(Icons.clear),
-                                onPressed: () {
-                                  _searchController.clear();
-                                  ref.read(superAdminSearchQueryProvider.notifier).state = '';
-                                },
-                              )
-                            : null,
-                        border: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(16),
+                  // Search Bar & Stats Header
+                  Padding(
+                    padding: const EdgeInsets.all(24.0),
+                    child: Row(
+                      children: [
+                        Expanded(
+                          child: TextField(
+                            controller: _searchController,
+                            decoration: InputDecoration(
+                              hintText: 'দোকান খুঁজুন...',
+                              prefixIcon: const Icon(Icons.search),
+                              suffixIcon: searchQuery.isNotEmpty
+                                  ? IconButton(
+                                      icon: const Icon(Icons.clear),
+                                      onPressed: () {
+                                        _searchController.clear();
+                                        ref.read(superAdminSearchQueryProvider.notifier).state = '';
+                                      },
+                                    )
+                                  : null,
+                              border: OutlineInputBorder(
+                                borderRadius: BorderRadius.circular(16),
+                              ),
+                              filled: true,
+                              fillColor: theme.colorScheme.surface,
+                            ),
+                            onChanged: (val) {
+                              ref.read(superAdminSearchQueryProvider.notifier).state = val.trim().toLowerCase();
+                            },
+                          ),
                         ),
-                        filled: true,
-                        fillColor: theme.colorScheme.surface,
+                      ],
+                    ),
+                  ),
+
+                  // Shops List
+                  Expanded(
+                    child: shopsAsync.when(
+                      loading: () => const Center(child: CircularProgressIndicator()),
+                      error: (error, stack) => RefreshIndicator(
+                        onRefresh: () async {
+                          ref.invalidate(superAdminShopsStreamProvider);
+                          try {
+                            await ref.read(superAdminShopsStreamProvider.future);
+                          } catch (_) {}
+                        },
+                        child: ListView(
+                          physics: const AlwaysScrollableScrollPhysics(),
+                          children: [
+                            SizedBox(
+                              height: MediaQuery.of(context).size.height * 0.5,
+                              child: Center(
+                                child: Text('ত্রুটি: $error'),
+                              ),
+                            ),
+                          ],
+                        ),
                       ),
-                      onChanged: (val) {
-                        ref.read(superAdminSearchQueryProvider.notifier).state = val.trim().toLowerCase();
+                      data: (snapshot) {
+                        final docs = snapshot.docs;
+                        final filteredDocs = docs.where((doc) {
+                          final name = (doc.data()['shopName'] ?? '')
+                              .toString()
+                              .toLowerCase();
+                          final id = doc.id.toLowerCase();
+                          final shopID = (doc.data()['shopID'] ?? '')
+                              .toString()
+                              .toLowerCase();
+                          return name.contains(searchQuery) ||
+                              id.contains(searchQuery) ||
+                              shopID.contains(searchQuery);
+                        }).toList();
+
+                        if (filteredDocs.isEmpty) {
+                          return RefreshIndicator(
+                            onRefresh: () async {
+                              ref.invalidate(superAdminShopsStreamProvider);
+                              try {
+                                await ref.read(superAdminShopsStreamProvider.future);
+                              } catch (_) {}
+                            },
+                            child: ListView(
+                              physics: const AlwaysScrollableScrollPhysics(),
+                              children: [
+                                SizedBox(
+                                  height: MediaQuery.of(context).size.height * 0.5,
+                                  child: Center(
+                                    child: Column(
+                                      mainAxisAlignment: MainAxisAlignment.center,
+                                      children: [
+                                        Icon(
+                                          Icons.store_outlined,
+                                          size: 64,
+                                          color: theme.colorScheme.onSurfaceVariant
+                                              .withOpacity(0.5),
+                                        ),
+                                        const SizedBox(height: 16),
+                                        Text(
+                                          'কোনো দোকান পাওয়া যায়নি।',
+                                          style: TextStyle(
+                                            color: theme.colorScheme.onSurfaceVariant,
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                  ),
+                                ),
+                              ],
+                            ),
+                          );
+                        }
+
+                        return RefreshIndicator(
+                          onRefresh: () async {
+                            ref.invalidate(superAdminShopsStreamProvider);
+                            try {
+                              await ref.read(superAdminShopsStreamProvider.future);
+                            } catch (_) {}
+                          },
+                          child: GridView.builder(
+                            physics: const AlwaysScrollableScrollPhysics(),
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 24,
+                              vertical: 8,
+                            ),
+                            gridDelegate:
+                                const SliverGridDelegateWithMaxCrossAxisExtent(
+                              maxCrossAxisExtent: 400,
+                              mainAxisSpacing: 18,
+                              crossAxisSpacing: 18,
+                              childAspectRatio: 1.25,
+                            ),
+                            itemCount: filteredDocs.length,
+                            itemBuilder: (context, index) {
+                              final doc = filteredDocs[index];
+                              final data = doc.data();
+                              final shopName = data['shopName'] ?? 'Unnamed Shop';
+                              final storeDocId = doc.id;
+                              final pin = data['adminPin'] ?? '';
+                              final currency = data['currency'] ?? 'BDT';
+                              final taxRate =
+                                  (data['taxRate'] as num?)?.toDouble() ?? 0.0;
+
+                              return _ShopCard(
+                                    storeDocId: storeDocId,
+                                    shopName: shopName,
+                                    pin: pin,
+                                    currency: currency,
+                                    taxRate: taxRate,
+                                    docRef: doc.reference,
+                                  )
+                                  .animate()
+                                  .fadeIn(delay: (50 * index).ms)
+                                  .scale(delay: (50 * index).ms);
+                            },
+                          ),
+                        );
                       },
                     ),
                   ),
                 ],
               ),
             ),
-
-            // Shops List
-            Expanded(
-              child: shopsAsync.when(
-                loading: () => const Center(child: CircularProgressIndicator()),
-                error: (error, stack) => RefreshIndicator(
-                  onRefresh: () async {
-                    ref.invalidate(superAdminShopsStreamProvider);
-                    try {
-                      await ref.read(superAdminShopsStreamProvider.future);
-                    } catch (_) {}
-                  },
-                  child: ListView(
-                    physics: const AlwaysScrollableScrollPhysics(),
-                    children: [
-                      SizedBox(
-                        height: MediaQuery.of(context).size.height * 0.5,
-                        child: Center(
-                          child: Text('ত্রুটি: $error'),
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-                data: (snapshot) {
-                  final docs = snapshot.docs;
-                  final filteredDocs = docs.where((doc) {
-                    final name = (doc.data()['shopName'] ?? '')
-                        .toString()
-                        .toLowerCase();
-                    final id = doc.id.toLowerCase();
-                    final shopID = (doc.data()['shopID'] ?? '')
-                        .toString()
-                        .toLowerCase();
-                    return name.contains(searchQuery) ||
-                        id.contains(searchQuery) ||
-                        shopID.contains(searchQuery);
-                  }).toList();
-
-                  if (filteredDocs.isEmpty) {
-                    return RefreshIndicator(
-                      onRefresh: () async {
-                        ref.invalidate(superAdminShopsStreamProvider);
-                        try {
-                          await ref.read(superAdminShopsStreamProvider.future);
-                        } catch (_) {}
-                      },
-                      child: ListView(
-                        physics: const AlwaysScrollableScrollPhysics(),
-                        children: [
-                          SizedBox(
-                            height: MediaQuery.of(context).size.height * 0.5,
-                            child: Center(
-                              child: Column(
-                                mainAxisAlignment: MainAxisAlignment.center,
-                                children: [
-                                  Icon(
-                                    Icons.store_outlined,
-                                    size: 64,
-                                    color: theme.colorScheme.onSurfaceVariant
-                                        .withOpacity(0.5),
-                                  ),
-                                  const SizedBox(height: 16),
-                                  Text(
-                                    'কোনো দোকান পাওয়া যায়নি।',
-                                    style: TextStyle(
-                                      color: theme.colorScheme.onSurfaceVariant,
-                                    ),
-                                  ),
-                                ],
-                              ),
-                            ),
-                          ),
-                        ],
-                      ),
-                    );
-                  }
-
-                  return RefreshIndicator(
-                    onRefresh: () async {
-                      ref.invalidate(superAdminShopsStreamProvider);
-                      try {
-                        await ref.read(superAdminShopsStreamProvider.future);
-                      } catch (_) {}
-                    },
-                    child: GridView.builder(
-                      physics: const AlwaysScrollableScrollPhysics(),
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 24,
-                        vertical: 8,
-                      ),
-                      gridDelegate:
-                          const SliverGridDelegateWithMaxCrossAxisExtent(
-                            maxCrossAxisExtent: 400,
-                            mainAxisSpacing: 18,
-                            crossAxisSpacing: 18,
-                            childAspectRatio: 1.25,
-                          ),
-                      itemCount: filteredDocs.length,
-                      itemBuilder: (context, index) {
-                        final doc = filteredDocs[index];
-                        final data = doc.data();
-                        final shopName = data['shopName'] ?? 'Unnamed Shop';
-                        final storeDocId = doc.id;
-                        final pin = data['adminPin'] ?? '';
-                        final currency = data['currency'] ?? 'BDT';
-                        final taxRate =
-                            (data['taxRate'] as num?)?.toDouble() ?? 0.0;
-
-                        return _ShopCard(
-                              storeDocId: storeDocId,
-                              shopName: shopName,
-                              pin: pin,
-                              currency: currency,
-                              taxRate: taxRate,
-                              docRef: doc.reference,
-                            )
-                            .animate()
-                            .fadeIn(delay: (50 * index).ms)
-                            .scale(delay: (50 * index).ms);
-                      },
-                    ),
-                  );
-                },
-              ),
-            ),
+            // Tab 2: Supply Chain Requests
+            const _AdminSupplyChainTab(),
           ],
         ),
       ),
@@ -869,5 +887,342 @@ class _ShopCard extends ConsumerWidget {
         ),
       ],
     );
+  }
+}
+
+class _AdminSupplyChainTab extends ConsumerWidget {
+  const _AdminSupplyChainTab();
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final theme = Theme.of(context);
+    final ordersAsync = ref.watch(allSupplyChainOrdersProvider);
+
+    return Container(
+      decoration: BoxDecoration(
+        gradient: LinearGradient(
+          begin: Alignment.topCenter,
+          end: Alignment.bottomCenter,
+          colors: [
+            theme.colorScheme.primary.withOpacity(0.04),
+            theme.colorScheme.background,
+          ],
+        ),
+      ),
+      child: ordersAsync.when(
+        loading: () => const Center(child: CircularProgressIndicator()),
+        error: (err, stack) => Center(child: Text('অনুরোধ লোড করতে ব্যর্থ: $err')),
+        data: (orders) {
+          if (orders.isEmpty) {
+            return Center(
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Icon(Icons.hub_outlined, size: 64, color: Colors.grey.shade400),
+                  const SizedBox(height: 16),
+                  Text('কোনো সাপ্লাই চেইন অনুরোধ পাওয়া যায়নি।', style: TextStyle(color: Colors.grey.shade600, fontSize: 16)),
+                ],
+              ),
+            );
+          }
+
+          return ListView.builder(
+            padding: const EdgeInsets.all(24),
+            itemCount: orders.length,
+            itemBuilder: (context, index) {
+              final order = orders[index];
+              return _AdminOrderApprovalCard(order: order)
+                  .animate()
+                  .fadeIn(delay: (index * 50).ms)
+                  .slideY(begin: 0.05, delay: (index * 50).ms);
+            },
+          );
+        },
+      ),
+    );
+  }
+}
+
+class _AdminOrderApprovalCard extends ConsumerStatefulWidget {
+  final SupplyChainOrder order;
+
+  const _AdminOrderApprovalCard({required this.order});
+
+  @override
+  ConsumerState<_AdminOrderApprovalCard> createState() => _AdminOrderApprovalCardState();
+}
+
+class _AdminOrderApprovalCardState extends ConsumerState<_AdminOrderApprovalCard> {
+  late TextEditingController _qtySentController;
+  late TextEditingController _qtyRecController;
+  final _formKey = GlobalKey<FormState>();
+
+  @override
+  void initState() {
+    super.initState();
+    _qtySentController = TextEditingController(text: widget.order.quantityRequested.toString());
+    _qtyRecController = TextEditingController(text: widget.order.quantityRequested.toString());
+  }
+
+  @override
+  void dispose() {
+    _qtySentController.dispose();
+    _qtyRecController.dispose();
+    super.dispose();
+  }
+
+  Color _getStatusColor(String status) {
+    switch (status) {
+      case 'Approved':
+        return Colors.green;
+      case 'Rejected':
+        return Colors.red;
+      case 'Pending Approval':
+      default:
+        return Colors.orange;
+    }
+  }
+
+  String _getStatusText(String status) {
+    switch (status) {
+      case 'Approved':
+        return 'অনুমোদিত';
+      case 'Rejected':
+        return 'প্রত্যাখ্যাত';
+      case 'Pending Approval':
+      default:
+        return 'অনুমোদনের অপেক্ষায়';
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final order = widget.order;
+    final statusColor = _getStatusColor(order.status);
+    final isPending = order.status == 'Pending Approval';
+
+    return Card(
+      margin: const EdgeInsets.only(bottom: 16),
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+      elevation: 3,
+      child: Padding(
+        padding: const EdgeInsets.all(20.0),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Expanded(
+                  child: Text(
+                    'অনুরোধ আইডি: #${order.id.substring(0, 8).toUpperCase()}',
+                    style: theme.textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold),
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                ),
+                const SizedBox(width: 8),
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                  decoration: BoxDecoration(
+                    color: statusColor.withOpacity(0.1),
+                    borderRadius: BorderRadius.circular(10),
+                    border: Border.all(color: statusColor, width: 1),
+                  ),
+                  child: Text(
+                    _getStatusText(order.status),
+                    style: TextStyle(color: statusColor, fontSize: 12, fontWeight: FontWeight.bold),
+                  ),
+                ),
+              ],
+            ),
+            const Divider(height: 24),
+            Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Expanded(
+                  flex: 3,
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text('অনুরোধকারী শাখা: ${order.fromStoreName}', style: const TextStyle(fontWeight: FontWeight.bold)),
+                      const SizedBox(height: 4),
+                      Text('সরবরাহকারী শাখা: ${order.toStoreName}', style: const TextStyle(fontWeight: FontWeight.bold)),
+                      const SizedBox(height: 12),
+                      Text('পণ্য: ${order.productName}', style: theme.textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w600)),
+                      Text('বারকোড: ${order.productBarcode.isNotEmpty ? order.productBarcode : "N/A"}', style: theme.textTheme.bodySmall),
+                      Text('একক মূল্য: ${Formatters.currency(order.productSellingPrice)}'),
+                    ],
+                  ),
+                ),
+                Expanded(
+                  flex: 2,
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.end,
+                    children: [
+                      Text(
+                        'অনুরোধকৃত পরিমাণ: ${order.quantityRequested} ${order.productUnit}',
+                        style: const TextStyle(fontWeight: FontWeight.bold),
+                      ),
+                      if (!isPending) ...[
+                        const SizedBox(height: 4),
+                        Text('প্রেরিত পরিমাণ: ${order.quantitySent} ${order.productUnit}'),
+                        Text('গৃহীত পরিমাণ: ${order.quantityReceived} ${order.productUnit}'),
+                        const SizedBox(height: 8),
+                        Text(
+                          'মোট মূল্য: ${Formatters.currency(order.totalPrice)}',
+                          style: TextStyle(color: theme.colorScheme.primary, fontWeight: FontWeight.bold),
+                        ),
+                        Text('পরিশোধিত: ${Formatters.currency(order.amountPaid)}'),
+                        Text('বকেয়া: ${Formatters.currency(order.paymentDue)}', style: const TextStyle(fontWeight: FontWeight.bold, color: Colors.red)),
+                      ],
+                    ],
+                  ),
+                ),
+              ],
+            ),
+            if (isPending) ...[
+              const Divider(height: 32),
+              Form(
+                key: _formKey,
+                child: Row(
+                  children: [
+                    Expanded(
+                      child: TextFormField(
+                        controller: _qtySentController,
+                        decoration: const InputDecoration(
+                          labelText: 'প্রেরিত পরিমাণ',
+                          border: OutlineInputBorder(),
+                        ),
+                        keyboardType: TextInputType.number,
+                        validator: (val) {
+                          if (val == null || val.trim().isEmpty) return 'পরিমাণ দিন';
+                          final num = double.tryParse(val);
+                          if (num == null || num < 0) return 'সঠিক পরিমাণ দিন';
+                          return null;
+                        },
+                        onChanged: (val) {
+                          _qtyRecController.text = val;
+                        },
+                      ),
+                    ),
+                    const SizedBox(width: 16),
+                    Expanded(
+                      child: TextFormField(
+                        controller: _qtyRecController,
+                        decoration: const InputDecoration(
+                          labelText: 'গৃহীত পরিমাণ',
+                          border: OutlineInputBorder(),
+                        ),
+                        keyboardType: TextInputType.number,
+                        validator: (val) {
+                          if (val == null || val.trim().isEmpty) return 'পরিমাণ দিন';
+                          final num = double.tryParse(val);
+                          if (num == null || num < 0) return 'সঠিক পরিমাণ দিন';
+                          return null;
+                        },
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(height: 16),
+              Wrap(
+                spacing: 12,
+                runSpacing: 8,
+                alignment: WrapAlignment.center,
+                children: [
+                  OutlinedButton.icon(
+                    style: OutlinedButton.styleFrom(
+                      foregroundColor: Colors.red,
+                      side: const BorderSide(color: Colors.red),
+                    ),
+                    icon: const Icon(Icons.cancel_outlined),
+                    label: const Text('প্রত্যাখ্যান'),
+                    onPressed: () => _handleReject(context),
+                  ),
+                  ElevatedButton.icon(
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: Colors.green,
+                      foregroundColor: Colors.white,
+                    ),
+                    icon: const Icon(Icons.check_circle_outline),
+                    label: const Text('অনুমোদন করুন'),
+                    onPressed: () => _handleApprove(context),
+                  ),
+                ],
+              ),
+            ] else ...[
+              const Divider(height: 24),
+              Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  IconButton(
+                    icon: const Icon(Icons.picture_as_pdf_outlined, color: Colors.red),
+                    tooltip: 'ইনভয়েস প্রিন্ট',
+                    onPressed: () => PdfGenerator.printSupplyChainOrder(order),
+                  ),
+                ],
+              ),
+            ],
+          ],
+        ),
+      ),
+    );
+  }
+
+  void _handleApprove(BuildContext context) async {
+    if (_formKey.currentState?.validate() ?? false) {
+      final qtySent = double.parse(_qtySentController.text);
+      final qtyRec = double.parse(_qtyRecController.text);
+
+      showDialog(
+        context: context,
+        barrierDismissible: false,
+        builder: (context) => const Center(child: CircularProgressIndicator()),
+      );
+
+      try {
+        await ref.read(supplyChainServiceProvider).approveRequest(widget.order.id, qtySent, qtyRec);
+        if (context.mounted) {
+          Navigator.pop(context); // dismiss loading
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('অনুরোধটি সফলভাবে অনুমোদিত হয়েছে এবং স্টক আপডেট হয়েছে।')),
+          );
+        }
+      } catch (e) {
+        if (context.mounted) {
+          Navigator.pop(context);
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text('অনুমোদন ব্যর্থ হয়েছে: $e')),
+          );
+        }
+      }
+    }
+  }
+
+  void _handleReject(BuildContext context) async {
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (context) => const Center(child: CircularProgressIndicator()),
+    );
+
+    try {
+      await ref.read(supplyChainServiceProvider).rejectRequest(widget.order.id);
+      if (context.mounted) {
+        Navigator.pop(context); // dismiss loading
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('অনুরোধটি প্রত্যাখ্যান করা হয়েছে।')),
+        );
+      }
+    } catch (e) {
+      if (context.mounted) {
+        Navigator.pop(context);
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('অপারেশন ব্যর্থ হয়েছে: $e')),
+        );
+      }
+    }
   }
 }
