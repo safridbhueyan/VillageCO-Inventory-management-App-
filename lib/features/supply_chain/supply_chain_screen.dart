@@ -484,12 +484,8 @@ class _NewRequestDialog extends ConsumerStatefulWidget {
 }
 
 class _NewRequestDialogState extends ConsumerState<_NewRequestDialog> {
-  String _selectedBranchDocId = '';
-  String _selectedBranchName = '';
-  Map<String, dynamic>? _selectedProduct;
   final _qtyController = TextEditingController();
   final _searchController = TextEditingController();
-  String _productSearchQuery = '';
   final _formKey = GlobalKey<FormState>();
 
   @override
@@ -503,6 +499,11 @@ class _NewRequestDialogState extends ConsumerState<_NewRequestDialog> {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final branchesAsync = ref.watch(otherBranchesProvider);
+    final dialogState = ref.watch(newRequestControllerProvider);
+    final selectedBranchDocId = dialogState.selectedBranchDocId;
+    final selectedBranchName = dialogState.selectedBranchName;
+    final selectedProduct = dialogState.selectedProduct;
+    final productSearchQuery = dialogState.productSearchQuery;
 
     return AlertDialog(
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
@@ -526,7 +527,7 @@ class _NewRequestDialogState extends ConsumerState<_NewRequestDialog> {
                       labelText: 'সরবরাহকারী ব্রাঞ্চ নির্বাচন করুন',
                       border: OutlineInputBorder(),
                     ),
-                    value: _selectedBranchDocId.isEmpty ? null : _selectedBranchDocId,
+                    value: selectedBranchDocId.isEmpty ? null : selectedBranchDocId,
                     items: branches.map((b) {
                       return DropdownMenuItem<String>(
                         value: b['storeDocId'],
@@ -536,17 +537,16 @@ class _NewRequestDialogState extends ConsumerState<_NewRequestDialog> {
                     onChanged: (val) {
                       if (val != null) {
                         final selected = branches.firstWhere((b) => b['storeDocId'] == val);
-                        setState(() {
-                          _selectedBranchDocId = val;
-                          _selectedBranchName = selected['shopName'];
-                          _selectedProduct = null;
-                        });
+                        ref.read(newRequestControllerProvider.notifier).selectBranch(
+                              val,
+                              selected['shopName'],
+                            );
                       }
                     },
                   );
                 },
               ),
-              if (_selectedBranchDocId.isNotEmpty) ...[
+              if (selectedBranchDocId.isNotEmpty) ...[
                 const SizedBox(height: 16),
                 const Divider(),
                 const SizedBox(height: 8),
@@ -560,9 +560,7 @@ class _NewRequestDialogState extends ConsumerState<_NewRequestDialog> {
                     border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
                   ),
                   onChanged: (val) {
-                    setState(() {
-                      _productSearchQuery = val.trim().toLowerCase();
-                    });
+                    ref.read(newRequestControllerProvider.notifier).updateSearchQuery(val);
                   },
                 ),
                 const SizedBox(height: 10),
@@ -570,7 +568,7 @@ class _NewRequestDialogState extends ConsumerState<_NewRequestDialog> {
                   height: 180,
                   child: Consumer(
                     builder: (context, ref, child) {
-                      final productsAsync = ref.watch(branchProductsProvider(_selectedBranchDocId));
+                      final productsAsync = ref.watch(branchProductsProvider(selectedBranchDocId));
                       return productsAsync.when(
                         loading: () => const Center(child: CircularProgressIndicator()),
                         error: (e, s) => Text('পণ্য লোড করতে ব্যর্থ: $e'),
@@ -578,7 +576,7 @@ class _NewRequestDialogState extends ConsumerState<_NewRequestDialog> {
                           final filtered = products.where((p) {
                             final name = p['name'].toString().toLowerCase();
                             final barcode = p['barcode'].toString().toLowerCase();
-                            return name.contains(_productSearchQuery) || barcode.contains(_productSearchQuery);
+                            return name.contains(productSearchQuery) || barcode.contains(productSearchQuery);
                           }).toList();
 
                           if (filtered.isEmpty) {
@@ -590,7 +588,7 @@ class _NewRequestDialogState extends ConsumerState<_NewRequestDialog> {
                             itemCount: filtered.length,
                             itemBuilder: (context, index) {
                               final p = filtered[index];
-                              final isSelected = _selectedProduct?['id'] == p['id'];
+                              final isSelected = selectedProduct?['id'] == p['id'];
                               return ListTile(
                                 shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
                                 selected: isSelected,
@@ -599,9 +597,7 @@ class _NewRequestDialogState extends ConsumerState<_NewRequestDialog> {
                                 subtitle: Text('স্টক: ${p['currentStock']} ${p['unit']} | মূল্য: ${Formatters.currency(p['sellingPrice'])}'),
                                 trailing: isSelected ? Icon(Icons.check_circle, color: theme.colorScheme.primary) : null,
                                 onTap: () {
-                                  setState(() {
-                                    _selectedProduct = p;
-                                  });
+                                  ref.read(newRequestControllerProvider.notifier).selectProduct(p);
                                 },
                               );
                             },
@@ -612,7 +608,7 @@ class _NewRequestDialogState extends ConsumerState<_NewRequestDialog> {
                   ),
                 ),
               ],
-              if (_selectedProduct != null) ...[
+              if (selectedProduct != null) ...[
                 const SizedBox(height: 16),
                 const Divider(),
                 const SizedBox(height: 8),
@@ -621,7 +617,7 @@ class _NewRequestDialogState extends ConsumerState<_NewRequestDialog> {
                   child: TextFormField(
                     controller: _qtyController,
                     decoration: InputDecoration(
-                      labelText: 'অনুরোধকৃত পরিমাণ (${_selectedProduct!['unit']})',
+                      labelText: 'অনুরোধকৃত পরিমাণ (${selectedProduct['unit']})',
                       border: const OutlineInputBorder(),
                     ),
                     keyboardType: TextInputType.number,
@@ -630,9 +626,9 @@ class _NewRequestDialogState extends ConsumerState<_NewRequestDialog> {
                       final qty = double.tryParse(val);
                       if (qty == null) return 'সঠিক সংখ্যা দিন';
                       if (qty <= 0) return 'পরিমাণ ০ থেকে বেশি হতে হবে';
-                      final available = (_selectedProduct!['currentStock'] as num).toDouble();
+                      final available = (selectedProduct['currentStock'] as num).toDouble();
                       if (qty > available) {
-                        return 'দুঃখিত, ওই ব্রাঞ্চে মাত্র $available ${_selectedProduct!['unit']} আছে';
+                        return 'দুঃখিত, ওই ব্রাঞ্চে মাত্র $available ${selectedProduct['unit']} আছে';
                       }
                       return null;
                     },
@@ -646,7 +642,7 @@ class _NewRequestDialogState extends ConsumerState<_NewRequestDialog> {
       actions: [
         TextButton(onPressed: () => Navigator.pop(context), child: const Text('বাতিল')),
         ElevatedButton(
-          onPressed: _selectedProduct == null
+          onPressed: selectedProduct == null
               ? null
               : () async {
                   if (_formKey.currentState?.validate() ?? false) {
@@ -671,9 +667,9 @@ class _NewRequestDialogState extends ConsumerState<_NewRequestDialog> {
                       await ref.read(supplyChainServiceProvider).createRequest(
                             currentBranchInfo: currentBranchInfoAsync,
                             currentBranchName: settingsAsync.shopName,
-                            targetBranchDocId: _selectedBranchDocId,
-                            targetBranchName: _selectedBranchName,
-                            productData: _selectedProduct!,
+                            targetBranchDocId: selectedBranchDocId,
+                            targetBranchName: selectedBranchName,
+                            productData: selectedProduct,
                             quantityRequested: qty,
                           );
                       if (context.mounted) {
