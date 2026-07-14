@@ -434,6 +434,13 @@ class _Sidebar extends ConsumerWidget {
                     currentPath: currentPath,
                   ),
                   _SidebarItem(
+                    icon: Icons.hub_outlined,
+                    activeIcon: Icons.hub,
+                    label: 'সাপ্লাই চেইন',
+                    path: '/supply_chain',
+                    currentPath: currentPath,
+                  ),
+                  _SidebarItem(
                     icon: Icons.point_of_sale_outlined,
                     activeIcon: Icons.point_of_sale,
                     label: 'বিক্রয় কেন্দ্র (POS)',
