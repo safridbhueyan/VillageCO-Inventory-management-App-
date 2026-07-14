@@ -12,6 +12,7 @@ import '../../features/settings/settings_screen.dart';
 import '../../widgets/shared/main_layout.dart';
 import '../../features/super_admin/super_admin_screen.dart';
 import '../../features/suppliers/suppliers_screen.dart';
+import '../../features/supply_chain/supply_chain_screen.dart';
 
 final routerProvider = Provider<GoRouter>((ref) {
   return GoRouter(
@@ -52,6 +53,10 @@ final routerProvider = Provider<GoRouter>((ref) {
           GoRoute(
             path: '/suppliers',
             builder: (context, state) => const SuppliersScreen(),
+          ),
+          GoRoute(
+            path: '/supply_chain',
+            builder: (context, state) => const SupplyChainScreen(),
           ),
         ],
       ),
