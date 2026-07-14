@@ -237,6 +237,13 @@ class DashboardScreen extends ConsumerWidget {
                             color: Colors.orange,
                             onTap: () => context.go('/suppliers'),
                           ),
+                          const SizedBox(width: 14),
+                          _QuickActionCard(
+                            label: 'সাপ্লাই চেইন',
+                            icon: Icons.hub_rounded,
+                            color: Colors.indigo,
+                            onTap: () => context.go('/supply_chain'),
+                          ),
                         ],
                       ),
                     ),
