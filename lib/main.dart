@@ -38,6 +38,7 @@ class MyApp extends ConsumerWidget {
       darkTheme: AppTheme.dark,
       themeMode: themeMode,
       routerConfig: router,
+      locale: const Locale('bn', 'BD'),
       debugShowCheckedModeBanner: false,
     );
   }
