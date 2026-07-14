@@ -481,3 +481,56 @@ class SupplyChainService {
 }
 
 final supplyChainServiceProvider = Provider((ref) => SupplyChainService());
+
+class NewRequestState {
+  final String selectedBranchDocId;
+  final String selectedBranchName;
+  final Map<String, dynamic>? selectedProduct;
+  final String productSearchQuery;
+
+  NewRequestState({
+    this.selectedBranchDocId = '',
+    this.selectedBranchName = '',
+    this.selectedProduct,
+    this.productSearchQuery = '',
+  });
+
+  NewRequestState copyWith({
+    String? selectedBranchDocId,
+    String? selectedBranchName,
+    Map<String, dynamic>? selectedProduct,
+    bool clearProduct = false,
+    String? productSearchQuery,
+  }) {
+    return NewRequestState(
+      selectedBranchDocId: selectedBranchDocId ?? this.selectedBranchDocId,
+      selectedBranchName: selectedBranchName ?? this.selectedBranchName,
+      selectedProduct: clearProduct ? null : (selectedProduct ?? this.selectedProduct),
+      productSearchQuery: productSearchQuery ?? this.productSearchQuery,
+    );
+  }
+}
+
+class NewRequestController extends AutoDisposeNotifier<NewRequestState> {
+  @override
+  NewRequestState build() => NewRequestState();
+
+  void selectBranch(String docId, String name) {
+    state = state.copyWith(
+      selectedBranchDocId: docId,
+      selectedBranchName: name,
+      clearProduct: true,
+    );
+  }
+
+  void selectProduct(Map<String, dynamic>? product) {
+    state = state.copyWith(selectedProduct: product);
+  }
+
+  void updateSearchQuery(String query) {
+    state = state.copyWith(productSearchQuery: query.trim().toLowerCase());
+  }
+}
+
+final newRequestControllerProvider =
+    AutoDisposeNotifierProvider<NewRequestController, NewRequestState>(NewRequestController.new);
