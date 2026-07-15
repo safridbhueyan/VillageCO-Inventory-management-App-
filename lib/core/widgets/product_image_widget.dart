@@ -48,6 +48,9 @@ class ProductImageWidget extends StatelessWidget {
               ),
             ),
           ),
+          errorListener: (error) {
+            debugPrint('CachedNetworkImage info: Failed to load network image (expected if offline).');
+          },
           errorWidget: (context, url, error) => _buildPlaceholder(),
         ),
       );
