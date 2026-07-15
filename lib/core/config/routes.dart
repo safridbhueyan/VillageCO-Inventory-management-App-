@@ -1,4 +1,3 @@
-import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
@@ -9,7 +8,7 @@ import '../../features/inventory/inventory_screen.dart';
 import '../../features/sales/pos_screen.dart';
 import '../../features/reports/reports_screen.dart';
 import '../../features/settings/settings_screen.dart';
-import '../../widgets/shared/main_layout.dart';
+import '../../features/home/home_screen.dart';
 import '../../features/super_admin/super_admin_screen.dart';
 import '../../features/suppliers/suppliers_screen.dart';
 import '../../features/supply_chain/supply_chain_screen.dart';
@@ -25,7 +24,7 @@ final routerProvider = Provider<GoRouter>((ref) {
       ),
       ShellRoute(
         builder: (context, state, child) {
-          return MainLayout(child: child);
+          return HomeScreen(child: child);
         },
         routes: [
           GoRoute(path: '/', redirect: (_, __) => '/dashboard'),
