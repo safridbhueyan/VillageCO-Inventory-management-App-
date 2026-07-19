@@ -1,3 +1,4 @@
+import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
@@ -27,7 +28,7 @@ class SupplierDetailsSheet extends ConsumerWidget {
       padding: EdgeInsets.only(bottom: MediaQuery.of(context).viewInsets.bottom),
       height: MediaQuery.of(context).size.height * 0.85,
       child: DefaultTabController(
-        length: 3,
+        length: 4,
         child: Column(
           children: [
             const SizedBox(height: 12),
@@ -47,7 +48,14 @@ class SupplierDetailsSheet extends ConsumerWidget {
                   CircleAvatar(
                     backgroundColor: theme.colorScheme.primaryContainer.withOpacity(0.4),
                     radius: 24,
-                    child: Icon(Icons.local_shipping_rounded, color: theme.colorScheme.primary, size: 28),
+                    backgroundImage: supplier.imagePath != null
+                        ? (supplier.imagePath!.startsWith('http')
+                            ? NetworkImage(supplier.imagePath!) as ImageProvider
+                            : FileImage(File(supplier.imagePath!)))
+                        : null,
+                    child: supplier.imagePath == null
+                        ? Icon(Icons.local_shipping_rounded, color: theme.colorScheme.primary, size: 28)
+                        : null,
                   ),
                   const SizedBox(width: 12),
                   Expanded(
@@ -89,6 +97,7 @@ class SupplierDetailsSheet extends ConsumerWidget {
               unselectedLabelColor: Colors.grey,
               indicatorColor: theme.colorScheme.primary,
               tabs: const [
+                Tab(icon: Icon(Icons.hourglass_bottom_rounded), text: 'বকেয়া পেমেন্ট'),
                 Tab(icon: Icon(Icons.receipt_long_rounded), text: 'লেনদেন'),
                 Tab(icon: Icon(Icons.inventory_2_outlined), text: 'পণ্য ও স্টক'),
                 Tab(icon: Icon(Icons.broken_image_outlined), text: 'ক্ষতিগ্রস্ত'),
@@ -98,6 +107,7 @@ class SupplierDetailsSheet extends ConsumerWidget {
             Expanded(
               child: TabBarView(
                 children: [
+                  LedgerTab(supplierId: supplier.id, showOnlyOutstanding: true),
                   LedgerTab(supplierId: supplier.id),
                   InventoryTab(supplierId: supplier.id),
                   DamagesTab(supplierId: supplier.id),
