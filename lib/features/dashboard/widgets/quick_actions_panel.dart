@@ -14,11 +14,23 @@ class QuickActionsPanel extends StatelessWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text(
-          'দ্রুত অ্যাক্সেস',
-          style: theme.textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold),
+        Row(
+          children: [
+            Icon(
+              Icons.flash_on_rounded,
+              size: 18,
+              color: theme.colorScheme.primary,
+            ),
+            const SizedBox(width: 8),
+            Text(
+              'দ্রুত অ্যাক্সেস',
+              style: theme.textTheme.titleMedium?.copyWith(
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+          ],
         ),
-        const SizedBox(height: 12),
+        const SizedBox(height: 14),
         SingleChildScrollView(
           scrollDirection: Axis.horizontal,
           child: Row(
@@ -28,46 +40,52 @@ class QuickActionsPanel extends StatelessWidget {
                 icon: Icons.point_of_sale_rounded,
                 color: theme.colorScheme.primary,
                 onTap: () => context.go('/pos'),
+                animationIndex: 0,
               ),
-              const SizedBox(width: 14),
+              const SizedBox(width: 12),
               QuickActionCard(
                 label: 'পণ্য যোগ',
                 icon: Icons.add_circle_outline_rounded,
-                color: Colors.blue,
+                color: const Color(0xFF0284C7),
                 onTap: () => context.go('/products'),
+                animationIndex: 1,
               ),
-              const SizedBox(width: 14),
+              const SizedBox(width: 12),
               QuickActionCard(
                 label: 'স্টক আপডেট',
                 icon: Icons.call_received_rounded,
-                color: Colors.teal,
+                color: const Color(0xFF0D9488),
                 onTap: () => context.go('/inventory'),
+                animationIndex: 2,
               ),
-              const SizedBox(width: 14),
+              const SizedBox(width: 12),
               QuickActionCard(
                 label: 'লাভ-ক্ষতি রিপোর্ট',
                 icon: Icons.bar_chart_rounded,
-                color: Colors.purple,
+                color: const Color(0xFF7C3AED),
                 onTap: () => context.go('/reports'),
+                animationIndex: 3,
               ),
-              const SizedBox(width: 14),
+              const SizedBox(width: 12),
               QuickActionCard(
                 label: 'সাপ্লায়ার রেজিস্ট্রি',
                 icon: Icons.local_shipping_rounded,
-                color: Colors.orange,
+                color: const Color(0xFFD97706),
                 onTap: () => context.go('/suppliers'),
+                animationIndex: 4,
               ),
-              const SizedBox(width: 14),
+              const SizedBox(width: 12),
               QuickActionCard(
                 label: 'সাপ্লাই চেইন',
                 icon: Icons.hub_rounded,
-                color: Colors.indigo,
+                color: const Color(0xFF4F46E5),
                 onTap: () => context.go('/supply_chain'),
+                animationIndex: 5,
               ),
             ],
           ),
         ),
       ],
-    ).animate().fadeIn(delay: 100.ms, duration: 300.ms);
+    ).animate().fadeIn(delay: 150.ms, duration: 350.ms);
   }
 }
