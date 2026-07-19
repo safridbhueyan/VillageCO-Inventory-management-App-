@@ -9,8 +9,12 @@ import '../../core/database/firebase_sync_service.dart';
 
 // Riverpod state providers for login screen
 final loginPinProvider = StateProvider.autoDispose<String>((ref) => '');
-final loginRememberLoginProvider = StateProvider.autoDispose<bool>((ref) => false);
-final loginErrorMessageProvider = StateProvider.autoDispose<String?>((ref) => null);
+final loginRememberLoginProvider = StateProvider.autoDispose<bool>(
+  (ref) => false,
+);
+final loginErrorMessageProvider = StateProvider.autoDispose<String?>(
+  (ref) => null,
+);
 
 class LoginScreen extends ConsumerStatefulWidget {
   const LoginScreen({super.key});
@@ -38,7 +42,10 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
   void _handleBackspace() {
     final currentPin = ref.read(loginPinProvider);
     if (currentPin.isNotEmpty) {
-      ref.read(loginPinProvider.notifier).state = currentPin.substring(0, currentPin.length - 1);
+      ref.read(loginPinProvider.notifier).state = currentPin.substring(
+        0,
+        currentPin.length - 1,
+      );
       ref.read(loginErrorMessageProvider.notifier).state = null;
     }
   }
@@ -108,12 +115,18 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
         await ref.read(adminRepositoryProvider).pullShopData(storeDocId);
 
         if (mounted) {
-          Navigator.of(context, rootNavigator: true).pop(); // dismiss loading dialog
+          Navigator.of(
+            context,
+            rootNavigator: true,
+          ).pop(); // dismiss loading dialog
           context.go('/dashboard');
         }
       } else {
         if (mounted) {
-          Navigator.of(context, rootNavigator: true).pop(); // dismiss loading dialog
+          Navigator.of(
+            context,
+            rootNavigator: true,
+          ).pop(); // dismiss loading dialog
         }
         // Fallback for unconfigured store when pin matches local settings (e.g. default 1234 offline)
         if (pinVal == correctPin) {
@@ -123,11 +136,15 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
           return;
         }
         ref.read(loginPinProvider.notifier).state = '';
-        ref.read(loginErrorMessageProvider.notifier).state = 'ভুল পিন। আবার চেষ্টা করুন।';
+        ref.read(loginErrorMessageProvider.notifier).state =
+            'ভুল পিন। আবার চেষ্টা করুন।';
       }
     } catch (e) {
       if (mounted) {
-        Navigator.of(context, rootNavigator: true).pop(); // dismiss loading dialog
+        Navigator.of(
+          context,
+          rootNavigator: true,
+        ).pop(); // dismiss loading dialog
       }
       // Fallback for offline access with the local PIN
       if (pinVal == correctPin) {
@@ -137,7 +154,8 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
         return;
       }
       ref.read(loginPinProvider.notifier).state = '';
-      ref.read(loginErrorMessageProvider.notifier).state = 'সংযোগ ত্রুটি বা পিনটি পাওয়া যায়নি।';
+      ref.read(loginErrorMessageProvider.notifier).state =
+          'সংযোগ ত্রুটি বা পিনটি পাওয়া যায়নি।';
       debugPrint('Error verifying PIN online: $e');
     }
   }
@@ -181,23 +199,33 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                 ),
                 color: theme.colorScheme.surface.withOpacity(0.9),
                 child: Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 28, vertical: 40),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 28,
+                    vertical: 40,
+                  ),
                   child: Column(
                     mainAxisSize: MainAxisSize.min,
                     children: [
                       // Shop Logo (Pulsing storefront)
                       Container(
-                        padding: const EdgeInsets.all(18),
+                        padding: const EdgeInsets.all(8),
                         decoration: BoxDecoration(
-                          color: theme.colorScheme.primaryContainer.withOpacity(0.25),
+                          color: theme.colorScheme.primaryContainer.withOpacity(
+                            0.25,
+                          ),
                           shape: BoxShape.circle,
                         ),
-                        child: Icon(
-                          Icons.storefront_rounded,
-                          size: 38,
-                          color: theme.colorScheme.primary,
+                        child: Image.asset(
+                          'assets/icons.png',
+                          width: 90,
+                          height: 90,
+                          fit: BoxFit.contain,
                         ),
-                      ).animate().scale(delay: 100.ms, duration: 450.ms, curve: Curves.easeOutBack),
+                      ).animate().scale(
+                        delay: 100.ms,
+                        duration: 450.ms,
+                        curve: Curves.easeOutBack,
+                      ),
                       const SizedBox(height: 20),
                       Text(
                         'ভিলেজকো ইনভেন্টরি',
@@ -222,23 +250,32 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                         children: List.generate(4, (index) {
                           final isActive = index < pinVal.length;
                           return Container(
-                            margin: const EdgeInsets.symmetric(horizontal: 8),
-                            width: 14,
-                            height: 14,
-                            decoration: BoxDecoration(
-                              shape: BoxShape.circle,
-                              color: isActive
-                                  ? theme.colorScheme.primary
-                                  : theme.colorScheme.outlineVariant.withOpacity(0.6),
-                              border: Border.all(
-                                color: isActive
-                                    ? theme.colorScheme.primary
-                                    : theme.colorScheme.outline.withOpacity(0.5),
-                                width: 1,
-                              ),
-                            ),
-                          ).animate(target: isActive ? 1.0 : 0.0)
-                           .scale(end: const Offset(1.15, 1.15), duration: 150.ms);
+                                margin: const EdgeInsets.symmetric(
+                                  horizontal: 8,
+                                ),
+                                width: 14,
+                                height: 14,
+                                decoration: BoxDecoration(
+                                  shape: BoxShape.circle,
+                                  color: isActive
+                                      ? theme.colorScheme.primary
+                                      : theme.colorScheme.outlineVariant
+                                            .withOpacity(0.6),
+                                  border: Border.all(
+                                    color: isActive
+                                        ? theme.colorScheme.primary
+                                        : theme.colorScheme.outline.withOpacity(
+                                            0.5,
+                                          ),
+                                    width: 1,
+                                  ),
+                                ),
+                              )
+                              .animate(target: isActive ? 1.0 : 0.0)
+                              .scale(
+                                end: const Offset(1.15, 1.15),
+                                duration: 150.ms,
+                              );
                         }),
                       ),
                       const SizedBox(height: 24),
@@ -264,7 +301,17 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                         crossAxisSpacing: 14,
                         mainAxisSpacing: 14,
                         children: [
-                          ...['1', '2', '3', '4', '5', '6', '7', '8', '9'].map(_buildKeypadButton),
+                          ...[
+                            '1',
+                            '2',
+                            '3',
+                            '4',
+                            '5',
+                            '6',
+                            '7',
+                            '8',
+                            '9',
+                          ].map(_buildKeypadButton),
                           const SizedBox.shrink(),
                           _buildKeypadButton('0'),
                           IconButton(
@@ -289,9 +336,16 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                             child: Checkbox(
                               value: rememberLogin,
                               activeColor: theme.colorScheme.primary,
-                              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(4)),
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(4),
+                              ),
                               onChanged: (val) {
-                                ref.read(loginRememberLoginProvider.notifier).state = val ?? false;
+                                ref
+                                        .read(
+                                          loginRememberLoginProvider.notifier,
+                                        )
+                                        .state =
+                                    val ?? false;
                               },
                             ),
                           ),
