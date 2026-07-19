@@ -1,7 +1,9 @@
+import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/database/database.dart';
+import '../../../core/utils/image_utils.dart';
 import '../suppliers_controller.dart';
 
 class AddOrderDialog extends ConsumerStatefulWidget {
@@ -21,6 +23,7 @@ class _AddOrderDialogState extends ConsumerState<AddOrderDialog> {
   
   String? selectedProdId;
   String status = 'Pending';
+  File? _chalanImage;
 
   @override
   void dispose() {
@@ -121,6 +124,36 @@ class _AddOrderDialogState extends ConsumerState<AddOrderDialog> {
                         }
                       },
                     ),
+                    const SizedBox(height: 12),
+                    Row(
+                      children: [
+                        Expanded(
+                          child: Text(
+                            _chalanImage == null ? 'চালান ছবি: যুক্ত করা হয়নি' : 'চালান ছবি: যুক্ত করা হয়েছে',
+                            style: TextStyle(
+                              fontSize: 12,
+                              color: _chalanImage == null ? Colors.grey : Colors.green,
+                              fontWeight: _chalanImage == null ? FontWeight.normal : FontWeight.bold,
+                            ),
+                          ),
+                        ),
+                        ElevatedButton.icon(
+                          onPressed: () async {
+                            final file = await ImageUtils.pickAndCropImage(context);
+                            if (file != null) {
+                              setDlgState(() {
+                                _chalanImage = file;
+                              });
+                            }
+                          },
+                          icon: const Icon(Icons.camera_alt, size: 14),
+                          label: const Text('ছবি তুলুন', style: TextStyle(fontSize: 11)),
+                          style: ElevatedButton.styleFrom(
+                            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                          ),
+                        ),
+                      ],
+                    ),
                   ],
                 ),
               );
@@ -151,6 +184,7 @@ class _AddOrderDialogState extends ConsumerState<AddOrderDialog> {
               date: DateTime.now(),
               status: status,
               newBuyingPrice: unitPrice,
+              localChalanPath: _chalanImage?.path,
             );
             Navigator.pop(context);
           },
