@@ -1,8 +1,10 @@
+import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/database/database.dart';
 import '../../../core/utils/formatters.dart';
+import '../../../core/utils/image_utils.dart';
 import '../suppliers_controller.dart';
 
 class UpdateOrderDialog extends ConsumerStatefulWidget {
@@ -19,6 +21,7 @@ class _UpdateOrderDialogState extends ConsumerState<UpdateOrderDialog> {
   final addQtyController = TextEditingController();
   final addPaidController = TextEditingController();
   late String status;
+  File? _chalanImage;
 
   @override
   void initState() {
@@ -42,6 +45,8 @@ class _UpdateOrderDialogState extends ConsumerState<UpdateOrderDialog> {
       title: const Text('অর্ডার তথ্য আপডেট করুন'),
       content: StatefulBuilder(
         builder: (context, setDlgState) {
+          final hasExistingChalan = widget.order.chalanPic != null;
+
           return Column(
             mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.start,
@@ -74,6 +79,38 @@ class _UpdateOrderDialogState extends ConsumerState<UpdateOrderDialog> {
                   if (val != null) setDlgState(() => status = val);
                 },
               ),
+              const SizedBox(height: 12),
+              Row(
+                children: [
+                  Expanded(
+                    child: Text(
+                      _chalanImage != null
+                          ? 'নতুন চালান ছবি সিলেক্ট করা হয়েছে'
+                          : (hasExistingChalan ? 'চালান ছবি: আপলোড করা আছে' : 'চালান ছবি: যুক্ত করা হয়নি'),
+                      style: TextStyle(
+                        fontSize: 12,
+                        color: (_chalanImage != null || hasExistingChalan) ? Colors.green : Colors.grey,
+                        fontWeight: (_chalanImage != null || hasExistingChalan) ? FontWeight.bold : FontWeight.normal,
+                      ),
+                    ),
+                  ),
+                  ElevatedButton.icon(
+                    onPressed: () async {
+                      final file = await ImageUtils.pickAndCropImage(context);
+                      if (file != null) {
+                        setDlgState(() {
+                          _chalanImage = file;
+                        });
+                      }
+                    },
+                    icon: const Icon(Icons.camera_alt, size: 14),
+                    label: Text(hasExistingChalan ? 'বদলান' : 'ছবি তুলুন', style: const TextStyle(fontSize: 11)),
+                    style: ElevatedButton.styleFrom(
+                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                    ),
+                  ),
+                ],
+              ),
             ],
           );
         },
@@ -91,6 +128,7 @@ class _UpdateOrderDialogState extends ConsumerState<UpdateOrderDialog> {
               addedReceived: addedReceived,
               addedPaid: addedPaid,
               status: status,
+              localChalanPath: _chalanImage?.path,
             );
             Navigator.pop(context);
           },
