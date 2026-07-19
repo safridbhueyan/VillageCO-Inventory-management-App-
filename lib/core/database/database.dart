@@ -46,6 +46,7 @@ class Suppliers extends Table {
   TextColumn get phone => text()();
   TextColumn get email => text().nullable()();
   TextColumn get address => text().nullable()();
+  TextColumn get imagePath => text().nullable()();
 
   @override
   Set<Column> get primaryKey => {id};
@@ -151,6 +152,7 @@ class SupplierOrders extends Table {
   TextColumn get status => text().withDefault(const Constant('Pending'))(); // 'Pending', 'Partially Received', 'Received'
   RealColumn get unitCost => real().nullable()();
   TextColumn get pdfUrl => text().nullable()();
+  TextColumn get chalanPic => text().nullable()();
 
   @override
   Set<Column> get primaryKey => {id};
@@ -195,6 +197,18 @@ class SalesReturnItems extends Table {
   Set<Column> get primaryKey => {id};
 }
 
+class SupplierPayments extends Table {
+  TextColumn get id => text()();
+  TextColumn get supplierId => text().references(Suppliers, #id)();
+  TextColumn get orderId => text().nullable().references(SupplierOrders, #id)();
+  RealColumn get amount => real()();
+  DateTimeColumn get date => dateTime()();
+  TextColumn get notes => text().nullable()();
+
+  @override
+  Set<Column> get primaryKey => {id};
+}
+
 @DriftDatabase(tables: [
   Categories,
   Products,
@@ -210,12 +224,13 @@ class SalesReturnItems extends Table {
   DamagedItems,
   SalesReturns,
   SalesReturnItems,
+  SupplierPayments,
 ])
 class AppDatabase extends _$AppDatabase {
   AppDatabase([QueryExecutor? e]) : super(e ?? _openConnection());
 
   @override
-  int get schemaVersion => 8;
+  int get schemaVersion => 10;
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
@@ -245,6 +260,13 @@ class AppDatabase extends _$AppDatabase {
           }
           if (from < 8) {
             await migrator.addColumn(damagedItems, damagedItems.pdfUrl);
+          }
+          if (from < 9) {
+            await migrator.createTable(supplierPayments);
+          }
+          if (from < 10) {
+            await migrator.addColumn(suppliers, suppliers.imagePath);
+            await migrator.addColumn(supplierOrders, supplierOrders.chalanPic);
           }
         },
       );
