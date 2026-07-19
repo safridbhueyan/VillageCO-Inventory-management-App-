@@ -1,7 +1,9 @@
+import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/database/database.dart';
+import '../../../core/utils/image_utils.dart';
 import '../suppliers_controller.dart';
 
 class SupplierFormDialog extends ConsumerStatefulWidget {
@@ -18,6 +20,7 @@ class _SupplierFormDialogState extends ConsumerState<SupplierFormDialog> {
   late final TextEditingController phoneController;
   late final TextEditingController emailController;
   late final TextEditingController addressController;
+  File? _imageFile;
 
   @override
   void initState() {
@@ -40,6 +43,7 @@ class _SupplierFormDialogState extends ConsumerState<SupplierFormDialog> {
   @override
   Widget build(BuildContext context) {
     final isEdit = widget.supplier != null;
+    final theme = Theme.of(context);
 
     return AlertDialog(
       title: Text(isEdit ? 'Update Supplier Details' : 'Register Supplier Contact'),
@@ -47,6 +51,46 @@ class _SupplierFormDialogState extends ConsumerState<SupplierFormDialog> {
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
+            Center(
+              child: Stack(
+                children: [
+                  CircleAvatar(
+                    radius: 40,
+                    backgroundColor: theme.colorScheme.primaryContainer.withOpacity(0.4),
+                    backgroundImage: _imageFile != null
+                        ? FileImage(_imageFile!)
+                        : (widget.supplier?.imagePath != null
+                            ? (widget.supplier!.imagePath!.startsWith('http')
+                                ? NetworkImage(widget.supplier!.imagePath!) as ImageProvider
+                                : FileImage(File(widget.supplier!.imagePath!)))
+                            : null),
+                    child: _imageFile == null && widget.supplier?.imagePath == null
+                        ? Icon(Icons.local_shipping, size: 40, color: theme.colorScheme.primary)
+                        : null,
+                  ),
+                  Positioned(
+                    bottom: 0,
+                    right: 0,
+                    child: CircleAvatar(
+                      radius: 16,
+                      backgroundColor: theme.colorScheme.primary,
+                      child: GestureDetector(
+                        onTap: () async {
+                          final file = await ImageUtils.pickAndCropImage(context);
+                          if (file != null) {
+                            setState(() {
+                              _imageFile = file;
+                            });
+                          }
+                        },
+                        child: const Icon(Icons.camera_alt, size: 14, color: Colors.white),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(height: 16),
             TextField(
               controller: nameController,
               decoration: const InputDecoration(labelText: 'Supplier Name *', border: OutlineInputBorder()),
@@ -87,6 +131,7 @@ class _SupplierFormDialogState extends ConsumerState<SupplierFormDialog> {
                 phone,
                 emailController.text.trim().isEmpty ? null : emailController.text.trim(),
                 addressController.text.trim().isEmpty ? null : addressController.text.trim(),
+                localImagePath: _imageFile?.path,
               );
             } else {
               notifier.addSupplier(
@@ -94,11 +139,12 @@ class _SupplierFormDialogState extends ConsumerState<SupplierFormDialog> {
                 phone,
                 emailController.text.trim().isEmpty ? null : emailController.text.trim(),
                 addressController.text.trim().isEmpty ? null : addressController.text.trim(),
+                localImagePath: _imageFile?.path,
               );
             }
             Navigator.pop(context);
           },
-          child: const Text('Save'),
+          child: Text(isEdit ? 'Update' : 'Register'),
         ),
       ],
     );
