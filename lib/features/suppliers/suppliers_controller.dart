@@ -21,15 +21,27 @@ class SuppliersController extends AsyncNotifier<List<Supplier>> {
     return _db.select(_db.suppliers).get();
   }
 
-  Future<void> addSupplier(String name, String phone, String? email, String? address) async {
+  Future<void> addSupplier(String name, String phone, String? email, String? address, {String? localImagePath}) async {
     state = const AsyncValue.loading();
     state = await AsyncValue.guard(() async {
+      final supplierId = const Uuid().v4();
+      String? imageUrl;
+      if (localImagePath != null) {
+        final settings = ref.read(settingsControllerProvider).valueOrNull;
+        if (settings != null) {
+          final docInfo = await ref.read(firebaseSyncServiceProvider).getStoreDocIdAndShopID(settings.shopName);
+          final storeDocId = docInfo['storeDocId']!;
+          imageUrl = await ref.read(firebaseSyncServiceProvider).uploadSupplierProfilePic(storeDocId, supplierId, localImagePath);
+        }
+      }
+
       final companion = SuppliersCompanion(
-        id: Value(const Uuid().v4()),
+        id: Value(supplierId),
         name: Value(name),
         phone: Value(phone),
         email: Value(email),
         address: Value(address),
+        imagePath: Value(imageUrl ?? localImagePath),
       );
       await _db.into(_db.suppliers).insert(companion);
       triggerAutoSync(ref);
@@ -37,15 +49,26 @@ class SuppliersController extends AsyncNotifier<List<Supplier>> {
     });
   }
 
-  Future<void> updateSupplier(String id, String name, String phone, String? email, String? address) async {
+  Future<void> updateSupplier(String id, String name, String phone, String? email, String? address, {String? localImagePath}) async {
     state = const AsyncValue.loading();
     state = await AsyncValue.guard(() async {
+      String? imageUrl;
+      if (localImagePath != null) {
+        final settings = ref.read(settingsControllerProvider).valueOrNull;
+        if (settings != null) {
+          final docInfo = await ref.read(firebaseSyncServiceProvider).getStoreDocIdAndShopID(settings.shopName);
+          final storeDocId = docInfo['storeDocId']!;
+          imageUrl = await ref.read(firebaseSyncServiceProvider).uploadSupplierProfilePic(storeDocId, id, localImagePath);
+        }
+      }
+
       await (_db.update(_db.suppliers)..where((t) => t.id.equals(id))).write(
         SuppliersCompanion(
           name: Value(name),
           phone: Value(phone),
           email: Value(email),
           address: Value(address),
+          imagePath: imageUrl != null ? Value(imageUrl) : (localImagePath != null ? Value(localImagePath) : const Value.absent()),
         ),
       );
       triggerAutoSync(ref);
@@ -77,10 +100,22 @@ class SuppliersController extends AsyncNotifier<List<Supplier>> {
     required DateTime date,
     required String status,
     double? newBuyingPrice,
+    String? localChalanPath,
   }) async {
     state = const AsyncValue.loading();
     state = await AsyncValue.guard(() async {
       final orderId = const Uuid().v4();
+      
+      String? chalanPicUrl;
+      if (localChalanPath != null) {
+        final settings = ref.read(settingsControllerProvider).valueOrNull;
+        if (settings != null) {
+          final docInfo = await ref.read(firebaseSyncServiceProvider).getStoreDocIdAndShopID(settings.shopName);
+          final storeDocId = docInfo['storeDocId']!;
+          chalanPicUrl = await ref.read(firebaseSyncServiceProvider).uploadChalanPic(storeDocId, supplierId, orderId, localChalanPath);
+        }
+      }
+
       final companion = SupplierOrdersCompanion(
         id: Value(orderId),
         supplierId: Value(supplierId),
@@ -92,8 +127,22 @@ class SuppliersController extends AsyncNotifier<List<Supplier>> {
         date: Value(date),
         status: Value(status),
         unitCost: Value(newBuyingPrice),
+        chalanPic: Value(chalanPicUrl ?? localChalanPath),
       );
       await _db.into(_db.supplierOrders).insert(companion);
+
+      if (amtPaid > 0) {
+        await _db.into(_db.supplierPayments).insert(
+          SupplierPaymentsCompanion(
+            id: Value(const Uuid().v4()),
+            supplierId: Value(supplierId),
+            orderId: Value(orderId),
+            amount: Value(amtPaid),
+            date: Value(date),
+            notes: Value('Initial payment'),
+          ),
+        );
+      }
 
       final product = await (_db.select(_db.products)..where((t) => t.id.equals(productId))).getSingle();
       
@@ -139,6 +188,8 @@ class SuppliersController extends AsyncNotifier<List<Supplier>> {
       ref.invalidate(productsListProvider);
       ref.invalidate(allActiveProductsProvider);
       ref.invalidate(supplierOrdersProvider(supplierId));
+      ref.invalidate(supplierPaymentsProvider(supplierId));
+      ref.invalidate(supplierBalancesProvider);
       triggerAutoSync(ref);
       return _fetchSuppliers();
     });
@@ -150,6 +201,7 @@ class SuppliersController extends AsyncNotifier<List<Supplier>> {
     required double addedReceived,
     required double addedPaid,
     required String status,
+    String? localChalanPath,
   }) async {
     state = const AsyncValue.loading();
     state = await AsyncValue.guard(() async {
@@ -157,13 +209,37 @@ class SuppliersController extends AsyncNotifier<List<Supplier>> {
       final updatedReceived = existing.quantityReceived + addedReceived;
       final updatedPaid = existing.amountPaid + addedPaid;
       
+      String? chalanPicUrl;
+      if (localChalanPath != null) {
+        final settings = ref.read(settingsControllerProvider).valueOrNull;
+        if (settings != null) {
+          final docInfo = await ref.read(firebaseSyncServiceProvider).getStoreDocIdAndShopID(settings.shopName);
+          final storeDocId = docInfo['storeDocId']!;
+          chalanPicUrl = await ref.read(firebaseSyncServiceProvider).uploadChalanPic(storeDocId, supplierId, orderId, localChalanPath);
+        }
+      }
+
       await (_db.update(_db.supplierOrders)..where((t) => t.id.equals(orderId))).write(
         SupplierOrdersCompanion(
           quantityReceived: Value(updatedReceived),
           amountPaid: Value(updatedPaid),
           status: Value(status),
+          chalanPic: chalanPicUrl != null ? Value(chalanPicUrl) : (localChalanPath != null ? Value(localChalanPath) : const Value.absent()),
         ),
       );
+
+      if (addedPaid > 0) {
+        await _db.into(_db.supplierPayments).insert(
+          SupplierPaymentsCompanion(
+            id: Value(const Uuid().v4()),
+            supplierId: Value(supplierId),
+            orderId: Value(orderId),
+            amount: Value(addedPaid),
+            date: Value(DateTime.now()),
+            notes: Value('Payment update'),
+          ),
+        );
+      }
 
       final product = await (_db.select(_db.products)..where((t) => t.id.equals(existing.productId))).getSingle();
 
@@ -210,6 +286,8 @@ class SuppliersController extends AsyncNotifier<List<Supplier>> {
       ref.invalidate(productsListProvider);
       ref.invalidate(allActiveProductsProvider);
       ref.invalidate(supplierOrdersProvider(supplierId));
+      ref.invalidate(supplierPaymentsProvider(supplierId));
+      ref.invalidate(supplierBalancesProvider);
       triggerAutoSync(ref);
       return _fetchSuppliers();
     });
@@ -397,4 +475,24 @@ final supplierDamagesProvider = FutureProvider.family<List<DamagedItem>, String>
   final list = await (db.select(db.damagedItems)..where((t) => t.supplierId.equals(supplierId))).get();
   list.sort((a, b) => b.date.compareTo(a.date));
   return list;
+});
+
+// Supplier payments provider
+final supplierPaymentsProvider = FutureProvider.family<List<SupplierPayment>, String>((ref, supplierId) async {
+  final db = ref.watch(databaseProvider);
+  final list = await (db.select(db.supplierPayments)..where((t) => t.supplierId.equals(supplierId))).get();
+  list.sort((a, b) => b.date.compareTo(a.date));
+  return list;
+});
+
+// Outstanding balances for all suppliers
+final supplierBalancesProvider = FutureProvider<Map<String, double>>((ref) async {
+  final db = ref.watch(databaseProvider);
+  final orders = await db.select(db.supplierOrders).get();
+  final Map<String, double> balances = {};
+  for (var o in orders) {
+    final due = o.totalCost - o.amountPaid;
+    balances[o.supplierId] = (balances[o.supplierId] ?? 0.0) + due;
+  }
+  return balances;
 });
