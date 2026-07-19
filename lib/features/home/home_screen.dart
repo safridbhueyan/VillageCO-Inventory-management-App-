@@ -35,17 +35,29 @@ class HomeScreen extends ConsumerWidget {
               const VerticalDivider(width: 1, thickness: 1),
               Expanded(
                 child: ClipRect(
-                  child: child.animate(key: ValueKey(child.hashCode))
+                  child: child
+                      .animate(key: ValueKey(child.hashCode))
                       .fadeIn(duration: 250.ms)
-                      .slideX(begin: 0.05, end: 0, duration: 250.ms, curve: Curves.easeOutCubic),
+                      .slideX(
+                        begin: 0.05,
+                        end: 0,
+                        duration: 250.ms,
+                        curve: Curves.easeOutCubic,
+                      ),
                 ),
               ),
             ],
           )
         : ClipRect(
-            child: child.animate(key: ValueKey(child.hashCode))
+            child: child
+                .animate(key: ValueKey(child.hashCode))
                 .fadeIn(duration: 200.ms)
-                .slideY(begin: 0.02, end: 0, duration: 200.ms, curve: Curves.easeOutCubic),
+                .slideY(
+                  begin: 0.02,
+                  end: 0,
+                  duration: 200.ms,
+                  curve: Curves.easeOutCubic,
+                ),
           );
 
     if (impersonationState.isImpersonating) {
@@ -76,11 +88,19 @@ class HomeScreen extends ConsumerWidget {
                       backgroundColor: Colors.white,
                       foregroundColor: Colors.amber.shade900,
                       elevation: 0,
-                      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 12,
+                        vertical: 8,
+                      ),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(20),
+                      ),
                     ),
                     icon: const Icon(Icons.arrow_back, size: 16),
-                    label: const Text('প্যানেলে ফিরুন', style: TextStyle(fontWeight: FontWeight.bold)),
+                    label: const Text(
+                      'প্যানেলে ফিরুন',
+                      style: TextStyle(fontWeight: FontWeight.bold),
+                    ),
                     onPressed: () async {
                       showDialog(
                         context: context,
@@ -96,7 +116,9 @@ class HomeScreen extends ConsumerWidget {
                                   SizedBox(height: 16),
                                   Text(
                                     'ডাটাবেস সিঙ্ক ও প্যানেলে ফিরে যাওয়া হচ্ছে...',
-                                    style: TextStyle(fontWeight: FontWeight.bold),
+                                    style: TextStyle(
+                                      fontWeight: FontWeight.bold,
+                                    ),
                                   ),
                                 ],
                               ),
@@ -106,26 +128,41 @@ class HomeScreen extends ConsumerWidget {
                       );
 
                       try {
-                        final settings = ref.read(settingsControllerProvider).valueOrNull;
+                        final settings = ref
+                            .read(settingsControllerProvider)
+                            .valueOrNull;
                         if (settings != null) {
-                          await ref.read(firebaseSyncServiceProvider).syncAllData(settings);
+                          await ref
+                              .read(firebaseSyncServiceProvider)
+                              .syncAllData(settings);
                         }
                       } catch (syncError) {
-                        debugPrint('Firebase Sync failed during exit: $syncError');
+                        debugPrint(
+                          'Firebase Sync failed during exit: $syncError',
+                        );
                       }
 
                       try {
-                        await ref.read(adminRepositoryProvider).clearLocalDatabase();
-                        ref.read(adminImpersonationProvider.notifier).stopImpersonation();
-                        
+                        await ref
+                            .read(adminRepositoryProvider)
+                            .clearLocalDatabase();
+                        ref
+                            .read(adminImpersonationProvider.notifier)
+                            .stopImpersonation();
+
                         if (context.mounted) {
-                          Navigator.of(context, rootNavigator: true).pop(); // dismiss loading dialog
+                          Navigator.of(
+                            context,
+                            rootNavigator: true,
+                          ).pop(); // dismiss loading dialog
                           context.go('/super_admin');
                         }
                       } catch (e) {
                         if (context.mounted) {
                           Navigator.of(context, rootNavigator: true).pop();
-                          ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('ত্রুটি: $e')));
+                          ScaffoldMessenger.of(
+                            context,
+                          ).showSnackBar(SnackBar(content: Text('ত্রুটি: $e')));
                         }
                       }
                     },
@@ -141,7 +178,9 @@ class HomeScreen extends ConsumerWidget {
 
     return Scaffold(
       body: mainBody,
-      bottomNavigationBar: isDesktop ? null : BottomNavBar(currentLocation: _getCurrentPath(context)),
+      bottomNavigationBar: isDesktop
+          ? null
+          : BottomNavBar(currentLocation: _getCurrentPath(context)),
     );
   }
 }
