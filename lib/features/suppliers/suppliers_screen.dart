@@ -1,6 +1,7 @@
+import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-
+import '../../core/utils/formatters.dart';
 import '../../core/database/database.dart';
 import '../../core/database/database_providers.dart';
 import '../../core/utils/permission_utils.dart';
@@ -24,6 +25,7 @@ class _SuppliersScreenState extends ConsumerState<SuppliersScreen> {
   @override
   Widget build(BuildContext context) {
     final suppliersAsync = ref.watch(suppliersControllerProvider);
+    final balancesAsync = ref.watch(supplierBalancesProvider);
     final theme = Theme.of(context);
     final searchQuery = ref.watch(_searchQueryProvider);
 
@@ -32,91 +34,155 @@ class _SuppliersScreenState extends ConsumerState<SuppliersScreen> {
       orElse: () => <Supplier>[],
     );
 
-    return Scaffold(
-      appBar: AppBar(
-        title: const Text('Suppliers Registry', style: TextStyle(fontWeight: FontWeight.bold)),
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.picture_as_pdf_rounded),
-            tooltip: 'রিপোর্ট পিডিএফ ডাউনলোড',
-            onPressed: () => _generatePDFReport(context),
-          ),
-          const SizedBox(width: 8),
-        ],
-      ),
-      body: Column(
-        children: [
-          Padding(
-            padding: const EdgeInsets.all(16.0),
-            child: TextField(
-              decoration: InputDecoration(
-                hintText: 'Search suppliers by name or phone...',
-                prefixIcon: const Icon(Icons.search),
-                border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
-                contentPadding: const EdgeInsets.symmetric(vertical: 0),
-              ),
-              onChanged: (val) => ref.read(_searchQueryProvider.notifier).state = val,
-            ),
-          ),
-          Expanded(
-            child: suppliersAsync.when(
-              loading: () => const Center(child: CircularProgressIndicator()),
-              error: (err, st) => Center(child: Text('Error: $err')),
-              data: (suppliers) {
-                if (filtered.isEmpty) {
-                  return Center(
-                    child: Padding(
-                      padding: const EdgeInsets.all(32.0),
-                      child: Column(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: [
-                          Icon(Icons.local_shipping_outlined, size: 72, color: theme.colorScheme.onSurfaceVariant.withOpacity(0.3)),
-                          const SizedBox(height: 16),
-                          const Text('No Suppliers Registered', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 18)),
-                          const SizedBox(height: 8),
-                          const Text('Register your suppliers to log inventory restocks.', textAlign: TextAlign.center),
-                        ],
-                      ),
-                    ),
-                  );
-                }
+    final balances = balancesAsync.valueOrNull ?? {};
 
-                return ListView.separated(
-                  padding: const EdgeInsets.symmetric(horizontal: 16),
-                  itemCount: filtered.length,
-                  separatorBuilder: (_, __) => const Divider(),
-                  itemBuilder: (context, index) {
-                    final sup = filtered[index];
-                    return ListTile(
-                      contentPadding: const EdgeInsets.all(8),
-                      leading: CircleAvatar(
-                        backgroundColor: theme.colorScheme.primaryContainer.withOpacity(0.4),
-                        child: Icon(Icons.local_shipping, color: theme.colorScheme.primary),
-                      ),
-                      title: Text(sup.name, style: const TextStyle(fontWeight: FontWeight.bold)),
-                      subtitle: Text('Phone: ${sup.phone}${sup.email != null ? ' • ${sup.email}' : ''}'),
-                      trailing: const Icon(Icons.chevron_right),
-                      onTap: () {
-                        showModalBottomSheet(
-                          context: context,
-                          isScrollControlled: true,
-                          backgroundColor: Colors.transparent,
-                          builder: (context) => SupplierDetailsSheet(supplier: sup),
-                        );
-                      },
-                    );
-                  },
-                );
-              },
+    return DefaultTabController(
+      length: 2,
+      child: Scaffold(
+        appBar: AppBar(
+          title: const Text('Suppliers Registry', style: TextStyle(fontWeight: FontWeight.bold)),
+          actions: [
+            IconButton(
+              icon: const Icon(Icons.picture_as_pdf_rounded),
+              tooltip: 'রিপোর্ট পিডিএফ ডাউনলোড',
+              onPressed: () => _generatePDFReport(context),
             ),
+            const SizedBox(width: 8),
+          ],
+          bottom: TabBar(
+            labelColor: theme.colorScheme.primary,
+            unselectedLabelColor: theme.colorScheme.onSurfaceVariant,
+            indicatorColor: theme.colorScheme.primary,
+            tabs: const [
+              Tab(icon: Icon(Icons.people_alt_rounded), text: 'সব সরবরাহকারী'),
+              Tab(icon: Icon(Icons.hourglass_bottom_rounded), text: 'বকেয়া/বাকি'),
+            ],
           ),
-        ],
+        ),
+        body: Column(
+          children: [
+            Padding(
+              padding: const EdgeInsets.all(16.0),
+              child: TextField(
+                decoration: InputDecoration(
+                  hintText: 'Search suppliers by name or phone...',
+                  prefixIcon: const Icon(Icons.search),
+                  border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+                  contentPadding: const EdgeInsets.symmetric(vertical: 0),
+                ),
+                onChanged: (val) => ref.read(_searchQueryProvider.notifier).state = val,
+              ),
+            ),
+            Expanded(
+              child: TabBarView(
+                children: [
+                  _buildSupplierListView(filtered, balances, false, theme),
+                  _buildSupplierListView(filtered, balances, true, theme),
+                ],
+              ),
+            ),
+          ],
+        ),
+        floatingActionButton: FloatingActionButton.extended(
+          onPressed: () => showDialog(context: context, builder: (context) => const SupplierFormDialog()),
+          icon: const Icon(Icons.add),
+          label: const Text('Add Supplier'),
+        ),
       ),
-      floatingActionButton: FloatingActionButton.extended(
-        onPressed: () => showDialog(context: context, builder: (context) => const SupplierFormDialog()),
-        icon: const Icon(Icons.add),
-        label: const Text('Add Supplier'),
-      ),
+    );
+  }
+
+  Widget _buildSupplierListView(
+    List<Supplier> suppliers,
+    Map<String, double> balances,
+    bool showOnlyOutstanding,
+    ThemeData theme,
+  ) {
+    final list = showOnlyOutstanding
+        ? suppliers.where((s) => (balances[s.id] ?? 0.0) > 0.0).toList()
+        : suppliers;
+
+    if (list.isEmpty) {
+      return Center(
+        child: Padding(
+          padding: const EdgeInsets.all(32.0),
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Icon(
+                showOnlyOutstanding ? Icons.done_all_rounded : Icons.local_shipping_outlined,
+                size: 72,
+                color: theme.colorScheme.onSurfaceVariant.withOpacity(0.3),
+              ),
+              const SizedBox(height: 16),
+              Text(
+                showOnlyOutstanding ? 'কোনো বকেয়া বাকি নেই' : 'No Suppliers Registered',
+                style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 18),
+              ),
+              const SizedBox(height: 8),
+              Text(
+                showOnlyOutstanding
+                    ? 'সব সরবরাহকারীর সাথে লেনদেনের হিসাব সম্পূর্ণ পরিশোধিত।'
+                    : 'Register your suppliers to log inventory restocks.',
+                textAlign: TextAlign.center,
+              ),
+            ],
+          ),
+        ),
+      );
+    }
+
+    return ListView.separated(
+      padding: const EdgeInsets.symmetric(horizontal: 16),
+      itemCount: list.length,
+      separatorBuilder: (_, __) => const Divider(),
+      itemBuilder: (context, index) {
+        final sup = list[index];
+        final due = balances[sup.id] ?? 0.0;
+
+        return ListTile(
+          contentPadding: const EdgeInsets.all(8),
+          leading: CircleAvatar(
+            backgroundColor: theme.colorScheme.primaryContainer.withOpacity(0.4),
+            backgroundImage: sup.imagePath != null
+                ? (sup.imagePath!.startsWith('http')
+                    ? NetworkImage(sup.imagePath!) as ImageProvider
+                    : FileImage(File(sup.imagePath!)))
+                : null,
+            child: sup.imagePath == null
+                ? Icon(Icons.local_shipping, color: theme.colorScheme.primary)
+                : null,
+          ),
+          title: Text(sup.name, style: const TextStyle(fontWeight: FontWeight.bold)),
+          subtitle: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text('Phone: ${sup.phone}${sup.email != null ? ' • ${sup.email}' : ''}'),
+              if (due > 0.0)
+                Padding(
+                  padding: const EdgeInsets.only(top: 4.0),
+                  child: Text(
+                    'বকেয়া: ${Formatters.currency(due)}',
+                    style: TextStyle(
+                      color: theme.colorScheme.error,
+                      fontWeight: FontWeight.bold,
+                      fontSize: 12,
+                    ),
+                  ),
+                ),
+            ],
+          ),
+          trailing: const Icon(Icons.chevron_right),
+          onTap: () {
+            showModalBottomSheet(
+              context: context,
+              isScrollControlled: true,
+              backgroundColor: Colors.transparent,
+              builder: (context) => SupplierDetailsSheet(supplier: sup),
+            );
+          },
+        );
+      },
     );
   }
 
