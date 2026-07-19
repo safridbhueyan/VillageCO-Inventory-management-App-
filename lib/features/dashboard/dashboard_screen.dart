@@ -48,60 +48,74 @@ class DashboardScreen extends ConsumerWidget {
           ),
         ],
       ),
-      body: metricsAsync.when(
-        loading: () => const Center(child: CircularProgressIndicator()),
-        error: (err, stack) => Center(child: Text('ড্যাশবোর্ড লোড করতে সমস্যা হয়েছে: $err')),
-        data: (metrics) => RefreshIndicator(
-          onRefresh: () async {
-            ref.invalidate(dashboardMetricsProvider);
-            ref.invalidate(productsListProvider);
-            ref.invalidate(salesHistoryProvider);
-          },
-          child: SingleChildScrollView(
-            padding: const EdgeInsets.all(24.0),
-            physics: const AlwaysScrollableScrollPhysics(),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                // Welcome Header (Bangla)
-                const WelcomeHeader(),
-                const SizedBox(height: 24),
+      body: Container(
+        decoration: BoxDecoration(
+          gradient: LinearGradient(
+            begin: Alignment.topCenter,
+            end: Alignment.bottomCenter,
+            colors: [
+              theme.colorScheme.primary.withOpacity(0.03),
+              theme.colorScheme.surface,
+            ],
+          ),
+        ),
+        child: metricsAsync.when(
+          loading: () => const Center(child: CircularProgressIndicator()),
+          error: (err, stack) => Center(child: Text('ড্যাশবোর্ড লোড করতে সমস্যা হয়েছে: $err')),
+          data: (metrics) => RefreshIndicator(
+            onRefresh: () async {
+              ref.invalidate(dashboardMetricsProvider);
+              ref.invalidate(productsListProvider);
+              ref.invalidate(salesHistoryProvider);
+            },
+            child: SingleChildScrollView(
+              padding: const EdgeInsets.symmetric(horizontal: 22.0, vertical: 24.0),
+              physics: const AlwaysScrollableScrollPhysics(),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  // Welcome Header (Bangla)
+                  const WelcomeHeader(),
+                  const SizedBox(height: 28),
 
-                // Metrics Grid
-                MetricsGrid(metrics: metrics),
-                const SizedBox(height: 28),
+                  // Metrics Grid
+                  MetricsGrid(metrics: metrics),
+                  const SizedBox(height: 32),
 
-                // Quick Actions
-                const QuickActionsPanel(),
-                const SizedBox(height: 28),
+                  // Quick Actions
+                  const QuickActionsPanel(),
+                  const SizedBox(height: 32),
 
-                // Sales Trend Chart & Alerts
-                if (isDesktop)
-                  Row(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Expanded(
-                        flex: 2,
-                        child: SalesChartPanel(salesAsync: salesAsync),
-                      ),
-                      const SizedBox(width: 16),
-                      Expanded(
-                        flex: 1,
-                        child: LowStockPanel(productsAsync: productsAsync),
-                      ),
-                    ],
-                  )
-                else ...[
-                  SalesChartPanel(salesAsync: salesAsync),
-                  const SizedBox(height: 16),
-                  LowStockPanel(productsAsync: productsAsync),
+                  // Sales Trend Chart & Alerts
+                  if (isDesktop)
+                    Row(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Expanded(
+                          flex: 2,
+                          child: SalesChartPanel(salesAsync: salesAsync),
+                        ),
+                        const SizedBox(width: 16),
+                        Expanded(
+                          flex: 1,
+                          child: LowStockPanel(productsAsync: productsAsync),
+                        ),
+                      ],
+                    )
+                  else ...[
+                    SalesChartPanel(salesAsync: salesAsync),
+                    const SizedBox(height: 16),
+                    LowStockPanel(productsAsync: productsAsync),
+                  ],
+
+                  const SizedBox(height: 32),
+
+                  // Recent Sales List
+                  RecentSalesList(salesAsync: salesAsync),
+
+                  const SizedBox(height: 24),
                 ],
-
-                const SizedBox(height: 28),
-
-                // Recent Sales List
-                RecentSalesList(salesAsync: salesAsync),
-              ],
+              ),
             ),
           ),
         ),
