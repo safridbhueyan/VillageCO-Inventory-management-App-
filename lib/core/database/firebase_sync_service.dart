@@ -353,6 +353,7 @@ class FirebaseSyncService {
         'phone': sup.phone,
         'email': sup.email,
         'address': sup.address,
+        'imagePath': sup.imagePath,
       });
     }
 
@@ -681,6 +682,42 @@ class FirebaseSyncService {
     }
   }
 
+  /// Uploads a supplier profile image file to Firebase Storage.
+  Future<String?> uploadSupplierProfilePic(String storeId, String supplierId, String localPath) async {
+    try {
+      final file = File(localPath);
+      if (!await file.exists()) {
+        debugPrint('Supplier profile pic file does not exist at path: $localPath');
+        return null;
+      }
+      final ref = _storage.ref().child('stores/$storeId/suppliers/$supplierId/profile.jpg');
+      final uploadTask = await ref.putFile(file);
+      final downloadUrl = await uploadTask.ref.getDownloadURL();
+      return downloadUrl;
+    } catch (e) {
+      debugPrint('Failed to upload supplier profile pic: $e');
+      return null;
+    }
+  }
+
+  /// Uploads a supply order chalan image file to Firebase Storage.
+  Future<String?> uploadChalanPic(String storeId, String supplierId, String orderId, String localPath) async {
+    try {
+      final file = File(localPath);
+      if (!await file.exists()) {
+        debugPrint('Chalan pic file does not exist at path: $localPath');
+        return null;
+      }
+      final ref = _storage.ref().child('stores/$storeId/suppliers/$supplierId/orders/$orderId/chalan.jpg');
+      final uploadTask = await ref.putFile(file);
+      final downloadUrl = await uploadTask.ref.getDownloadURL();
+      return downloadUrl;
+    } catch (e) {
+      debugPrint('Failed to upload chalan pic: $e');
+      return null;
+    }
+  }
+
   /// Saves the report metadata and download link inside Firestore `/stores/{storeId}/reports` subcollection.
   Future<void> saveReportMetadata(
     String storeId, {
@@ -749,6 +786,7 @@ class FirebaseSyncService {
               phone: drift.Value(d['phone'] ?? ''),
               email: drift.Value(d['email']),
               address: drift.Value(d['address']),
+              imagePath: drift.Value(d['imagePath']),
             ),
             mode: drift.InsertMode.insertOrReplace,
           );
@@ -866,6 +904,7 @@ class FirebaseSyncService {
         'status': order.status,
         'unitCost': order.unitCost,
         'pdfUrl': pdfUrl ?? order.pdfUrl,
+        'chalanPic': order.chalanPic,
       };
 
       // General collection
