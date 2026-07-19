@@ -18,33 +18,34 @@ class WelcomeHeader extends StatelessWidget {
               Text(
                 'স্বাগতম, অ্যাডমিন 👋',
                 style: theme.textTheme.headlineSmall?.copyWith(
-                  fontWeight: FontWeight.bold,
-                  letterSpacing: -0.5,
+                  fontWeight: FontWeight.w700,
+                  letterSpacing: -0.3,
                 ),
                 maxLines: 1,
                 overflow: TextOverflow.ellipsis,
               ),
-              const SizedBox(height: 4),
+              const SizedBox(height: 6),
               Text(
-                'আজকের দোকানের বেচা-বিক্রি ও হিসাব নিচে দেওয়া হলো।',
+                'আজকের দোকানের বেচা-বিক্রি ও হিসাব নিচে দেওয়া হলো।',
                 style: theme.textTheme.bodyMedium?.copyWith(
-                  color: theme.colorScheme.onSurfaceVariant,
+                  color: theme.colorScheme.onSurfaceVariant.withOpacity(0.8),
+                  height: 1.4,
                 ),
-                maxLines: 1,
+                maxLines: 2,
                 overflow: TextOverflow.ellipsis,
               ),
             ],
           ),
         ),
-        const SizedBox(width: 8),
-        // Live Status (Bangla)
+        const SizedBox(width: 12),
+        // Live Status Badge
         Container(
           padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
           decoration: BoxDecoration(
-            color: theme.colorScheme.primary.withOpacity(0.08),
-            borderRadius: BorderRadius.circular(20),
+            color: const Color(0xFF059669).withOpacity(0.08),
+            borderRadius: BorderRadius.circular(24),
             border: Border.all(
-              color: theme.colorScheme.primary.withOpacity(0.2),
+              color: const Color(0xFF059669).withOpacity(0.15),
               width: 1,
             ),
           ),
@@ -52,30 +53,33 @@ class WelcomeHeader extends StatelessWidget {
             mainAxisSize: MainAxisSize.min,
             children: [
               Container(
-                width: 8,
-                height: 8,
-                decoration: BoxDecoration(
-                  color: theme.colorScheme.primary,
+                width: 7,
+                height: 7,
+                decoration: const BoxDecoration(
+                  color: Color(0xFF059669),
                   shape: BoxShape.circle,
                 ),
+              ).animate(
+                onPlay: (controller) => controller.repeat(reverse: true),
+              ).scaleXY(
+                end: 1.3,
+                duration: 1200.ms,
+                curve: Curves.easeInOut,
               ),
               const SizedBox(width: 8),
-              Text(
+              const Text(
                 'বিক্রি চালু',
                 style: TextStyle(
-                  color: theme.colorScheme.primary,
+                  color: Color(0xFF059669),
                   fontSize: 11,
-                  fontWeight: FontWeight.bold,
-                  letterSpacing: 0.5,
+                  fontWeight: FontWeight.w700,
+                  letterSpacing: 0.3,
                 ),
               ),
             ],
           ),
-        ).animate(onPlay: (controller) => controller.repeat(reverse: true))
-         .custom(duration: 1.seconds, builder: (context, val, child) {
-           return Opacity(opacity: 0.5 + (val * 0.5), child: child);
-         }),
+        ),
       ],
-    ).animate().fadeIn(duration: 300.ms);
+    ).animate().fadeIn(duration: 400.ms).slideX(begin: -0.02, duration: 400.ms, curve: Curves.easeOut);
   }
 }
