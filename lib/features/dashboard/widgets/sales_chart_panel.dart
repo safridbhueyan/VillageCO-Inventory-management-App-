@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:fl_chart/fl_chart.dart';
+import 'package:flutter_animate/flutter_animate.dart';
 
 import '../../reports/reports_controller.dart';
 
@@ -18,27 +19,48 @@ class SalesChartPanel extends StatelessWidget {
     return Container(
       decoration: BoxDecoration(
         color: theme.colorScheme.surface,
-        borderRadius: BorderRadius.circular(20),
+        borderRadius: BorderRadius.circular(22),
         border: Border.all(
-          color: theme.colorScheme.outlineVariant.withOpacity(0.4),
+          color: theme.colorScheme.outlineVariant.withOpacity(0.3),
           width: 1,
         ),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.015),
-            blurRadius: 10,
+            color: Colors.black.withOpacity(0.02),
+            blurRadius: 16,
             offset: const Offset(0, 4),
           ),
         ],
       ),
       child: Padding(
-        padding: const EdgeInsets.all(20.0),
+        padding: const EdgeInsets.all(22.0),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text(
-              'সাপ্তাহিক বিক্রি রিপোর্ট (টাকা)',
-              style: theme.textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold),
+            Row(
+              children: [
+                Container(
+                  padding: const EdgeInsets.all(8),
+                  decoration: BoxDecoration(
+                    color: theme.colorScheme.primary.withOpacity(0.08),
+                    borderRadius: BorderRadius.circular(10),
+                  ),
+                  child: Icon(
+                    Icons.show_chart_rounded,
+                    size: 18,
+                    color: theme.colorScheme.primary,
+                  ),
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Text(
+                    'সাপ্তাহিক বিক্রি রিপোর্ট (টাকা)',
+                    style: theme.textTheme.titleMedium?.copyWith(
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                ),
+              ],
             ),
             const SizedBox(height: 24),
             salesAsync.when(
@@ -46,13 +68,27 @@ class SalesChartPanel extends StatelessWidget {
               error: (err, st) => SizedBox(height: 200, child: Center(child: Text('চার্ট লোড ব্যর্থ: $err'))),
               data: (sales) {
                 if (sales.isEmpty) {
-                  return const SizedBox(
+                  return SizedBox(
                     height: 200,
                     child: Center(
-                      child: Text(
-                        'এখনও কোনো বিক্রি করা হয়নি। পিওএস থেকে নতুন পণ্য বিক্রি করুন।',
-                        style: TextStyle(color: Colors.grey),
-                        textAlign: TextAlign.center,
+                      child: Column(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          Icon(
+                            Icons.bar_chart_rounded,
+                            size: 40,
+                            color: theme.colorScheme.outlineVariant,
+                          ),
+                          const SizedBox(height: 12),
+                          Text(
+                            'এখনও কোনো বিক্রি করা হয়নি।\nপিওএস থেকে নতুন পণ্য বিক্রি করুন।',
+                            style: TextStyle(
+                              color: theme.colorScheme.onSurfaceVariant.withOpacity(0.6),
+                              fontSize: 13,
+                            ),
+                            textAlign: TextAlign.center,
+                          ),
+                        ],
                       ),
                     ),
                   );
@@ -69,9 +105,9 @@ class SalesChartPanel extends StatelessWidget {
                         drawVerticalLine: false,
                         getDrawingHorizontalLine: (value) {
                           return FlLine(
-                            color: theme.colorScheme.outlineVariant.withOpacity(0.3),
+                            color: theme.colorScheme.outlineVariant.withOpacity(0.2),
                             strokeWidth: 1,
-                            dashArray: [4, 4],
+                            dashArray: [5, 5],
                           );
                         },
                       ),
@@ -85,7 +121,11 @@ class SalesChartPanel extends StatelessWidget {
                             getTitlesWidget: (value, meta) {
                               return Text(
                                 '৳${value.toInt()}',
-                                style: const TextStyle(fontSize: 10, color: Colors.grey, fontWeight: FontWeight.w600),
+                                style: TextStyle(
+                                  fontSize: 10,
+                                  color: theme.colorScheme.onSurfaceVariant.withOpacity(0.6),
+                                  fontWeight: FontWeight.w600,
+                                ),
                               );
                             },
                           ),
@@ -97,10 +137,14 @@ class SalesChartPanel extends StatelessWidget {
                               final index = value.toInt();
                               if (index >= 0 && index < chartPoints.length) {
                                 return Padding(
-                                  padding: const EdgeInsets.only(top: 8.0),
+                                  padding: const EdgeInsets.only(top: 10.0),
                                   child: Text(
                                     chartPoints[index].label,
-                                    style: const TextStyle(fontSize: 10, color: Colors.grey, fontWeight: FontWeight.w600),
+                                    style: TextStyle(
+                                      fontSize: 10,
+                                      color: theme.colorScheme.onSurfaceVariant.withOpacity(0.6),
+                                      fontWeight: FontWeight.w600,
+                                    ),
                                   ),
                                 );
                               }
@@ -117,14 +161,14 @@ class SalesChartPanel extends StatelessWidget {
                           }),
                           isCurved: true,
                           color: theme.colorScheme.primary,
-                          barWidth: 4,
+                          barWidth: 3,
                           isStrokeCapRound: true,
                           dotData: FlDotData(
                             show: true,
                             getDotPainter: (spot, percent, barData, index) => FlDotCirclePainter(
                               radius: 4,
-                              color: Colors.white,
-                              strokeWidth: 3,
+                              color: theme.colorScheme.surface,
+                              strokeWidth: 2.5,
                               strokeColor: theme.colorScheme.primary,
                             ),
                           ),
@@ -134,8 +178,8 @@ class SalesChartPanel extends StatelessWidget {
                               begin: Alignment.topCenter,
                               end: Alignment.bottomCenter,
                               colors: [
-                                theme.colorScheme.primary.withOpacity(0.18),
-                                theme.colorScheme.primary.withOpacity(0.01),
+                                theme.colorScheme.primary.withOpacity(0.12),
+                                theme.colorScheme.primary.withOpacity(0.0),
                               ],
                             ),
                           ),
@@ -149,7 +193,7 @@ class SalesChartPanel extends StatelessWidget {
           ],
         ),
       ),
-    );
+    ).animate().fadeIn(delay: 200.ms, duration: 400.ms);
   }
 
   List<ChartDataPoint> _getLast7DaysSales(List<SaleWithDetails> sales) {
