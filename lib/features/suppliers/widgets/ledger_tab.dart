@@ -1,3 +1,4 @@
+import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:share_plus/share_plus.dart';
@@ -13,8 +14,13 @@ import 'update_order_dialog.dart';
 
 class LedgerTab extends ConsumerWidget {
   final String supplierId;
+  final bool showOnlyOutstanding;
 
-  const LedgerTab({super.key, required this.supplierId});
+  const LedgerTab({
+    super.key,
+    required this.supplierId,
+    this.showOnlyOutstanding = false,
+  });
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -30,6 +36,10 @@ class LedgerTab extends ConsumerWidget {
           data: (list) => {for (var p in list) p.product.id: p.product.name},
           orElse: () => <String, String>{},
         );
+
+        final displayOrders = showOnlyOutstanding
+            ? orders.where((o) => o.totalCost > o.amountPaid).toList()
+            : orders;
 
         double totalCost = 0.0;
         double totalPaid = 0.0;
@@ -50,28 +60,49 @@ class LedgerTab extends ConsumerWidget {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              GridView.count(
-                shrinkWrap: true,
-                physics: const NeverScrollableScrollPhysics(),
-                crossAxisCount: 2,
-                childAspectRatio: 1.4,
-                mainAxisSpacing: 8,
-                crossAxisSpacing: 8,
+              if (!showOnlyOutstanding) ...[
+                GridView.count(
+                  shrinkWrap: true,
+                  physics: const NeverScrollableScrollPhysics(),
+                  crossAxisCount: 2,
+                  childAspectRatio: 1.4,
+                  mainAxisSpacing: 8,
+                  crossAxisSpacing: 8,
+                  children: [
+                    _buildMetricCard('মোট মূল্য', Formatters.currency(totalCost), Icons.calculate_outlined, Colors.purple),
+                    _buildMetricCard('পরিশোধিত', Formatters.currency(totalPaid), Icons.done_all_rounded, Colors.green),
+                    _buildMetricCard('বকেয়া পাওনা', Formatters.currency(totalDue), Icons.hourglass_empty_rounded, totalDue > 0 ? Colors.red : Colors.grey),
+                    _buildMetricCard('অর্ডার পণ্য', '${Formatters.number(quantityOrdered)} units', Icons.local_shipping_outlined, Colors.blue),
+                    _buildMetricCard('রিসিভড পণ্য', '${Formatters.number(quantityReceived)} units', Icons.download_done_rounded, Colors.teal),
+                    _buildMetricCard('বাকি পণ্য', '${Formatters.number(quantityPending > 0 ? quantityPending : 0.0)} units', Icons.pending_actions_rounded, quantityPending > 0 ? Colors.amber : Colors.grey),
+                  ],
+                ),
+                const Divider(height: 32),
+              ],
+              
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
-                  _buildMetricCard('মোট মূল্য', Formatters.currency(totalCost), Icons.calculate_outlined, Colors.purple),
-                  _buildMetricCard('পরিশোধিত', Formatters.currency(totalPaid), Icons.done_all_rounded, Colors.green),
-                  _buildMetricCard('বকেয়া পাওনা', Formatters.currency(totalDue), Icons.hourglass_empty_rounded, totalDue > 0 ? Colors.red : Colors.grey),
-                  _buildMetricCard('অর্ডার পণ্য', '${Formatters.number(quantityOrdered)} units', Icons.local_shipping_outlined, Colors.blue),
-                  _buildMetricCard('রিসিভড পণ্য', '${Formatters.number(quantityReceived)} units', Icons.download_done_rounded, Colors.teal),
-                  _buildMetricCard('বাকি পণ্য', '${Formatters.number(quantityPending > 0 ? quantityPending : 0.0)} units', Icons.pending_actions_rounded, quantityPending > 0 ? Colors.amber : Colors.grey),
+                  Expanded(
+                    child: Text(
+                      showOnlyOutstanding ? 'বকেয়া অর্ডারসমূহ (Outstanding Orders)' : 'অর্ডার হিস্ট্রি (Orders History)',
+                      style: theme.textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold),
+                    ),
+                  ),
+                  if (!showOnlyOutstanding)
+                    ElevatedButton.icon(
+                      onPressed: () => _generateLedgerPDF(context, ref, orders, productNames),
+                      icon: const Icon(Icons.picture_as_pdf_rounded, size: 16),
+                      label: const Text('লেজার PDF', style: TextStyle(fontSize: 12)),
+                      style: ElevatedButton.styleFrom(
+                        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                      ),
+                    ),
                 ],
               ),
-              const Divider(height: 32),
-              
-              Text('অর্ডার হিস্ট্রি (Orders History)', style: theme.textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold)),
               const SizedBox(height: 8),
               
-              if (orders.isEmpty)
+              if (displayOrders.isEmpty)
                 const Center(
                   child: Padding(
                     padding: EdgeInsets.all(24.0),
@@ -82,10 +113,10 @@ class LedgerTab extends ConsumerWidget {
                 ListView.separated(
                   shrinkWrap: true,
                   physics: const NeverScrollableScrollPhysics(),
-                  itemCount: orders.length,
+                  itemCount: displayOrders.length,
                   separatorBuilder: (_, __) => const Divider(),
                   itemBuilder: (context, index) {
-                    final order = orders[index];
+                    final order = displayOrders[index];
                     final prodName = productNames[order.productId] ?? 'Unknown Product';
 
                     Color statusColor = Colors.grey;
@@ -118,6 +149,40 @@ class LedgerTab extends ConsumerWidget {
                               style: TextStyle(color: statusColor, fontWeight: FontWeight.bold, fontSize: 10),
                             ),
                           ),
+                           if (order.chalanPic != null)
+                            IconButton(
+                              icon: const Icon(Icons.image_outlined, color: Colors.green),
+                              tooltip: 'চালান ছবি দেখুন',
+                              onPressed: () {
+                                showDialog(
+                                  context: context,
+                                  builder: (context) => Dialog(
+                                    child: Column(
+                                      mainAxisSize: MainAxisSize.min,
+                                      children: [
+                                        AppBar(
+                                          title: const Text('চালান ছবি (Chalan Pic)'),
+                                          automaticallyImplyLeading: false,
+                                          actions: [
+                                            IconButton(
+                                              icon: const Icon(Icons.close),
+                                              onPressed: () => Navigator.pop(context),
+                                            ),
+                                          ],
+                                        ),
+                                        Flexible(
+                                          child: InteractiveViewer(
+                                            child: order.chalanPic!.startsWith('http')
+                                                ? Image.network(order.chalanPic!)
+                                                : Image.file(File(order.chalanPic!)),
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                  ),
+                                );
+                              },
+                            ),
                           const SizedBox(width: 4),
                           IconButton(
                             icon: const Icon(Icons.edit_note_rounded, color: Colors.blue),
@@ -226,6 +291,63 @@ class LedgerTab extends ConsumerWidget {
         );
       },
     );
+  }
+
+  Future<void> _generateLedgerPDF(
+    BuildContext context,
+    WidgetRef ref,
+    List<SupplierOrder> orders,
+    Map<String, String> productNames,
+  ) async {
+    // 1. Pick start date (optional)
+    final pickedDate = await showDatePicker(
+      context: context,
+      initialDate: DateTime.now(),
+      firstDate: DateTime(2020),
+      lastDate: DateTime(2100),
+      helpText: 'লেজারের শুরুর তারিখ নির্বাচন করুন (ঐচ্ছিক)',
+      cancelText: 'সকল তারিখ',
+      confirmText: 'বাছাই করুন',
+    );
+
+    if (!context.mounted) return;
+
+    // Show loading
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (context) => const Center(child: CircularProgressIndicator()),
+    );
+
+    try {
+      final supplierList = ref.read(suppliersControllerProvider).valueOrNull ?? [];
+      final supplier = supplierList.firstWhere((s) => s.id == supplierId);
+      final payments = await ref.read(supplierPaymentsProvider(supplierId).future);
+      final settings = ref.read(settingsControllerProvider).valueOrNull;
+
+      final savedPath = await PdfGenerator.generateAndSaveSupplierLedgerPdf(
+        supplier: supplier,
+        orders: orders,
+        payments: payments,
+        productNames: productNames,
+        startDate: pickedDate,
+        customSavePath: settings?.pdfSavePath,
+      );
+
+      if (context.mounted) {
+        Navigator.of(context, rootNavigator: true).pop(); // dismiss loading
+        if (savedPath != null) {
+          DialogUtils.showSaveSuccessDialog(context, savedPath);
+        }
+      }
+    } catch (e) {
+      if (context.mounted) {
+        Navigator.of(context, rootNavigator: true).pop(); // dismiss loading
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('লেজার PDF তৈরিতে ত্রুটি: $e')),
+        );
+      }
+    }
   }
 
   Widget _buildMetricCard(String label, String value, IconData icon, Color color) {
