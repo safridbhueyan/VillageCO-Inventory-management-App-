@@ -12,6 +12,7 @@ import 'pdf/suppliers_report_pdf.dart';
 import 'pdf/supplier_order_pdf.dart';
 import 'pdf/damaged_item_pdf.dart';
 import 'pdf/supply_chain_order_pdf.dart';
+import 'pdf/supplier_ledger_pdf.dart';
 
 class PdfGenerator {
   // Receipt / POS PDF
@@ -246,6 +247,41 @@ class PdfGenerator {
   // Branch Supply Chain Order PDF
   static Future<void> printSupplyChainOrder(SupplyChainOrder order) {
     return SupplyChainOrderPdfGenerator.printSupplyChainOrder(order);
+  }
+
+  // Supplier Ledger PDF
+  static Future<String?> generateAndSaveSupplierLedgerPdf({
+    required Supplier supplier,
+    required List<SupplierOrder> orders,
+    required List<SupplierPayment> payments,
+    required Map<String, String> productNames,
+    DateTime? startDate,
+    String? customSavePath,
+  }) {
+    return SupplierLedgerPdfGenerator.generateAndSaveSupplierLedgerPdf(
+      supplier: supplier,
+      orders: orders,
+      payments: payments,
+      productNames: productNames,
+      startDate: startDate,
+      customSavePath: customSavePath,
+    );
+  }
+
+  static Future<void> printSupplierLedger({
+    required Supplier supplier,
+    required List<SupplierOrder> orders,
+    required List<SupplierPayment> payments,
+    required Map<String, String> productNames,
+    DateTime? startDate,
+  }) {
+    return SupplierLedgerPdfGenerator.printSupplierLedger(
+      supplier: supplier,
+      orders: orders,
+      payments: payments,
+      productNames: productNames,
+      startDate: startDate,
+    );
   }
 
   // Directory Helpers
